@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="kn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ಅಕ್ಷರ ದಾಸೋಹ - Calculation Settings</title>
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:"Noto Sans Kannada","Noto Sans",Arial,sans-serif;background:#f4f7fb;color:#1f2937}
+header{background:#166534;color:#fff;padding:18px 24px}header h1{margin:0;font-size:24px}header p{margin:5px 0 0;font-size:14px}
+main{max-width:1100px;margin:28px auto;padding:0 16px}.card{background:#fff;border-radius:12px;padding:22px;margin-bottom:20px;box-shadow:0 3px 14px rgba(0,0,0,.07)}
+h2{margin:0 0 18px;font-size:19px}.year{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+select,input{width:100%;padding:10px 12px;border:1px solid #cbd5e1;border-radius:8px;font-size:15px;background:#fff}
+.year select{max-width:260px}.grid{display:grid;grid-template-columns:1.5fr 1fr 1fr 110px;gap:14px;align-items:end}.field{display:flex;flex-direction:column;gap:7px}
+.switch{height:42px;display:flex;align-items:center;gap:8px}.switch input{width:auto}
+.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:18px}button{border:0;border-radius:8px;padding:10px 16px;cursor:pointer;font-size:14px;font-weight:600}
+.primary{background:#166534;color:#fff}.secondary{background:#475569;color:#fff}.danger{background:#dc2626;color:#fff}.edit{background:#d97706;color:#fff}
+table{width:100%;border-collapse:collapse;min-width:720px}th,td{border-bottom:1px solid #e5e7eb;padding:12px 10px;text-align:left}th{background:#f1f5f9}
+.wrap{overflow-x:auto}.badge{padding:5px 9px;border-radius:20px;font-size:12px;font-weight:700}.on{background:#dcfce7;color:#166534}.off{background:#fee2e2;color:#991b1b}
+.empty{text-align:center;padding:30px;color:#64748b}.msg{display:none;margin-top:14px;padding:10px 12px;border-radius:8px;font-size:14px}.success{display:block;background:#dcfce7;color:#166534}.error{display:block;background:#fee2e2;color:#991b1b}
+.note{color:#64748b;font-size:13px}@media(max-width:800px){.grid{grid-template-columns:1fr 1fr}}@media(max-width:520px){.grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header><h1>ಅಕ್ಷರ ದಾಸೋಹ ಕಾರ್ಯಕ್ರಮ</h1><p>Calculation Settings / ಲೆಕ್ಕಾಚಾರ ಸೆಟ್ಟಿಂಗ್ಸ್</p></header>
+<main>
+<section class="card">
+<h2>ಶೈಕ್ಷಣಿಕ ವರ್ಷ</h2>
+<div class="year"><label for="year">Academic Year:</label><select id="year"><option value="">Loading...</option></select></div>
+<div id="msg" class="msg"></div>
+</section>
+
+<section class="card">
+<h2 id="title">➕ ಹೊಸ Item ಸೇರಿಸಿ</h2>
+<form id="form">
+<div class="grid">
+<div class="field"><label>Item Name / ವಸ್ತುವಿನ ಹೆಸರು</label><input id="name" required placeholder="ಉದಾ: ರಾಗಿ ಮಾಲ್ಟ್"></div>
+<div class="field"><label>ಪ್ರತಿ ಮಗುವಿಗೆ ಪ್ರಮಾಣ</label><input id="qty" type="number" min="0" step="0.0001" required></div>
+<div class="field"><label>Unit / ಅಳತೆ</label><input id="unit" required placeholder="ಉದಾ: ಗ್ರಾಂ"></div>
+<div class="field"><label>ಸ್ಥಿತಿ</label><div class="switch"><input id="enabled" type="checkbox" checked><span>Enable</span></div></div>
+</div>
+<div class="actions"><button class="primary" id="save" type="submit">💾 Save</button><button class="secondary" id="cancel" type="button" style="display:none">Cancel</button></div>
+<p class="note">Itemಗಳನ್ನು SQL Editor ಮೂಲಕ ಸೇರಿಸುವ ಅಗತ್ಯವಿಲ್ಲ. ಇಲ್ಲಿ ನೇರವಾಗಿ Add / Edit / Delete ಮಾಡಬಹುದು.</p>
+</form>
+</section>
+
+<section class="card"><h2>Calculation Items</h2><div class="wrap"><table>
+<thead><tr><th>Sl.No</th><th>Item Name</th><th>ಪ್ರತಿ ಮಗುವಿಗೆ ಪ್ರಮಾಣ</th><th>Unit</th><th>Status</th><th>Actions</th></tr></thead>
+<tbody id="body"><tr><td colspan="6" class="empty">Academic Year ಆಯ್ಕೆ ಮಾಡಿ.</td></tr></tbody>
+</table></div></section>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+const SUPABASE_URL="YOUR_SUPABASE_URL";
+const SUPABASE_KEY="YOUR_SUPABASE_ANON_OR_PUBLISHABLE_KEY";
+let db=null,editingId=null;
+const $=id=>document.getElementById(id);
+function ready(){return SUPABASE_URL!=="YOUR_SUPABASE_URL"&&SUPABASE_KEY!=="YOUR_SUPABASE_ANON_OR_PUBLISHABLE_KEY"}
+function message(t,type="success"){$("msg").textContent=t;$("msg").className="msg "+type;setTimeout(()=>$("msg").className="msg",4000)}
+function esc(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]))}
+function resetForm(){editingId=null;$("form").reset();$("enabled").checked=true;$("title").textContent="➕ ಹೊಸ Item ಸೇರಿಸಿ";$("save").textContent="💾 Save";$("cancel").style.display="none"}
+async function loadYears(){
+ if(!ready()){ $("year").innerHTML='<option value="">ಮೊದಲು Supabase config ಹಾಕಿ</option>';return }
+ const {data,error}=await db.from("academic_years").select("id,year_name,is_active").order("year_name",{ascending:false});
+ if(error){message("Academic Year load failed: "+error.message,"error");return}
+ $("year").innerHTML="";
+ if(!data?.length){$("year").innerHTML='<option value="">Academic Year ಇಲ್ಲ</option>';return}
+ data.forEach(y=>{let o=document.createElement("option");o.value=y.id;o.textContent=y.year_name+(y.is_active?" (Active)":"");$("year").appendChild(o)});
+ const active=data.find(y=>y.is_active);$("year").value=(active||data[0]).id;loadItems()
+}
+async function loadItems(){
+ const y=$("year").value;if(!y){$("body").innerHTML='<tr><td colspan="6" class="empty">Academic Year ಆಯ್ಕೆ ಮಾಡಿ.</td></tr>';return}
+ const {data,error}=await db.from("calculation_settings").select("*").eq("academic_year_id",y).order("item_name");
+ if(error){message("Items load failed: "+error.message,"error");return}
+ $("body").innerHTML="";
+ if(!data?.length){$("body").innerHTML='<tr><td colspan="6" class="empty">ಇನ್ನೂ ಯಾವುದೇ item ಸೇರಿಸಿಲ್ಲ. ➕ ಹೊಸ Item ಸೇರಿಸಿ.</td></tr>';return}
+ data.forEach((x,i)=>{
+  const tr=document.createElement("tr");
+  tr.innerHTML=`<td>${i+1}</td><td><strong>${esc(x.item_name)}</strong></td><td>${Number(x.quantity_per_student)}</td><td>${esc(x.unit)}</td><td>${x.is_enabled?'<span class="badge on">Enabled</span>':'<span class="badge off">Disabled</span>'}</td><td><div class="actions" style="margin:0"><button class="edit" type="button" onclick="editItem('${x.id}')">✏️ Edit</button><button class="${x.is_enabled?'secondary':'primary'}" type="button" onclick="toggleItem('${x.id}',${x.is_enabled})">${x.is_enabled?'Disable':'Enable'}</button><button class="danger" type="button" onclick="deleteItem('${x.id}',${JSON.stringify(x.item_name)})">🗑️ Delete</button></div></td>`;
+  $("body").appendChild(tr)
+ })
+}
+$("form").addEventListener("submit",async e=>{
+ e.preventDefault();if(!ready())return message("ಮೊದಲು Supabase URL ಮತ್ತು key ಹಾಕಬೇಕು.","error");
+ const yearId=$("year").value,name=$("name").value.trim(),qty=Number($("qty").value),unit=$("unit").value.trim();
+ if(!yearId||!name||!Number.isFinite(qty)||qty<0||!unit)return message("ಎಲ್ಲಾ ವಿವರಗಳನ್ನು ಸರಿಯಾಗಿ ನಮೂದಿಸಿ.","error");
+ $("save").disabled=true;
+ try{
+  let res;
+  if(editingId) res=await db.from("calculation_settings").update({item_name:name,quantity_per_student:qty,unit,is_enabled:$("enabled").checked,updated_at:new Date().toISOString()}).eq("id",editingId);
+  else res=await db.from("calculation_settings").insert({academic_year_id:yearId,item_name:name,quantity_per_student:qty,unit,is_enabled:$("enabled").checked});
+  if(res.error){if(res.error.code==="23505")throw Error("ಈ Academic Yearನಲ್ಲಿ ಇದೇ Item ಈಗಾಗಲೇ ಇದೆ.");throw res.error}
+  message(editingId?"Item ಯಶಸ್ವಿಯಾಗಿ Update ಆಗಿದೆ.":"Item ಯಶಸ್ವಿಯಾಗಿ Save ಆಗಿದೆ.");resetForm();await loadItems()
+ }catch(err){message("Save failed: "+err.message,"error")}finally{$("save").disabled=false}
+});
+$("year").addEventListener("change",()=>{resetForm();loadItems()});$("cancel").addEventListener("click",resetForm);
+window.editItem=async id=>{const {data,error}=await db.from("calculation_settings").select("*").eq("id",id).single();if(error)return message("Load failed: "+error.message,"error");editingId=id;$("name").value=data.item_name;$("qty").value=data.quantity_per_student;$("unit").value=data.unit;$("enabled").checked=data.is_enabled;$("title").textContent="✏️ Item Edit ಮಾಡಿ";$("save").textContent="💾 Update";$("cancel").style.display="inline-block";scrollTo({top:0,behavior:"smooth"})};
+window.toggleItem=async(id,status)=>{const {error}=await db.from("calculation_settings").update({is_enabled:!status,updated_at:new Date().toISOString()}).eq("id",id);if(error)return message("Status update failed: "+error.message,"error");message(!status?"Item Enabled ಆಗಿದೆ.":"Item Disabled ಆಗಿದೆ.");loadItems()};
+window.deleteItem=async(id,name)=>{if(!confirm('"'+name+'" item ಅನ್ನು Delete ಮಾಡಬೇಕೇ?'))return;const {error}=await db.from("calculation_settings").delete().eq("id",id);if(error)return message("Delete failed: "+error.message,"error");message("Item Delete ಆಗಿದೆ.");resetForm();loadItems()};
+if(ready()){db=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);loadYears()}else loadYears();
+</script>
+</body>
+</html>
