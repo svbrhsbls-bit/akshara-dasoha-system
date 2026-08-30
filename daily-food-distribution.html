@@ -59,8 +59,8 @@ tfoot td{font-weight:700;background:#e8eee9}
   .wrap{max-width:none;margin:0;padding:0}
   .card{box-shadow:none;padding:0;margin:0}
   .sheet-wrap{overflow:visible;border:0}
-  .sheet{width:100%;height:100%;min-width:0;font-size:8.2px;table-layout:fixed}
-  .sheet th,.sheet td{padding:1.3px;line-height:1.08;height:7.2mm}
+  .sheet{width:100%;height:100%;min-width:0;font-size:9.2px;table-layout:fixed}
+  .sheet th,.sheet td{padding:1.5px;line-height:1.12;height:7.5mm}
   .sheet input{border:0;background:transparent;padding:0;font-size:6.5px;width:100%;height:auto}
   .title{font-size:12px}.school{font-size:9px;padding:2.5px!important}
   .group{font-size:7px}.day{width:10%}.enroll{width:6.5%}.n{width:auto}.actionCol{display:none}
@@ -82,7 +82,10 @@ tfoot td{font-weight:700;background:#e8eee9}
 <div class="wrap">
   <div class="card no-print">
     <div class="controls">
-      <div><label>Active Academic Year / ಸಕ್ರಿಯ ಶೈಕ್ಷಣಿಕ ವರ್ಷ</label><div id="activeYearDisplay" style="padding:10px;border:1px solid #bfc9c2;border-radius:7px;background:#f7faf8;font-weight:700">Loading...</div></div>
+      <div><label>Academic Year / ಶೈಕ್ಷಣಿಕ ವರ್ಷ</label>
+        <input id="yearDisplay" type="text" readonly placeholder="School Settings Active Year">
+        <div id="settingsYearNote" class="small" style="margin-top:5px"></div>
+      </div>
       <div><label>Month / ತಿಂಗಳು</label><select id="month"></select></div>
       <div><label>Class / ತರಗತಿ</label>
         <select id="classGroup">
@@ -116,10 +119,9 @@ tfoot td{font-weight:700;background:#e8eee9}
   <div class="card">
     <div style="text-align:center;font-weight:700;font-size:20px" id="reportDepartment">ಅಕ್ಷರ ದಾಸೋಹ ಕಾರ್ಯಕ್ರಮ</div>
     <div style="text-align:center;font-weight:700;font-size:18px;margin:3px 0" id="reportSchool">ಶಾಲೆಯ ಹೆಸರು</div>
-    <div style="text-align:center;font-weight:700;margin:3px 0 4px" id="reportTitle">
+    <div style="text-align:center;font-weight:700;margin:3px 0 8px" id="reportTitle">
       ಪ್ರತಿನಿತ್ಯ ಶಾಲೆಯಲ್ಲಿ ಬಿಸಿ ಊಟ, ಮೊಟ್ಟೆ ಮತ್ತು ಬಾಳೆಹಣ್ಣು ಸೇವಿಸಿದ ಮಕ್ಕಳ ಮಾಹಿತಿ
     </div>
-    <div id="reportAcademicYear" style="text-align:center;font-weight:700;margin-bottom:8px"></div>
     <div id="attendanceCheck" class="no-print" style="text-align:center;font-weight:700;margin:4px 0"></div>
     <div id="sheetHost"></div>
     <div class="signature">
@@ -169,31 +171,34 @@ async function loadSchoolSettings(){
     $("schoolTitle").textContent=school;
     $("reportDepartment").textContent=department;
     $("reportSchool").textContent=school;
-    if($("reportAcademicYear"))$("reportAcademicYear").textContent="ಶೈಕ್ಷಣಿಕ ವರ್ಷ: "+(settingsAcademicYear||"");
     $("headTeacherPrint").textContent=head?("ಮುಖ್ಯ ಶಿಕ್ಷಕರು: "+head):"";
   }catch(e){console.warn("school_settings load failed:",e.message)}
 }
 
-async function loadActiveAcademicYear(){
+async function loadYears(){
+  // Daily Food Distribution always uses ONLY the Academic Year
+  // marked active in School Settings / academic_years.
   const {data,error}=await db.from("academic_years")
     .select("id,year_name,is_active")
     .eq("is_active",true)
+    .order("created_at",{ascending:false})
     .limit(1)
     .maybeSingle();
-  if(error){
-    show($("msg"),"Active Academic Year load failed: "+error.message,"err");
-    $("activeYearDisplay").textContent="Active Year ಸಿಗಲಿಲ್ಲ";
-    return false;
-  }
+
+  if(error){show($("msg"),"Active Academic Year load failed: "+error.message,"err");return}
   if(!data){
-    show($("msg"),"School Settingsನಲ್ಲಿ Active Academic Year set ಮಾಡಿಲ್ಲ.","err");
-    $("activeYearDisplay").textContent="Active Year set ಮಾಡಿಲ್ಲ";
-    return false;
+    currentYear=null;
+    $("yearDisplay").value="";
+    $("settingsYearNote").textContent="School Settingsನಲ್ಲಿ Active Academic Year ಹೊಂದಿಸಿ.";
+    show($("msg"),"School Settingsನಲ್ಲಿ Active Academic Year ಇಲ್ಲ.","err");
+    return;
   }
-  currentYear={id:data.id,year_name:String(data.year_name||"").trim()};
-  settingsAcademicYear=currentYear.year_name;
-  $("activeYearDisplay").textContent=currentYear.year_name;
-  return true;
+
+  currentYear=data;
+  settingsAcademicYear=String(data.year_name||"").trim();
+  $("yearDisplay").value=settingsAcademicYear;
+  $("settingsYearNote").textContent=
+    `School Settings Active Academic Year: ${settingsAcademicYear}`;
 }
 
 function setMonthDefault(){$("month").value=new Date().getMonth()+1}
@@ -343,6 +348,8 @@ function renderSheet(year,month,counts,holidays,food,group){
 
 function recalc(){
   document.querySelectorAll("tr[data-date]").forEach(tr=>{
+    // Holiday rows contain one merged cell and therefore have no number inputs.
+    if(tr.classList.contains("holiday-row")) return;
     const eggs=[...tr.querySelectorAll(".egg")],bans=[...tr.querySelectorAll(".banana")],meals=[...tr.querySelectorAll(".meal")];
     let a=Math.max(0,Number(tr.querySelector(".attendance")?.value||0));
     let e=0,b=0;
@@ -362,6 +369,7 @@ function recalc(){
   classes.forEach((c,i)=>{
     let e=0,b=0,m=0;
     document.querySelectorAll("tr[data-date]").forEach(tr=>{
+      if(tr.classList.contains("holiday-row")) return;
       e+=Number(tr.querySelectorAll(".egg")[i]?.value||0);
       b+=Number(tr.querySelectorAll(".banana")[i]?.value||0);
       m+=Number(tr.querySelectorAll(".meal")[i]?.textContent||0);
@@ -383,10 +391,7 @@ function recalc(){
 
 async function loadSheet(){
   try{
-    if(!currentYear){
-      const ok=await loadActiveAcademicYear();
-      if(!ok)throw new Error("School Settingsನಲ್ಲಿ Active Academic Year ಇಲ್ಲ.");
-    }
+    if(!currentYear) throw new Error("School Settingsನಲ್ಲಿ Active Academic Year ಹೊಂದಿಸಿಲ್ಲ.");
     const yearId=currentYear.id,year=getYearNumber(currentYear.year_name),month=Number($("month").value),group=$("classGroup").value;
     const [counts,holidays,food]=await Promise.all([getStudentCounts(yearId,group),getHolidayMap(yearId,month,year),getFood(yearId,month,year)]);
     currentRows={yearId,year,month,group,counts,holidays,food};
@@ -464,7 +469,7 @@ function enableDayEdit(date){
 }
 
 async function loadHolidayList(){
-  const yearId=currentYear?.id;if(!yearId){$("holidayList").innerHTML="";return}
+  const yearId=$("year").value;if(!yearId){$("holidayList").innerHTML="";return}
   try{
     const {data,error}=await db.from("school_holidays").select("id,holiday_date,holiday_reason").eq("academic_year_id",yearId).order("holiday_date",{ascending:true});
     if(error)throw error;
@@ -477,8 +482,8 @@ async function loadHolidayList(){
 }
 
 async function saveHoliday(){
-  const yearId=currentYear?.id,date=$("holidayDate").value,reason=$("holidayReason").value.trim();
-  if(!yearId)return show($("holidayMsg"),"School Settingsನಲ್ಲಿ Active Academic Year ಇಲ್ಲ.","err");
+  const yearId=$("year").value,date=$("holidayDate").value,reason=$("holidayReason").value.trim();
+  if(!yearId)return show($("holidayMsg"),"ಮೊದಲು Academic Year ಆಯ್ಕೆ ಮಾಡಿ.","err");
   if(!date)return show($("holidayMsg"),"ದಿನಾಂಕ ಆಯ್ಕೆ ಮಾಡಿ.","err");
   if(!reason)return show($("holidayMsg"),"ರಜೆಯ ಹೆಸರು / ಕಾರಣ ನಮೂದಿಸಿ.","err");
   try{
@@ -514,6 +519,7 @@ $("saveAllBottom").onclick=saveAll;
 $("holidaySaveBtn").onclick=saveHoliday;
 $("month").onchange=loadSheet;
 $("classGroup").onchange=loadSheet;
+// Academic Year is controlled only by School Settings Active Year.
 
 $("sheetHost").addEventListener("click",e=>{
   const edit=e.target.closest(".day-edit");
@@ -633,10 +639,8 @@ function exportExcel(){
   for(let i=1;i<=12;i++)$("month").insertAdjacentHTML("beforeend",`<option value="${i}">${months[i-1]}</option>`);
   setMonthDefault();
   await loadSchoolSettings();
-  if(await loadActiveAcademicYear()){
-    await loadSheet();
-    await loadHolidayList();
-  }
+  await loadYears();
+  if(currentYear) await loadSheet();
   await loadHolidayList();
 })();
 </script>
