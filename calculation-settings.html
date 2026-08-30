@@ -77,7 +77,11 @@
       </select>
     </div>
 
-    <div id="yearInfo" class="small"></div>
+    <div style="margin-top:12px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+      <button class="btn-save" id="setActiveBtn" onclick="setSelectedYearActive()">⭐ ಈ Year ಅನ್ನು Active ಮಾಡಿ</button>
+      <span id="yearInfo" class="small" style="margin-top:0"></span>
+    </div>
+
     <div id="message" class="status"></div>
   </div>
 
@@ -161,7 +165,16 @@ yearSelect.addEventListener("change", async () => {
   document.getElementById("selectedYearLabel").textContent =
     y ? y.year_name : "ಶೈಕ್ಷಣಿಕ ವರ್ಷ ಆಯ್ಕೆ ಮಾಡಿ";
   document.getElementById("yearInfo").textContent =
-    y ? ("ಆಯ್ಕೆ ಮಾಡಿದ ವರ್ಷ: " + y.year_name + (y.is_active ? " (Active)" : "")) : "";
+    y ? ("ಆಯ್ಕೆ ಮಾಡಿದ ವರ್ಷ: " + y.year_name + (y.is_active ? " (Active)" : " (Inactive)")) : "";
+
+  const activeBtn = document.getElementById("setActiveBtn");
+  if (activeBtn) {
+    activeBtn.disabled = !y || !!y.is_active;
+    activeBtn.textContent = y && y.is_active
+      ? "⭐ Active Year"
+      : "⭐ ಈ Year ಅನ್ನು Active ಮಾಡಿ";
+  }
+
   await loadItems();
 });
 
@@ -209,14 +222,13 @@ async function addAcademicYear() {
     return;
   }
 
-  // First year entered becomes active automatically.
-  const hasAnyYear = years.length > 0;
-
+  // New years are added as inactive.
+  // You can choose any year and explicitly make it Active.
   const { data, error } = await db
     .from("academic_years")
     .insert({
       year_name: yearName,
-      is_active: !hasAnyYear
+      is_active: false
     })
     .select("id, year_name, is_active, created_at")
     .single();
@@ -232,6 +244,61 @@ async function addAcademicYear() {
   await loadYears(data.id);
   btn.disabled = false;
   showMessage(yearName + " Academic Year successfully added.");
+}
+
+
+async function setSelectedYearActive() {
+  const yearId = yearSelect.value;
+
+  if (!yearId) {
+    showMessage("ಮೊದಲು Academic Year ಆಯ್ಕೆ ಮಾಡಿ.", "error");
+    return;
+  }
+
+  const selectedYear = years.find(y => y.id === yearId);
+  if (!selectedYear) {
+    showMessage("Academic Year ಕಂಡುಬಂದಿಲ್ಲ.", "error");
+    return;
+  }
+
+  if (selectedYear.is_active) {
+    showMessage(selectedYear.year_name + " ಈಗಾಗಲೇ Active ಇದೆ.");
+    return;
+  }
+
+  const btn = document.getElementById("setActiveBtn");
+  btn.disabled = true;
+
+  // First deactivate all years.
+  const { error: deactivateError } = await db
+    .from("academic_years")
+    .update({ is_active: false })
+    .neq("id", yearId);
+
+  if (deactivateError) {
+    console.error(deactivateError);
+    btn.disabled = false;
+    showMessage("Active Year change failed: " + deactivateError.message, "error");
+    return;
+  }
+
+  // Then activate the selected year.
+  const { error: activateError } = await db
+    .from("academic_years")
+    .update({ is_active: true })
+    .eq("id", yearId);
+
+  btn.disabled = false;
+
+  if (activateError) {
+    console.error(activateError);
+    showMessage("Active Year save failed: " + activateError.message, "error");
+    await loadYears(yearId);
+    return;
+  }
+
+  await loadYears(yearId);
+  showMessage(selectedYear.year_name + " ಅನ್ನು Active Year ಆಗಿ ಮಾಡಲಾಗಿದೆ.");
 }
 
 async function loadYears(selectId = null) {
