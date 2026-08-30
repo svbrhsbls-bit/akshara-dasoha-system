@@ -261,7 +261,11 @@ $("schoolForm").addEventListener("submit",async e=>{
 
   }catch(err){
     console.error(err);
-    showMessage("❌ Save failed: "+err.message,"error");
+    let msg = err.message || "Unknown error";
+     if(/row-level security|RLS|permission denied/i.test(msg)){
+       msg += " — Supabase SQL Editorನಲ್ಲಿ school_settings ಗೆ INSERT/UPDATE/SELECT policy run ಮಾಡಬೇಕು.";
+     }
+     showMessage("❌ Save failed: "+msg,"error");
   }finally{
     $("saveBtn").disabled=false;
     $("saveBtn").textContent="💾 Save";
