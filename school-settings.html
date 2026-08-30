@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="kn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ಶಾಲಾ ಸೆಟ್ಟಿಂಗ್ಸ್</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#f3f6fa;color:#172033;font-family:Arial,"Noto Sans Kannada",sans-serif}
+.header{background:#146c3a;color:#fff;padding:25px 5%;box-shadow:0 2px 8px #0002}
+.header h1{margin:0;font-size:30px}.header p{margin:6px 0 0}
+.wrap{max-width:1050px;margin:25px auto;padding:0 18px}
+.card{background:#fff;border-radius:15px;padding:26px;margin-bottom:20px;box-shadow:0 3px 16px #00000012}
+.card h2{margin:0 0 20px;font-size:23px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:17px}
+.full{grid-column:1/-1}
+label{display:block;font-weight:700;margin-bottom:7px}
+input{width:100%;height:45px;padding:10px 12px;border:1px solid #cfd5df;border-radius:8px;font-size:16px}
+input:focus{outline:0;border-color:#146c3a;box-shadow:0 0 0 3px #146c3a18}
+.actions{margin-top:22px;display:flex;gap:10px}
+button{border:0;border-radius:8px;padding:12px 20px;font-size:16px;font-weight:700;cursor:pointer}
+.save{background:#146c3a;color:#fff}.edit{background:#eef2ff;color:#263b8f}.cancel{background:#eee;color:#333}
+.status{margin-top:18px;padding:12px 15px;border-radius:8px;display:none}
+.success{display:block;background:#ecfdf3;color:#067647}.error{display:block;background:#fef3f2;color:#b42318}.info{display:block;background:#eff8ff;color:#175cd3}
+.note{color:#667085;font-size:14px;line-height:1.6;margin-top:15px}
+.preview{border-top:1px solid #eaecf0;margin-top:20px;padding-top:18px}
+.preview div{display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid #f0f2f5;gap:20px}
+.preview b{min-width:190px}
+@media(max-width:700px){.grid{grid-template-columns:1fr}.full{grid-column:auto}.preview div{display:block}.preview b{display:block;margin-bottom:4px}}
+</style>
+</head>
+<body>
+
+<header class="header">
+  <h1>ಶಾಲಾ ಸೆಟ್ಟಿಂಗ್ಸ್</h1>
+  <p>School Settings / ಶಾಲೆಯ ಸಂಪೂರ್ಣ ವಿವರಗಳು</p>
+</header>
+
+<main class="wrap">
+<section class="card">
+  <h2>🏫 ಶಾಲೆಯ ವಿವರಗಳನ್ನು ನಮೂದಿಸಿ</h2>
+
+  <form id="schoolForm">
+    <div class="grid">
+
+      <div class="full">
+        <label>ಇಲಾಖೆಯ ಹೆಸರು / Department Name *</label>
+        <input id="department_name" type="text" placeholder="ಉದಾ: ಶಾಲಾ ಶಿಕ್ಷಣ ಇಲಾಖೆ">
+      </div>
+
+      <div class="full">
+        <label>ಶಾಲೆಯ ಹೆಸರು / School Name *</label>
+        <input id="school_name" type="text" placeholder="ಉದಾ: ಶ್ರೀ ವೀರಬಲ್ಲಾಳ ಗ್ರಾಮಾಂತರ ಪ್ರೌಢಶಾಲೆ">
+      </div>
+
+      <div class="full">
+        <label>ಶಾಲೆಯ ವಿಳಾಸ / School Address</label>
+        <input id="school_address" type="text" placeholder="ಶಾಲೆಯ ಸಂಪೂರ್ಣ ವಿಳಾಸ">
+      </div>
+
+      <div>
+        <label>ಗ್ರಾಮ / Village</label>
+        <input id="village" type="text">
+      </div>
+
+      <div>
+        <label>ತಾಲೂಕು / Taluk</label>
+        <input id="taluk" type="text">
+      </div>
+
+      <div>
+        <label>ಜಿಲ್ಲೆ / District</label>
+        <input id="district" type="text">
+      </div>
+
+      <div>
+        <label>UDISE Code</label>
+        <input id="udise_code" type="text">
+      </div>
+
+      <div>
+        <label>ಮುಖ್ಯ ಶಿಕ್ಷಕರ ಹೆಸರು / Head Teacher</label>
+        <input id="head_teacher_name" type="text">
+      </div>
+
+      <div>
+        <label>ಮೊಬೈಲ್ / Contact Number</label>
+        <input id="contact_number" type="text" inputmode="tel">
+      </div>
+
+      <div>
+        <label>Email</label>
+        <input id="email" type="email">
+      </div>
+
+      <div>
+        <label>Academic Year</label>
+        <input id="academic_year" type="text" placeholder="ಉದಾ: 2026-27">
+      </div>
+
+    </div>
+
+    <div class="actions">
+      <button class="save" id="saveBtn" type="submit">💾 Save</button>
+      <button class="edit" id="editBtn" type="button" style="display:none">✏️ Edit</button>
+      <button class="cancel" id="cancelBtn" type="button" style="display:none">Cancel</button>
+    </div>
+  </form>
+
+  <div id="status" class="status"></div>
+
+  <div class="note">
+    ℹ️ ಈ ಒಂದು School Settings ಮಾಹಿತಿಯನ್ನು <b>Daily Food Distribution</b>,
+    Reports ಮತ್ತು Printಗಳಲ್ಲಿ automatic ಆಗಿ ಬಳಸಬಹುದು.
+  </div>
+
+  <div id="preview" class="preview" style="display:none">
+    <h3>Saved Details / ಉಳಿಸಿದ ವಿವರಗಳು</h3>
+    <div><b>ಇಲಾಖೆ</b><span id="v_department"></span></div>
+    <div><b>ಶಾಲೆ</b><span id="v_school"></span></div>
+    <div><b>ವಿಳಾಸ</b><span id="v_address"></span></div>
+    <div><b>ಗ್ರಾಮ</b><span id="v_village"></span></div>
+    <div><b>ತಾಲೂಕು</b><span id="v_taluk"></span></div>
+    <div><b>ಜಿಲ್ಲೆ</b><span id="v_district"></span></div>
+    <div><b>UDISE Code</b><span id="v_udise"></span></div>
+    <div><b>ಮುಖ್ಯ ಶಿಕ್ಷಕರು</b><span id="v_head"></span></div>
+    <div><b>Contact</b><span id="v_contact"></span></div>
+    <div><b>Email</b><span id="v_email"></span></div>
+    <div><b>Academic Year</b><span id="v_year"></span></div>
+  </div>
+</section>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+const SUPABASE_URL = "https://ezmudfrpcvjsgnjibvoq.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable__FYyH6NQaqgARaq2dvuovQ_rKmus0js";
+const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+let currentId = null;
+let savedRow = null;
+
+const fields = [
+  "department_name","school_name","school_address","village","taluk",
+  "district","udise_code","head_teacher_name","contact_number","email","academic_year"
+];
+
+const $ = id => document.getElementById(id);
+
+function showMessage(text,type){
+  const s=$("status");
+  s.textContent=text;
+  s.className="status "+type;
+}
+
+function setLocked(lock){
+  fields.forEach(id => $(id).disabled=lock);
+  $("saveBtn").style.display=lock ? "none" : "inline-block";
+  $("editBtn").style.display=(lock && currentId) ? "inline-block" : "none";
+  $("cancelBtn").style.display=lock ? "none" : "inline-block";
+}
+
+function fill(row){
+  fields.forEach(id => $(id).value=row?.[id] ?? "");
+}
+
+function preview(row){
+  $("preview").style.display="block";
+  $("v_department").textContent=row.department_name || "—";
+  $("v_school").textContent=row.school_name || "—";
+  $("v_address").textContent=row.school_address || "—";
+  $("v_village").textContent=row.village || "—";
+  $("v_taluk").textContent=row.taluk || "—";
+  $("v_district").textContent=row.district || "—";
+  $("v_udise").textContent=row.udise_code || "—";
+  $("v_head").textContent=row.head_teacher_name || "—";
+  $("v_contact").textContent=row.contact_number || "—";
+  $("v_email").textContent=row.email || "—";
+  $("v_year").textContent=row.academic_year || "—";
+}
+
+async function load(){
+  const {data,error}=await db
+    .from("school_settings")
+    .select("*")
+    .order("created_at",{ascending:true})
+    .limit(1)
+    .maybeSingle();
+
+  if(error){
+    console.error(error);
+    showMessage("School Settings load failed: "+error.message,"error");
+    setLocked(false);
+    return;
+  }
+
+  if(data){
+    currentId=data.id;
+    savedRow=data;
+    fill(data);
+    preview(data);
+    setLocked(true);
+    showMessage("School details loaded successfully.","success");
+  }else{
+    currentId=null;
+    savedRow=null;
+    setLocked(false);
+    showMessage("ಮೊದಲಿಗೆ ಶಾಲೆಯ ವಿವರಗಳನ್ನು ನಮೂದಿಸಿ.","info");
+  }
+}
+
+$("schoolForm").addEventListener("submit",async e=>{
+  e.preventDefault();
+
+  const department_name=$("department_name").value.trim();
+  const school_name=$("school_name").value.trim();
+
+  if(!department_name){
+    showMessage("ಇಲಾಖೆಯ ಹೆಸರು ನಮೂದಿಸಿ.","error");
+    $("department_name").focus(); return;
+  }
+  if(!school_name){
+    showMessage("ಶಾಲೆಯ ಹೆಸರು ನಮೂದಿಸಿ.","error");
+    $("school_name").focus(); return;
+  }
+
+  const payload={};
+  fields.forEach(id=>{
+    const value=$(id).value.trim();
+    payload[id]=value || null;
+  });
+  payload.updated_at=new Date().toISOString();
+
+  $("saveBtn").disabled=true;
+  $("saveBtn").textContent="Saving...";
+
+  try{
+    let result;
+
+    if(currentId){
+      result=await db.from("school_settings")
+        .update(payload)
+        .eq("id",currentId)
+        .select()
+        .single();
+    }else{
+      result=await db.from("school_settings")
+        .insert(payload)
+        .select()
+        .single();
+    }
+
+    if(result.error) throw result.error;
+
+    currentId=result.data.id;
+    savedRow=result.data;
+    fill(result.data);
+    preview(result.data);
+    setLocked(true);
+    showMessage("✅ School Settings saved successfully.","success");
+
+  }catch(err){
+    console.error(err);
+    showMessage("❌ Save failed: "+err.message,"error");
+  }finally{
+    $("saveBtn").disabled=false;
+    $("saveBtn").textContent="💾 Save";
+  }
+});
+
+$("editBtn").addEventListener("click",()=>{
+  setLocked(false);
+  showMessage("✏️ Edit mode: ಬದಲಾವಣೆ ಮಾಡಿ Save ಒತ್ತಿ.","info");
+});
+
+$("cancelBtn").addEventListener("click",()=>{
+  if(savedRow){
+    fill(savedRow);
+    setLocked(true);
+    showMessage("ಬದಲಾವಣೆಗಳನ್ನು ರದ್ದು ಮಾಡಲಾಗಿದೆ.","info");
+  }
+});
+
+load();
+</script>
+</body>
+</html>
