@@ -45,9 +45,9 @@ tfoot td{font-weight:700;background:#e8eee9}
 </style>
 </head>
 <body>
-<header>
- <h1>ಅಕ್ಷರ ದಾಸೋಹ ಕಾರ್ಯಕ್ರಮ</h1>
- <p>ಶಾಲಾ ಶಿಕ್ಷಣ ಮತ್ತು ಸಾಕ್ಷರತಾ ಇಲಾಖೆ — ಪ್ರತಿ ನಿತ್ಯ ಶಾಲೆಯಲ್ಲಿ ಬಿಸಿಊಟ, ಮೊಟ್ಟೆ &amp; ಬಾಳೆಹಣ್ಣು ಸೇವಿಸಿದ ಮಕ್ಕಳ ಮಾಹಿತಿ</p>
+<header id="pageHeader">
+ <h1 id="departmentTitle">ಅಕ್ಷರ ದಾಸೋಹ ಕಾರ್ಯಕ್ರಮ</h1>
+ <p id="schoolTitle">ಶಾಲೆಯ ಹೆಸರು</p>
 </header>
 
 <div class="wrap">
@@ -62,20 +62,27 @@ tfoot td{font-weight:700;background:#e8eee9}
      <option value="1-10">1 - 10</option>
     </select>
    </div>
-   <div><label>School Name / ಶಾಲೆಯ ಹೆಸರು</label><input id="schoolName" value="ಶ್ರೀ ವೀರಬಲ್ಲಾಳ ಗ್ರಾಮಾಂತರ ಪ್ರೌಢಶಾಲೆ ಬಲ್ಲಾಳಸಮುದ್ರ ಹೊಸದುರ್ಗ ತಾ||"></div>
    <button class="primary" id="loadBtn">Load</button>
   </div>
   <div id="msg" class="msg"></div>
   <div class="small" style="margin-top:8px">ತಿಂಗಳು ಬದಲಿಸಿದಾಗ ಆ ತಿಂಗಳ ಎಲ್ಲಾ ದಿನಗಳು ಬರುತ್ತವೆ. ರಜೆ ದಿನದಲ್ಲಿ ಖರ್ಚು/quantity ತೋರಿಸುವುದಿಲ್ಲ; ನೀವು ನಮೂದಿಸಿದ ರಜೆಯ ಕಾರಣ ಮಾತ್ರ ತೋರಿಸುತ್ತದೆ.</div>
  </div>
 
+ <div class="card no-print">
+  <h3 style="margin:0 0 12px">🗓️ ರಜೆ ನಮೂದು / Holiday Entry</h3>
+  <div class="controls" style="grid-template-columns:1fr 1.5fr auto">
+   <div><label>ರಜೆ ದಿನಾಂಕ</label><input type="date" id="holidayDate"></div>
+   <div><label>ರಜೆಯ ಹೆಸರು / ಕಾರಣ</label><input id="holidayReason" placeholder="ಉದಾ: ಸ್ಥಳೀಯ ರಜೆ / ಸರ್ಕಾರಿ ರಜೆ"></div>
+   <button class="primary" id="holidaySaveBtn">💾 ರಜೆ Save</button>
+  </div>
+  <div id="holidayMsg" class="msg"></div>
+  <div id="holidayList" style="margin-top:12px"></div>
+ </div>
+
  <div class="card">
-  <div style="text-align:center;font-weight:700;font-size:20px">
-   ಅಕ್ಷರ ದಾಸೋಹ ಕಾರ್ಯಕ್ರಮ ಶಾಲಾ ಶಿಕ್ಷಣ ಮತ್ತು ಸಾಕ್ಷರತಾ ಇಲಾಖೆ ಹೊಸದುರ್ಗ
-  </div>
-  <div style="text-align:center;font-weight:700;margin:4px 0 12px">
-   ಪ್ರತಿ ನಿತ್ಯ ಶಾಲೆಯಲ್ಲಿ ಬಿಸಿಊಟ ಮೊಟ್ಟೆ &amp; ಬಾಳೆಹಣ್ಣು ಸೇವಿಸಿದ ಮಕ್ಕಳ ಮಾಹಿತಿ
-  </div>
+  <div style="text-align:center;font-weight:700;font-size:20px" id="reportDepartment">ಅಕ್ಷರ ದಾಸೋಹ ಕಾರ್ಯಕ್ರಮ</div>
+  <div style="text-align:center;font-weight:700;font-size:18px;margin:3px 0" id="reportSchool">ಶಾಲೆಯ ಹೆಸರು</div>
+  <div style="text-align:center;font-weight:700;margin:4px 0 12px" id="reportTitle">ಪ್ರತಿನಿತ್ಯ ಶಾಲೆಯಲ್ಲಿ ಬಿಸಿ ಊಟ, ಮೊಟ್ಟೆ ಮತ್ತು ಬಾಳೆಹಣ್ಣು ಸೇವಿಸಿದ ಮಕ್ಕಳ ಮಾಹಿತಿ</div>
   <div id="sheetHost"></div>
   <div class="actions no-print">
    <button class="primary" id="saveBtn">💾 Save Month</button>
@@ -100,6 +107,20 @@ function pad(n){return String(n).padStart(2,"0")}
 function dateISO(y,m,d){return `${y}-${pad(m)}-${pad(d)}`}
 function esc(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
 function selectedClasses(){return groups[$("classGroup").value]||groups["8-10"]}
+
+async function loadSchoolSettings(){
+ try{
+  const {data,error}=await db.from("school_settings").select("*").limit(1).maybeSingle();
+  if(error) throw error;
+  const row=data||{};
+  const department=row.department_name || row.department || row.dept_name || "ಅಕ್ಷರ ದಾಸೋಹ ಕಾರ್ಯಕ್ರಮ";
+  const school=row.school_name || row.schoolName || row.school || row.school_title || "ಶಾಲೆಯ ಹೆಸರು";
+  $("departmentTitle").textContent=department;
+  $("schoolTitle").textContent=school;
+  $("reportDepartment").textContent=department;
+  $("reportSchool").textContent=school;
+ }catch(e){ console.warn("school_settings load failed:",e.message); }
+}
 
 async function loadYears(){
  const {data,error}=await db.from("academic_years").select("id,year_name,is_active").order("year_name",{ascending:false});
@@ -171,7 +192,7 @@ function renderSheet(year,month,counts,holidays,foodRecords,group){
  let h=`<div class="sheet-wrap"><table class="sheet">
  <thead>
   <tr><th colspan="${3+classes.length*4}" class="title">ಅಕ್ಷರ ದಾಸೋಹ ಕಾರ್ಯಕ್ರಮ ಶಾಲಾ ಶಿಕ್ಷಣ ಮತ್ತು ಸಾಕ್ಷರತಾ ಇಲಾಖೆ ಹೊಸದುರ್ಗ</th></tr>
-  <tr><th colspan="${3+classes.length*4}" class="school">ಶಾಲೆಯ ಹೆಸರು : ${esc($("schoolName").value)} <span style="float:right">ತಿಂಗಳು: <b>${months[month-1]} ${year}</b></span></th></tr>
+  <tr><th colspan="${3+classes.length*4}" class="school">${esc($("schoolTitle").textContent)} <span style="float:right">ತಿಂಗಳು: <b>${months[month-1]} ${year}</b></span></th></tr>
   <tr>
    <th rowspan="2" class="day">ದಿನಾಂಕ</th><th rowspan="2" class="enroll">ದಾಖಲಾತಿ</th><th rowspan="2" class="att">ಹಾಜರಾತಿ</th>
    <th colspan="${classes.length+1}" class="group">ಮೊಟ್ಟೆ</th>
@@ -273,6 +294,38 @@ async function loadSheet(){
  }catch(e){show($("msg"),"Load failed: "+e.message,"err")}
 }
 
+async function loadHolidayList(){
+ const yearId=$("year").value;
+ if(!yearId){$("holidayList").innerHTML="";return;}
+ try{
+  const {data,error}=await db.from("school_holidays").select("id,holiday_date,holiday_reason").eq("academic_year_id",yearId).order("holiday_date",{ascending:true});
+  if(error) throw error;
+  $("holidayList").innerHTML=(data||[]).map(r=>`<div style="display:flex;gap:10px;align-items:center;padding:7px 0;border-bottom:1px solid #e5e7eb"><b>${esc(r.holiday_date)}</b><span style="flex:1">${esc(r.holiday_reason)}</span><button class="secondary holiday-edit" data-id="${r.id}" data-date="${esc(r.holiday_date)}" data-reason="${esc(r.holiday_reason)}">Edit</button><button class="danger holiday-delete" data-id="${r.id}">Delete</button></div>`).join("") || '<div class="small">ಈ Academic Yearಗೆ ರಜೆ entry ಇಲ್ಲ.</div>';
+ }catch(e){show($("holidayMsg"),"ರಜೆ load failed: "+e.message,"err");}
+}
+
+async function saveHoliday(){
+ const yearId=$("year").value, date=$("holidayDate").value, reason=$("holidayReason").value.trim();
+ if(!yearId)return show($("holidayMsg"),"ಮೊದಲು Academic Year ಆಯ್ಕೆ ಮಾಡಿ.","err");
+ if(!date)return show($("holidayMsg"),"ರಜೆ ದಿನಾಂಕ ಆಯ್ಕೆ ಮಾಡಿ.","err");
+ if(!reason)return show($("holidayMsg"),"ರಜೆಯ ಹೆಸರು / ಕಾರಣ ನಮೂದಿಸಿ.","err");
+ try{
+  const editId=$("holidayMsg").dataset.editId;
+  let result;
+  if(editId) result=await db.from("school_holidays").update({holiday_date:date,holiday_reason:reason,updated_at:new Date().toISOString()}).eq("id",editId);
+  else result=await db.from("school_holidays").upsert({academic_year_id:yearId,holiday_date:date,holiday_reason:reason,updated_at:new Date().toISOString()},{onConflict:"academic_year_id,holiday_date"});
+  if(result.error)throw result.error;
+  $("holidayDate").value=""; $("holidayReason").value=""; $("holidayMsg").dataset.editId="";
+  show($("holidayMsg"),"ರಜೆ ಯಶಸ್ವಿಯಾಗಿ Save ಆಯಿತು.","ok");
+  await loadSheet(); await loadHolidayList();
+ }catch(e){show($("holidayMsg"),"Holiday save failed: "+e.message,"err");}
+}
+
+async function deleteHoliday(id){
+ if(!confirm("ಈ ರಜೆ entry ಅಳಿಸಬೇಕೇ?"))return;
+ try{ const {error}=await db.from("school_holidays").delete().eq("id",id); if(error)throw error; await loadSheet(); await loadHolidayList(); show($("holidayMsg"),"ರಜೆ entry ಅಳಿಸಲಾಗಿದೆ.","ok"); }catch(e){show($("holidayMsg"),"Delete failed: "+e.message,"err");}
+}
+
 async function saveMonth(){
  try{
   if(!currentRows?.yearId){await loadSheet(); if(!currentRows?.yearId)return}
@@ -310,15 +363,24 @@ async function saveMonth(){
 $("loadBtn").onclick=loadSheet;
 $("saveBtn").onclick=saveMonth;
 $("printBtn").onclick=()=>window.print();
+$("holidaySaveBtn").onclick=saveHoliday;
+$("holidayList").addEventListener("click",e=>{
+ const edit=e.target.closest(".holiday-edit");
+ const del=e.target.closest(".holiday-delete");
+ if(edit){ $("holidayDate").value=edit.dataset.date; $("holidayReason").value=edit.dataset.reason; $("holidayMsg").dataset.editId=edit.dataset.id; show($("holidayMsg"),"Edit ಮಾಡಲು ರಜೆ entry ಆಯ್ಕೆ ಮಾಡಲಾಗಿದೆ.","ok"); }
+ if(del) deleteHoliday(del.dataset.id);
+});
 $("month").onchange=loadSheet;
 $("classGroup").onchange=loadSheet;
-$("year").onchange=loadSheet;
+$("year").onchange=async()=>{await loadSheet();await loadHolidayList();};
 
 (async function init(){
  for(let i=1;i<=12;i++) $("month").insertAdjacentHTML("beforeend",`<option value="${i}">${months[i-1]}</option>`);
  setMonthDefault();
+ await loadSchoolSettings();
  await loadYears();
  await loadSheet();
+ await loadHolidayList();
 })();
 </script>
 </body>
