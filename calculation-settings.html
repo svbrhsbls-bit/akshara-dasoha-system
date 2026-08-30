@@ -13,8 +13,7 @@ header h1{margin:0;font-size:28px}
 header p{margin:5px 0 0}
 .wrap{max-width:1250px;margin:18px auto;padding:0 14px}
 .card{background:#fff;border-radius:12px;padding:20px;margin-bottom:16px;box-shadow:0 2px 10px #0001}
-.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;align-items:end}
-.grid5{display:grid;grid-template-columns:1.4fr 1fr 1fr auto;gap:12px;align-items:end}
+.grid{display:grid;grid-template-columns:1.2fr 1fr 1fr auto;gap:12px;align-items:end}
 label{display:block;font-weight:700;margin-bottom:6px}
 input,select{width:100%;height:42px;padding:9px;border:1px solid #bfc9c2;border-radius:7px;background:#fff;font:inherit}
 button{border:0;border-radius:7px;padding:9px 14px;font:inherit;font-weight:700;cursor:pointer}
@@ -22,167 +21,180 @@ button{border:0;border-radius:7px;padding:9px 14px;font:inherit;font-weight:700;
 .secondary{background:#e7ece9;color:#17202a}
 .edit{background:#f59e0b;color:#fff}
 .danger{background:#b42318;color:#fff}
+.lock{background:#475569;color:#fff}
 .msg{display:none;margin-top:10px;padding:9px;border-radius:7px}
 .msg.ok{display:block;background:#e5f6eb;color:#126b38}
 .msg.err{display:block;background:#fde8e7;color:#a11}
 .msg.info{display:block;background:#eaf3ff;color:#175cd1}
-.lockbox{background:#eef7f1;border:1px solid #cfe4d6;padding:12px;border-radius:8px}
-.lockbox b{font-size:19px}
 .small{font-size:13px;color:#64748b}
+.lockbox{background:#eef7f1;border:1px solid #cfe4d6;padding:12px;border-radius:8px}
+.year{font-size:20px;font-weight:700}
 .table-wrap{overflow:auto;margin-top:15px;border:1px solid #7f8b84}
-table{width:100%;border-collapse:collapse;min-width:900px;background:#fff}
+table{width:100%;border-collapse:collapse;min-width:800px;background:#fff}
 th,td{border:1px solid #7f8b84;padding:8px;text-align:center;vertical-align:middle}
 th{background:#eef2ef}
 .actions{white-space:nowrap}
-.badge{display:inline-block;padding:4px 8px;border-radius:15px;font-size:12px;font-weight:700}
-.on{background:#dcfce7;color:#166534}
-.off{background:#fee2e2;color:#991b1b}
-.empty{padding:22px;color:#64748b}
-.calc{background:#f8fbf9;font-weight:700}
-@media(max-width:850px){.grid,.grid5{grid-template-columns:1fr}}
+.calc{font-weight:700;background:#f8fbf9}
+.section-title{display:flex;justify-content:space-between;align-items:center;gap:10px}
+@media(max-width:850px){.grid{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
 
 <header>
-<h1 id="departmentTitle">ಅಕ್ಷರ ದಾಸೋಹ ಕಾರ್ಯಕ್ರಮ</h1>
-<p id="schoolTitle">ಶಾಲೆಯ ಹೆಸರು</p>
+  <h1 id="departmentTitle">ಅಕ್ಷರ ದಾಸೋಹ ಕಾರ್ಯಕ್ರಮ</h1>
+  <p id="schoolTitle">ಶಾಲೆಯ ಹೆಸರು</p>
 </header>
 
 <div class="wrap">
 
-<!-- ACTIVE ACADEMIC YEAR -->
-<div class="card">
-<h2 style="margin-top:0">ಶೈಕ್ಷಣಿಕ ವರ್ಷ</h2>
-<div class="lockbox">
-<div>Settings → Active Academic Year</div>
-<b id="academicYear">Loading...</b>
-<div class="small" style="margin-top:5px">
-Academic Year ಅನ್ನು ಇಲ್ಲಿ ಆಯ್ಕೆ ಮಾಡುವುದಿಲ್ಲ. School Settingsನಲ್ಲಿ Active ಆಗಿರುವ ವರ್ಷವೇ ಬಳಸಲಾಗುತ್ತದೆ.
-</div>
-</div>
-<div id="msg" class="msg"></div>
-</div>
+  <div class="card">
+    <h2 style="margin-top:0">School Settings → Active Academic Year</h2>
+    <div class="lockbox">
+      <div>ಪ್ರಸ್ತುತ Active Academic Year</div>
+      <div class="year" id="academicYear">Loading...</div>
+      <div class="small" style="margin-top:5px">
+        ಇಲ್ಲಿ Academic Year ಆಯ್ಕೆ ಮಾಡುವ option ಇಲ್ಲ. School Settingsನಲ್ಲಿ Active ಆಗಿರುವ Year ಮಾತ್ರ ಬಳಸಲಾಗುತ್ತದೆ.
+      </div>
+    </div>
+    <div id="mainMsg" class="msg"></div>
+  </div>
 
-<!-- CLASS + MONTH -->
-<div class="card">
-<h2 style="margin-top:0">ತರಗತಿ ಮತ್ತು ತಿಂಗಳು</h2>
-<div class="grid5">
-<div>
-<label>Class Group / ತರಗತಿ</label>
-<select id="classGroup">
-<option value="">ತರಗತಿ ಆಯ್ಕೆ ಮಾಡಿ</option>
-<option value="1-5">1 - 5</option>
-<option value="6-7">6 - 7</option>
-<option value="8-10">8 - 10</option>
-<option value="1-10">1 - 10</option>
-</select>
-</div>
-<div>
-<label>Month / ತಿಂಗಳು</label>
-<select id="month">
-<option value="">ತಿಂಗಳು ಆಯ್ಕೆ ಮಾಡಿ</option>
-</select>
-</div>
-<div>
-<label>ಸ್ಥಿತಿ</label>
-<div id="selectionStatus" class="lockbox" style="height:42px;padding:9px">ಆಯ್ಕೆ ಮಾಡಿಲ್ಲ</div>
-</div>
-<div>
-<button class="primary" id="loadBtn">Load</button>
-<button class="edit" id="editBtn" style="display:none">✏️ Edit</button>
-</div>
-</div>
-</div>
+  <div class="card">
+    <h2 style="margin-top:0">ತರಗತಿ + ತಿಂಗಳು</h2>
+    <div class="grid">
+      <div>
+        <label>Class Group / ತರಗತಿ</label>
+        <select id="classGroup">
+          <option value="">ತರಗತಿ ಆಯ್ಕೆ ಮಾಡಿ</option>
+          <option value="1-5">1 - 5</option>
+          <option value="6-7">6 - 7</option>
+          <option value="8-10">8 - 10</option>
+          <option value="1-10">1 - 10</option>
+        </select>
+      </div>
+      <div>
+        <label>Month / ತಿಂಗಳು</label>
+        <select id="month">
+          <option value="">ತಿಂಗಳು ಆಯ್ಕೆ ಮಾಡಿ</option>
+        </select>
+      </div>
+      <div>
+        <label>Selection Status</label>
+        <div class="lockbox" id="selectionStatus">ಆಯ್ಕೆ ಮಾಡಿಲ್ಲ</div>
+      </div>
+      <div>
+        <button class="primary" id="loadBtn">Load</button>
+        <button class="edit" id="editSelectionBtn" style="display:none">✏️ Edit</button>
+      </div>
+    </div>
+  </div>
 
-<!-- FOOD ITEM: KG/GRAM -->
-<div class="card">
-<h2 style="margin-top:0">🍚 Item — KG / Gram</h2>
-<div class="grid5">
-<div>
-<label>Item / ಪದಾರ್ಥ</label>
-<input id="itemName" placeholder="ಉದಾ: ಅಕ್ಕಿ">
-</div>
-<div>
-<label>Student 01 ಪ್ರಮಾಣ</label>
-<input id="itemQty" type="number" min="0" step="0.001" placeholder="ಉದಾ: 0.150">
-</div>
-<div>
-<label>ಅಳತೆ</label>
-<select id="itemUnit">
-<option value="KG">KG</option>
-<option value="Gram">Gram</option>
-</select>
-</div>
-<div>
-<button class="primary" id="itemSaveBtn">💾 Save</button>
-<button class="secondary" id="itemCancelBtn" style="display:none">Cancel</button>
-</div>
-</div>
-<div class="small" style="margin-top:8px">
-ಉದಾ: Student 01 = 0.150 KG, Daily Food Distributionನಲ್ಲಿ 20 students ಇದ್ದರೆ
-20 × 0.150 = <b>3.000 KG</b>.
-</div>
-<div class="table-wrap">
-<table>
-<thead><tr>
-<th>Sl.No</th><th>Item</th><th>Student 01</th><th>Unit</th><th>20 Students ಉದಾಹರಣೆ</th><th>Actions</th>
-</tr></thead>
-<tbody id="itemsBody"><tr><td colspan="6" class="empty">Class + Month ಆಯ್ಕೆ ಮಾಡಿ.</td></tr></tbody>
-</table>
-</div>
-</div>
+  <div class="card">
+    <div class="section-title">
+      <h2 style="margin:0">🍚 Calculation Item — KG / Gram</h2>
+    </div>
+    <p class="small">
+      ಇಲ್ಲಿ Itemಗೆ ಪ್ರತಿ ವಿದ್ಯಾರ್ಥಿಗೆ ಬೇಕಾದ ಪ್ರಮಾಣ ಮಾತ್ರ. ಉದಾ: ಅಕ್ಕಿ = 0.150 KG.
+    </p>
 
-<!-- INGREDIENT AMOUNT -->
-<div class="card">
-<h2 style="margin-top:0">🥕 ಅಡಿಗೆ ಪದಾರ್ಥ — ಮೊತ್ತ</h2>
-<div class="grid5">
-<div>
-<label>Item / ಅಡಿಗೆ ಪದಾರ್ಥ</label>
-<input id="ingredientName" placeholder="ಉದಾ: ತರಕಾರಿ">
-</div>
-<div>
-<label>Student 01 ಮೊತ್ತ (₹)</label>
-<input id="ingredientAmount" type="number" min="0" step="0.01" placeholder="ಉದಾ: 2.24">
-</div>
-<div>
-<label>ವಿವರಣೆ</label>
-<input value="ಪ್ರತಿ ವಿದ್ಯಾರ್ಥಿಗೆ" disabled>
-</div>
-<div>
-<button class="primary" id="ingredientSaveBtn">💾 Save</button>
-<button class="secondary" id="ingredientCancelBtn" style="display:none">Cancel</button>
-</div>
-</div>
-<div class="small" style="margin-top:8px">
-ಉದಾ: Student 01 = ₹2.24, Daily Food Distributionನಲ್ಲಿ 20 students ಇದ್ದರೆ
-20 × ₹2.24 = <b>₹44.80</b>.
-</div>
-<div class="table-wrap">
-<table>
-<thead><tr>
-<th>Sl.No</th><th>ಅಡಿಗೆ ಪದಾರ್ಥ</th><th>Student 01 ಮೊತ್ತ</th><th>20 Students ಉದಾಹರಣೆ</th><th>Actions</th>
-</tr></thead>
-<tbody id="ingredientsBody"><tr><td colspan="5" class="empty">Class + Month ಆಯ್ಕೆ ಮಾಡಿ.</td></tr></tbody>
-</table>
-</div>
-</div>
+    <div class="grid">
+      <div>
+        <label>Item</label>
+        <input id="itemName" placeholder="ಉದಾ: ಅಕ್ಕಿ">
+      </div>
+      <div>
+        <label>KG / Gram</label>
+        <input id="itemQty" type="number" min="0" step="0.001" placeholder="ಉದಾ: 0.150">
+      </div>
+      <div>
+        <label>Unit</label>
+        <select id="itemUnit">
+          <option value="KG">KG</option>
+          <option value="Gram">Gram</option>
+        </select>
+      </div>
+      <div>
+        <button class="primary" id="itemSaveBtn">💾 Save</button>
+        <button class="secondary" id="itemCancelBtn" style="display:none">Cancel</button>
+      </div>
+    </div>
 
-<!-- LOGIC NOTE -->
-<div class="card">
-<h2 style="margin-top:0">Daily Food Distribution → UC Calculation</h2>
-<div class="small" style="font-size:14px;line-height:1.7">
-ಈ ಪುಟದಲ್ಲಿ ಕೇವಲ <b>Student 01</b>ಗೆ ಬೇಕಾದ ಪ್ರಮಾಣ/ಮೊತ್ತವನ್ನು save ಮಾಡಲಾಗುತ್ತದೆ.
-<br>
-<strong>Students ಸಂಖ್ಯೆ ಇಲ್ಲಿ ಹಾಕುವುದಿಲ್ಲ.</strong>
-<br>
-Students ಸಂಖ್ಯೆ <b>daily-food-distribution.html</b>ನಲ್ಲಿ ದಿನವಾರು ದಾಖಲಾದ ಸಂಖ್ಯೆಯಿಂದಲೇ ಮುಂದಿನ calculationಗೆ ತೆಗೆದುಕೊಳ್ಳಬೇಕು.
-<br>
-ಉದಾಹರಣೆ: <b>20 × 0.150 KG = 3.000 KG</b> ಅಥವಾ <b>20 × ₹2.24 = ₹44.80</b>.
-<br>
-ಮುಂದೆ <b>UC.html</b>ನಲ್ಲಿ ದಿನವಾರು totals ಅನ್ನು Class-wise + Month-wise ಸೇರಿಸಿ Monthly Total ಮಾಡಬಹುದು.
-</div>
-</div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Sl.No</th>
+            <th>Item</th>
+            <th>Student 01</th>
+            <th>Unit</th>
+            <th>20 Students Example</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="itemsBody">
+          <tr><td colspan="6" class="small">Class + Month ಆಯ್ಕೆ ಮಾಡಿ.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="section-title">
+      <h2 style="margin:0">🥕 ಅಡಿಗೆ ಪದಾರ್ಥ — ಮೊತ್ತ</h2>
+    </div>
+    <p class="small">
+      ಇಲ್ಲಿ ಅಡಿಗೆ ಪದಾರ್ಥಕ್ಕೆ ಪ್ರತಿ ವಿದ್ಯಾರ್ಥಿಗೆ ಇರುವ ಮೊತ್ತ ಮಾತ್ರ. ಉದಾ: ತರಕಾರಿ = ₹2.24.
+    </p>
+
+    <div class="grid">
+      <div>
+        <label>Item / ಅಡಿಗೆ ಪದಾರ್ಥ</label>
+        <input id="ingredientName" placeholder="ಉದಾ: ತರಕಾರಿ">
+      </div>
+      <div>
+        <label>ಮೊತ್ತ (₹) / Student 01</label>
+        <input id="ingredientAmount" type="number" min="0" step="0.01" placeholder="ಉದಾ: 2.24">
+      </div>
+      <div>
+        <label>Unit</label>
+        <input value="₹" disabled>
+      </div>
+      <div>
+        <button class="primary" id="ingredientSaveBtn">💾 Save</button>
+        <button class="secondary" id="ingredientCancelBtn" style="display:none">Cancel</button>
+      </div>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Sl.No</th>
+            <th>ಅಡಿಗೆ ಪದಾರ್ಥ</th>
+            <th>Student 01 ಮೊತ್ತ</th>
+            <th>20 Students Example</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="ingredientsBody">
+          <tr><td colspan="5" class="small">Class + Month ಆಯ್ಕೆ ಮಾಡಿ.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2 style="margin-top:0">Calculation ವಿಧಾನ</h2>
+    <div class="small" style="font-size:14px;line-height:1.8">
+      <b>Students ಸಂಖ್ಯೆ ಇಲ್ಲಿ ನಮೂದಿಸುವುದಿಲ್ಲ.</b><br>
+      Students ಸಂಖ್ಯೆ ಮುಂದಿನ <b>UC.html</b> calculationನಲ್ಲಿ
+      <b>daily-food-distribution.html</b>ನ ದಿನವಾರು ದಾಖಲಾದ ಸಂಖ್ಯೆಯಿಂದ ತೆಗೆದುಕೊಳ್ಳಬೇಕು.<br><br>
+
+      <b>ಅಕ್ಕಿ:</b> 20 ವಿದ್ಯಾರ್ಥಿಗಳು × 0.150 KG = 3.000 KG<br>
+      <b>ತರಕಾರಿ:</b> 20 ವಿದ್ಯಾರ್ಥಿಗಳು × ₹2.24 = ₹44.80
+    </div>
+  </div>
 
 </div>
 
@@ -201,331 +213,506 @@ let editingItemId=null;
 let editingIngredientId=null;
 
 function esc(v){
- return String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  return String(v??"").replace(/[&<>"']/g,c=>({
+    "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+  }[c]));
 }
+
 function show(text,type="ok"){
- $("msg").textContent=text;
- $("msg").className="msg "+type;
+  $("mainMsg").textContent=text;
+  $("mainMsg").className="msg "+type;
 }
+
 function groupLabel(g){
- return {"1-5":"1 - 5","6-7":"6 - 7","8-10":"8 - 10","1-10":"1 - 10"}[g]||g;
-}
-function setSelectionStatus(){
- if(selectedGroup && selectedMonth){
-  $("selectionStatus").innerHTML="🔒 "+groupLabel(selectedGroup)+" / "+months[Number(selectedMonth)-1];
- }else{
-  $("selectionStatus").textContent="ಆಯ್ಕೆ ಮಾಡಿಲ್ಲ";
- }
-}
-function fillMonths(){
- for(let i=1;i<=12;i++){
-  $("month").insertAdjacentHTML("beforeend",`<option value="${i}">${months[i-1]}</option>`);
- }
+  return {"1-5":"1 - 5","6-7":"6 - 7","8-10":"8 - 10","1-10":"1 - 10"}[g]||g;
 }
 
-/* School Settings Active Academic Year is the only source */
-async function loadActiveYear(){
- const {data,error}=await db.from("academic_years")
-   .select("id,year_name,is_active")
-   .eq("is_active",true)
-   .order("created_at",{ascending:false})
-   .limit(1)
-   .maybeSingle();
-
- if(error){
-  $("academicYear").textContent="Load failed";
-  show("Active Academic Year load failed: "+error.message,"err");
-  return false;
- }
- if(!data){
-  $("academicYear").textContent="Active Year ಇಲ್ಲ";
-  show("School Settingsನಲ್ಲಿ Active Academic Year ಹೊಂದಿಸಿ.","err");
-  return false;
- }
- activeYear=data;
- $("academicYear").textContent=data.year_name;
- return true;
-}
-
-async function loadSchoolSettings(){
- try{
-  const {data,error}=await db.from("school_settings").select("*").limit(1).maybeSingle();
-  if(error)throw error;
-  if(data){
-   $("departmentTitle").textContent=data.department_name||"ಅಕ್ಷರ ದಾಸೋಹ ಕಾರ್ಯಕ್ರಮ";
-   $("schoolTitle").textContent=data.school_name||"ಶಾಲೆಯ ಹೆಸರು";
+function setStatus(){
+  if(selectedGroup && selectedMonth){
+    $("selectionStatus").innerHTML =
+      "🔒 "+groupLabel(selectedGroup)+" / "+months[Number(selectedMonth)-1];
+  }else{
+    $("selectionStatus").textContent="ಆಯ್ಕೆ ಮಾಡಿಲ್ಲ";
   }
- }catch(e){console.warn(e.message)}
-}
-
-function selectionStorageKey(){
- return "calculation-settings-selection-"+(activeYear?.id||"");
 }
 
 function lockSelection(){
- $("classGroup").disabled=true;
- $("month").disabled=true;
- $("loadBtn").style.display="none";
- $("editBtn").style.display="inline-block";
- setSelectionStatus();
+  $("classGroup").disabled=true;
+  $("month").disabled=true;
+  $("loadBtn").style.display="none";
+  $("editSelectionBtn").style.display="inline-block";
+  setStatus();
 }
+
 function unlockSelection(){
- $("classGroup").disabled=false;
- $("month").disabled=false;
- $("loadBtn").style.display="inline-block";
- $("editBtn").style.display="none";
- setSelectionStatus();
+  $("classGroup").disabled=false;
+  $("month").disabled=false;
+  $("loadBtn").style.display="inline-block";
+  $("editSelectionBtn").style.display="none";
+  setStatus();
 }
-function saveSelection(){
- localStorage.setItem(selectionStorageKey(),JSON.stringify({
-  classGroup:selectedGroup,
-  month:selectedMonth,
-  locked:true
- }));
+
+function selectionKey(){
+  return "calculation_settings_selection_"+(activeYear?.id||"");
 }
+
+function rememberSelection(){
+  localStorage.setItem(selectionKey(),JSON.stringify({
+    classGroup:selectedGroup,
+    month:selectedMonth
+  }));
+}
+
 function restoreSelection(){
- try{
-  const x=JSON.parse(localStorage.getItem(selectionStorageKey())||"null");
-  if(x?.locked){
-   selectedGroup=x.classGroup||"";
-   selectedMonth=x.month||"";
-   $("classGroup").value=selectedGroup;
-   $("month").value=selectedMonth;
-   if(selectedGroup&&selectedMonth){
-    lockSelection();
-    loadItems();
-    loadIngredients();
-   }
+  try{
+    const x=JSON.parse(localStorage.getItem(selectionKey())||"null");
+    if(x?.classGroup && x?.month){
+      selectedGroup=x.classGroup;
+      selectedMonth=String(x.month);
+      $("classGroup").value=selectedGroup;
+      $("month").value=selectedMonth;
+      lockSelection();
+      loadItems();
+      loadIngredients();
+    }
+  }catch(e){}
+}
+
+/* School Settings Active Academic Year ಮಾತ್ರ */
+async function loadActiveAcademicYear(){
+  const {data,error}=await db
+    .from("academic_years")
+    .select("id,year_name,is_active")
+    .eq("is_active",true)
+    .order("year_name",{ascending:false})
+    .limit(1)
+    .maybeSingle();
+
+  if(error){
+    $("academicYear").textContent="Load failed";
+    show("Academic Year load failed: "+error.message,"err");
+    return false;
   }
- }catch(e){}
+
+  if(!data){
+    $("academicYear").textContent="Active Year ಇಲ್ಲ";
+    show("School Settingsನಲ್ಲಿ Active Academic Year ಆಯ್ಕೆ ಮಾಡಿ.","err");
+    return false;
+  }
+
+  activeYear=data;
+  $("academicYear").textContent=data.year_name;
+  return true;
+}
+
+async function loadSchoolSettings(){
+  try{
+    const {data,error}=await db
+      .from("school_settings")
+      .select("*")
+      .limit(1)
+      .maybeSingle();
+
+    if(error)throw error;
+
+    if(data){
+      $("departmentTitle").textContent =
+        data.department_name || "ಅಕ್ಷರ ದಾಸೋಹ ಕಾರ್ಯಕ್ರಮ";
+      $("schoolTitle").textContent =
+        data.school_name || "ಶಾಲೆಯ ಹೆಸರು";
+    }
+  }catch(e){
+    console.warn("school_settings:",e.message);
+  }
+}
+
+function fillMonths(){
+  for(let i=1;i<=12;i++){
+    $("month").insertAdjacentHTML(
+      "beforeend",
+      `<option value="${i}">${months[i-1]}</option>`
+    );
+  }
 }
 
 async function applySelection(){
- if(!activeYear){
-  show("Active Academic Year ಇಲ್ಲ. School Settingsನಲ್ಲಿ Active Year ಹೊಂದಿಸಿ.","err");
-  return;
- }
- const g=$("classGroup").value;
- const m=$("month").value;
- if(!g||!m){
-  show("Class Group ಮತ್ತು Month ಆಯ್ಕೆ ಮಾಡಿ.","err");
-  return;
- }
- selectedGroup=g;
- selectedMonth=m;
- saveSelection();
- lockSelection();
- resetItem();
- resetIngredient();
- await loadItems();
- await loadIngredients();
- show("Class + Month Load ಆಯಿತು. Selection Lock ಆಗಿದೆ.","ok");
+  if(!activeYear){
+    show("Active Academic Year ಇಲ್ಲ.","err");
+    return;
+  }
+
+  const g=$("classGroup").value;
+  const m=$("month").value;
+
+  if(!g || !m){
+    show("Class Group ಮತ್ತು Month ಆಯ್ಕೆ ಮಾಡಿ.","err");
+    return;
+  }
+
+  selectedGroup=g;
+  selectedMonth=String(m);
+  rememberSelection();
+  lockSelection();
+
+  resetItem();
+  resetIngredient();
+
+  await loadItems();
+  await loadIngredients();
+
+  show("Class + Month Save/Lock ಆಯಿತು. ಬದಲಾಯಿಸಲು Edit ಒತ್ತಿರಿ.","ok");
 }
 
 function editSelection(){
- localStorage.removeItem(selectionStorageKey());
- unlockSelection();
+  localStorage.removeItem(selectionKey());
+  unlockSelection();
+  show("Class + Month Edit mode.","info");
 }
 
-/* Existing calculation_settings table */
+/* =========================================================
+   CALCULATION ITEMS
+   Table: calculation_settings
+   class_group + month_number + item_name +
+   quantity_per_student + unit + is_enabled
+   ========================================================= */
+
 async function loadItems(){
- if(!activeYear||!selectedGroup||!selectedMonth){
-  $("itemsBody").innerHTML='<tr><td colspan="6" class="empty">Class + Month ಆಯ್ಕೆ ಮಾಡಿ.</td></tr>';
-  return;
- }
+  if(!activeYear || !selectedGroup || !selectedMonth){
+    $("itemsBody").innerHTML =
+      '<tr><td colspan="6" class="small">Class + Month ಆಯ್ಕೆ ಮಾಡಿ.</td></tr>';
+    return;
+  }
 
- const {data,error}=await db.from("calculation_settings")
-  .select("*")
-  .eq("academic_year_id",activeYear.id)
-  .eq("class_group",selectedGroup)
-  .eq("month_number",Number(selectedMonth))
-  .order("created_at",{ascending:true});
+  const {data,error}=await db
+    .from("calculation_settings")
+    .select("id,academic_year_id,class_group,month_number,item_name,quantity_per_student,unit,is_enabled")
+    .eq("academic_year_id",activeYear.id)
+    .eq("class_group",selectedGroup)
+    .eq("month_number",Number(selectedMonth))
+    .order("item_name",{ascending:true});
 
- if(error){
-  show("Calculation item load failed: "+error.message,"err");
-  return;
- }
- $("itemsBody").innerHTML=(data||[]).length ? (data||[]).map((x,i)=>{
-  const qty=Number(x.quantity_per_student||0);
-  const unit=x.unit||"KG";
-  const example=unit==="Gram"
-   ? (qty*20).toFixed(3)+" Gram"
-   : (qty*20).toFixed(3)+" KG";
-  return `<tr>
-   <td>${i+1}</td>
-   <td>${esc(x.item_name)}</td>
-   <td>${qty.toFixed(3)}</td>
-   <td>${esc(unit)}</td>
-   <td class="calc">20 × ${qty.toFixed(3)} = ${example}</td>
-   <td class="actions">
-    <button class="edit" onclick='editItem(${JSON.stringify(x)})'>✏️ Edit</button>
-    <button class="danger" onclick="deleteItem('${x.id}')">🗑️ Delete</button>
-   </td>
-  </tr>`;
- }).join(""):'<tr><td colspan="6" class="empty">ಈ Class + Monthಗೆ Item ಇಲ್ಲ.</td></tr>';
+  if(error){
+    show("Calculation item load failed: "+error.message,"err");
+    return;
+  }
+
+  if(!data?.length){
+    $("itemsBody").innerHTML =
+      '<tr><td colspan="6" class="small">ಈ Class + Monthಗೆ Item ಇಲ್ಲ.</td></tr>';
+    return;
+  }
+
+  $("itemsBody").innerHTML=data.map((x,i)=>{
+    const qty=Number(x.quantity_per_student||0);
+    const unit=x.unit==="Gram"?"Gram":"KG";
+    const total=(qty*20).toFixed(3);
+    return `
+      <tr>
+        <td>${i+1}</td>
+        <td>${esc(x.item_name)}</td>
+        <td>${qty.toFixed(3)}</td>
+        <td>${esc(unit)}</td>
+        <td class="calc">20 × ${qty.toFixed(3)} = ${total} ${unit}</td>
+        <td class="actions">
+          <button class="edit item-edit" data-id="${esc(x.id)}">✏️ Edit</button>
+          <button class="danger item-delete" data-id="${esc(x.id)}">🗑️ Delete</button>
+        </td>
+      </tr>`;
+  }).join("");
 }
 
 async function saveItem(){
- if(!activeYear||!selectedGroup||!selectedMonth){
-  show("ಮೊದಲು Class + Month Load ಮಾಡಿ.","err");return;
- }
- const name=$("itemName").value.trim();
- const qty=$("itemQty").value;
- const unit=$("itemUnit").value;
- if(!name||qty===""||Number(qty)<0){
-  show("Item ಮತ್ತು Student 01 ಪ್ರಮಾಣ ನಮೂದಿಸಿ.","err");return;
- }
+  if(!activeYear || !selectedGroup || !selectedMonth){
+    show("ಮೊದಲು Class + Month Load ಮಾಡಿ.","err");
+    return;
+  }
 
- const payload = {
-  academic_year_id: activeYear.id,
-  class_group: selectedGroup,
-  month_number: Number(selectedMonth),
-  item_name: name,
-  quantity_per_student: Number(qty),
-  unit: unit,
-  is_enabled: true,
-  updated_at: new Date().toISOString()
-};
+  const name=$("itemName").value.trim();
+  const qtyText=$("itemQty").value;
+  const unit=$("itemUnit").value;
 
- let result;
- if(editingItemId){
-  result=await db.from("calculation_settings").update(payload)
-   .eq("id",editingItemId).eq("academic_year_id",activeYear.id).select().single();
- }else{
-  result=await db.from("calculation_settings").insert(payload).select().single();
- }
- if(result.error){show("Item Save failed: "+result.error.message,"err");return;}
- resetItem();
- await loadItems();
- show(editingItemId?"Item updated.":"Item saved.","ok");
+  if(!name){
+    show("Item ನಮೂದಿಸಿ.","err");
+    return;
+  }
+
+  if(qtyText==="" || Number(qtyText)<0){
+    show("KG / Gram ಪ್ರಮಾಣ ನಮೂದಿಸಿ.","err");
+    return;
+  }
+
+  const payload={
+    academic_year_id:activeYear.id,
+    class_group:selectedGroup,
+    month_number:Number(selectedMonth),
+    item_name:name,
+    quantity_per_student:Number(qtyText),
+    unit:unit,
+    is_enabled:true
+  };
+
+  let result;
+
+  if(editingItemId){
+    result=await db
+      .from("calculation_settings")
+      .update(payload)
+      .eq("id",editingItemId)
+      .eq("academic_year_id",activeYear.id)
+      .select()
+      .single();
+  }else{
+    result=await db
+      .from("calculation_settings")
+      .insert(payload)
+      .select()
+      .single();
+  }
+
+  if(result.error){
+    show("Item Save failed: "+result.error.message,"err");
+    return;
+  }
+
+  const wasEditing=!!editingItemId;
+  resetItem();
+  await loadItems();
+  show(wasEditing?"Item Update ಆಯಿತು.":"Item Save ಆಯಿತು.","ok");
 }
 
-function editItem(x){
- editingItemId=x.id;
- $("itemName").value=x.item_name||"";
- $("itemQty").value=x.quantity_per_student??"";
- $("itemUnit").value=x.unit==="Gram"?"Gram":"KG";
- $("itemSaveBtn").textContent="💾 Update";
- $("itemCancelBtn").style.display="inline-block";
+async function editItem(id){
+  const {data,error}=await db
+    .from("calculation_settings")
+    .select("*")
+    .eq("id",id)
+    .eq("academic_year_id",activeYear.id)
+    .single();
+
+  if(error){
+    show("Item edit load failed: "+error.message,"err");
+    return;
+  }
+
+  editingItemId=data.id;
+  $("itemName").value=data.item_name||"";
+  $("itemQty").value=data.quantity_per_student??"";
+  $("itemUnit").value=data.unit==="Gram"?"Gram":"KG";
+  $("itemSaveBtn").textContent="💾 Update";
+  $("itemCancelBtn").style.display="inline-block";
 }
+
 async function deleteItem(id){
- if(!confirm("ಈ Item ಅಳಿಸಬೇಕೇ?"))return;
- const {error}=await db.from("calculation_settings").delete()
-  .eq("id",id).eq("academic_year_id",activeYear.id);
- if(error){show("Delete failed: "+error.message,"err");return;}
- await loadItems();show("Item deleted.","ok");
+  if(!confirm("ಈ Item ಅಳಿಸಬೇಕೇ?"))return;
+
+  const {error}=await db
+    .from("calculation_settings")
+    .delete()
+    .eq("id",id)
+    .eq("academic_year_id",activeYear.id);
+
+  if(error){
+    show("Item Delete failed: "+error.message,"err");
+    return;
+  }
+
+  await loadItems();
+  show("Item Delete ಆಯಿತು.","ok");
 }
+
 function resetItem(){
- editingItemId=null;
- $("itemName").value="";
- $("itemQty").value="";
- $("itemUnit").value="KG";
- $("itemSaveBtn").textContent="💾 Save";
- $("itemCancelBtn").style.display="none";
+  editingItemId=null;
+  $("itemName").value="";
+  $("itemQty").value="";
+  $("itemUnit").value="KG";
+  $("itemSaveBtn").textContent="💾 Save";
+  $("itemCancelBtn").style.display="none";
 }
 
-/* Kitchen ingredients: Item + Amount only */
+/* =========================================================
+   KITCHEN INGREDIENTS
+   Table: kitchen_ingredients
+   class_group + month_number + ingredient_name +
+   amount_per_student + unit + is_enabled
+   ========================================================= */
+
 async function loadIngredients(){
- if(!activeYear||!selectedGroup||!selectedMonth){
-  $("ingredientsBody").innerHTML='<tr><td colspan="5" class="empty">Class + Month ಆಯ್ಕೆ ಮಾಡಿ.</td></tr>';
-  return;
- }
+  if(!activeYear || !selectedGroup || !selectedMonth){
+    $("ingredientsBody").innerHTML =
+      '<tr><td colspan="5" class="small">Class + Month ಆಯ್ಕೆ ಮಾಡಿ.</td></tr>';
+    return;
+  }
 
- const {data,error}=await db.from("kitchen_ingredients")
-  .select("*")
-  .eq("academic_year_id",activeYear.id)
-  .eq("class_group",selectedGroup)
-  .eq("month_number",Number(selectedMonth))
-  .order("created_at",{ascending:true});
+  const {data,error}=await db
+    .from("kitchen_ingredients")
+    .select("id,academic_year_id,class_group,month_number,ingredient_name,amount_per_student,unit,is_enabled")
+    .eq("academic_year_id",activeYear.id)
+    .eq("class_group",selectedGroup)
+    .eq("month_number",Number(selectedMonth))
+    .order("ingredient_name",{ascending:true});
 
- if(error){
-  show("ಅಡಿಗೆ ಪದಾರ್ಥ load failed: "+error.message,"err");return;
- }
+  if(error){
+    show("ಅಡಿಗೆ ಪದಾರ್ಥ load failed: "+error.message,"err");
+    return;
+  }
 
- $("ingredientsBody").innerHTML=(data||[]).length ? (data||[]).map((x,i)=>{
-  const amount=Number(x.amount_per_student||0);
-  return `<tr>
-   <td>${i+1}</td>
-   <td>${esc(x.ingredient_name)}</td>
-   <td>₹ ${amount.toFixed(2)}</td>
-   <td class="calc">20 × ₹${amount.toFixed(2)} = ₹${(amount*20).toFixed(2)}</td>
-   <td class="actions">
-    <button class="edit" onclick='editIngredient(${JSON.stringify(x)})'>✏️ Edit</button>
-    <button class="danger" onclick="deleteIngredient('${x.id}')">🗑️ Delete</button>
-   </td>
-  </tr>`;
- }).join(""):'<tr><td colspan="5" class="empty">ಈ Class + Monthಗೆ ಅಡಿಗೆ ಪದಾರ್ಥ ಇಲ್ಲ.</td></tr>';
+  if(!data?.length){
+    $("ingredientsBody").innerHTML =
+      '<tr><td colspan="5" class="small">ಈ Class + Monthಗೆ ಅಡಿಗೆ ಪದಾರ್ಥ ಇಲ್ಲ.</td></tr>';
+    return;
+  }
+
+  $("ingredientsBody").innerHTML=data.map((x,i)=>{
+    const amount=Number(x.amount_per_student||0);
+    return `
+      <tr>
+        <td>${i+1}</td>
+        <td>${esc(x.ingredient_name)}</td>
+        <td>₹ ${amount.toFixed(2)}</td>
+        <td class="calc">20 × ₹${amount.toFixed(2)} = ₹${(amount*20).toFixed(2)}</td>
+        <td class="actions">
+          <button class="edit ingredient-edit" data-id="${esc(x.id)}">✏️ Edit</button>
+          <button class="danger ingredient-delete" data-id="${esc(x.id)}">🗑️ Delete</button>
+        </td>
+      </tr>`;
+  }).join("");
 }
 
 async function saveIngredient(){
- if(!activeYear||!selectedGroup||!selectedMonth){
-  show("ಮೊದಲು Class + Month Load ಮಾಡಿ.","err");return;
- }
- const name=$("ingredientName").value.trim();
- const amount=$("ingredientAmount").value;
- if(!name||amount===""||Number(amount)<0){
-  show("ಅಡಿಗೆ ಪದಾರ್ಥ ಮತ್ತು Student 01 ಮೊತ್ತ ನಮೂದಿಸಿ.","err");return;
- }
+  if(!activeYear || !selectedGroup || !selectedMonth){
+    show("ಮೊದಲು Class + Month Load ಮಾಡಿ.","err");
+    return;
+  }
 
- const payload={
-  academic_year_id:activeYear.id,
-  class_group:selectedGroup,
-  month_number:Number(selectedMonth),
-  ingredient_name:name,
-  quantity_per_student:0,
-  unit:"",
-  amount_per_student:Number(amount),
-  is_enabled:true,
-  updated_at:new Date().toISOString()
- };
+  const name=$("ingredientName").value.trim();
+  const amountText=$("ingredientAmount").value;
 
- let result;
- if(editingIngredientId){
-  result=await db.from("kitchen_ingredients").update(payload)
-   .eq("id",editingIngredientId).eq("academic_year_id",activeYear.id).select().single();
- }else{
-  result=await db.from("kitchen_ingredients").insert(payload).select().single();
- }
- if(result.error){show("ಅಡಿಗೆ ಪದಾರ್ಥ Save failed: "+result.error.message,"err");return;}
- resetIngredient();
- await loadIngredients();
- show(editingIngredientId?"ಅಡಿಗೆ ಪದಾರ್ಥ updated.":"ಅಡಿಗೆ ಪದಾರ್ಥ saved.","ok");
+  if(!name){
+    show("ಅಡಿಗೆ ಪದಾರ್ಥದ Item ನಮೂದಿಸಿ.","err");
+    return;
+  }
+
+  if(amountText==="" || Number(amountText)<0){
+    show("ಮೊತ್ತ ನಮೂದಿಸಿ.","err");
+    return;
+  }
+
+  const payload={
+    academic_year_id:activeYear.id,
+    class_group:selectedGroup,
+    month_number:Number(selectedMonth),
+    ingredient_name:name,
+    amount_per_student:Number(amountText),
+    unit:"₹",
+    is_enabled:true
+  };
+
+  let result;
+
+  if(editingIngredientId){
+    result=await db
+      .from("kitchen_ingredients")
+      .update(payload)
+      .eq("id",editingIngredientId)
+      .eq("academic_year_id",activeYear.id)
+      .select()
+      .single();
+  }else{
+    result=await db
+      .from("kitchen_ingredients")
+      .insert(payload)
+      .select()
+      .single();
+  }
+
+  if(result.error){
+    show("ಅಡಿಗೆ ಪದಾರ್ಥ Save failed: "+result.error.message,"err");
+    return;
+  }
+
+  const wasEditing=!!editingIngredientId;
+  resetIngredient();
+  await loadIngredients();
+  show(wasEditing?"ಅಡಿಗೆ ಪದಾರ್ಥ Update ಆಯಿತು.":"ಅಡಿಗೆ ಪದಾರ್ಥ Save ಆಯಿತು.","ok");
 }
 
-function editIngredient(x){
- editingIngredientId=x.id;
- $("ingredientName").value=x.ingredient_name||"";
- $("ingredientAmount").value=x.amount_per_student??"";
- $("ingredientSaveBtn").textContent="💾 Update";
- $("ingredientCancelBtn").style.display="inline-block";
+async function editIngredient(id){
+  const {data,error}=await db
+    .from("kitchen_ingredients")
+    .select("*")
+    .eq("id",id)
+    .eq("academic_year_id",activeYear.id)
+    .single();
+
+  if(error){
+    show("ಅಡಿಗೆ ಪದಾರ್ಥ edit load failed: "+error.message,"err");
+    return;
+  }
+
+  editingIngredientId=data.id;
+  $("ingredientName").value=data.ingredient_name||"";
+  $("ingredientAmount").value=data.amount_per_student??"";
+  $("ingredientSaveBtn").textContent="💾 Update";
+  $("ingredientCancelBtn").style.display="inline-block";
 }
+
 async function deleteIngredient(id){
- if(!confirm("ಈ ಅಡಿಗೆ ಪದಾರ್ಥ ಅಳಿಸಬೇಕೇ?"))return;
- const {error}=await db.from("kitchen_ingredients").delete()
-  .eq("id",id).eq("academic_year_id",activeYear.id);
- if(error){show("Delete failed: "+error.message,"err");return;}
- await loadIngredients();show("ಅಡಿಗೆ ಪದಾರ್ಥ deleted.","ok");
-}
-function resetIngredient(){
- editingIngredientId=null;
- $("ingredientName").value="";
- $("ingredientAmount").value="";
- $("ingredientSaveBtn").textContent="💾 Save";
- $("ingredientCancelBtn").style.display="none";
+  if(!confirm("ಈ ಅಡಿಗೆ ಪದಾರ್ಥ ಅಳಿಸಬೇಕೇ?"))return;
+
+  const {error}=await db
+    .from("kitchen_ingredients")
+    .delete()
+    .eq("id",id)
+    .eq("academic_year_id",activeYear.id);
+
+  if(error){
+    show("ಅಡಿಗೆ ಪದಾರ್ಥ Delete failed: "+error.message,"err");
+    return;
+  }
+
+  await loadIngredients();
+  show("ಅಡಿಗೆ ಪದಾರ್ಥ Delete ಆಯಿತು.","ok");
 }
 
+function resetIngredient(){
+  editingIngredientId=null;
+  $("ingredientName").value="";
+  $("ingredientAmount").value="";
+  $("ingredientSaveBtn").textContent="💾 Save";
+  $("ingredientCancelBtn").style.display="none";
+}
+
+/* Events */
 $("loadBtn").onclick=applySelection;
-$("editBtn").onclick=editSelection;
+$("editSelectionBtn").onclick=editSelection;
+
 $("itemSaveBtn").onclick=saveItem;
 $("itemCancelBtn").onclick=resetItem;
+
 $("ingredientSaveBtn").onclick=saveIngredient;
 $("ingredientCancelBtn").onclick=resetIngredient;
 
+$("itemsBody").addEventListener("click",e=>{
+  const edit=e.target.closest(".item-edit");
+  const del=e.target.closest(".item-delete");
+  if(edit)editItem(edit.dataset.id);
+  if(del)deleteItem(del.dataset.id);
+});
+
+$("ingredientsBody").addEventListener("click",e=>{
+  const edit=e.target.closest(".ingredient-edit");
+  const del=e.target.closest(".ingredient-delete");
+  if(edit)editIngredient(edit.dataset.id);
+  if(del)deleteIngredient(del.dataset.id);
+});
+
 (async function init(){
- fillMonths();
- await loadSchoolSettings();
- const ok=await loadActiveYear();
- if(ok)restoreSelection();
+  fillMonths();
+  await loadSchoolSettings();
+
+  const ok=await loadActiveAcademicYear();
+  if(!ok)return;
+
+  restoreSelection();
 })();
 </script>
 </body>
