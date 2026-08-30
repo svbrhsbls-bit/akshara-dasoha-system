@@ -82,7 +82,7 @@ tfoot td{font-weight:700;background:#e8eee9}
 <div class="wrap">
   <div class="card no-print">
     <div class="controls">
-      <div><label>Academic Year / ಶೈಕ್ಷಣಿಕ ವರ್ಷ</label>
+      <div><label>Settings → Active Academic Year / ಸಕ್ರಿಯ ಶೈಕ್ಷಣಿಕ ವರ್ಷ</label>
         <input id="yearDisplay" type="text" readonly placeholder="School Settings Active Year">
         <div id="settingsYearNote" class="small" style="margin-top:5px"></div>
       </div>
@@ -210,18 +210,62 @@ function getYearNumber(yearName){
 
 /* student_numbers table: month_number ಅವಲಂಬನೆ ಇಲ್ಲ.
    Academic year + class ಆಧಾರದಲ್ಲಿ Students Number ತೆಗೆದುಕೊಳ್ಳುತ್ತದೆ. */
-async function getStudentCounts(yearId,group){
+async function getStudentCounts(yearId,group,month){
+  /*
+    Students Number page saves:
+      1-5  => class_number 1
+      6-7  => class_number 6
+      8    => class_number 8
+      9    => class_number 9
+      10   => class_number 10
+
+    Therefore Daily Food must use the SAME group keys,
+    and must also filter by the selected month.
+  */
   const classes=groups[group];
+  const sourceClassNumbers =
+    group === "1-7" ? [1,6] :
+    group === "8-10" ? [8,9,10] :
+    [1,6,8,9,10];
+
   const {data,error}=await db.from("student_numbers")
     .select("class_number,division_name,total_students,boys,girls")
     .eq("academic_year_id",yearId)
-    .in("class_number",classes);
+    .eq("month_number",Number(month))
+    .eq("division_name","ALL")
+    .in("class_number",sourceClassNumbers);
+
   if(error)throw error;
-  const out={}; classes.forEach(c=>out[c]=0);
-  (data||[]).forEach(r=>{
-    const c=Number(r.class_number);
-    if(classes.includes(c))out[c]=(out[c]||0)+Number(r.total_students||0);
-  });
+
+  const out={};
+  classes.forEach(c=>out[c]=0);
+
+  if(group === "8-10") {
+    (data||[]).forEach(r=>{
+      const c=Number(r.class_number);
+      if(classes.includes(c)){
+        out[c]=Number(r.total_students||0);
+      }
+    });
+  } else if(group === "1-7") {
+    /* Students Number stores 1-5 and 6-7 as two totals.
+       Put the group total on the first class of each stored group.
+       The attendance remains common for all selected classes. */
+    const r15=(data||[]).find(r=>Number(r.class_number)===1);
+    const r67=(data||[]).find(r=>Number(r.class_number)===6);
+    if(classes.includes(1)) out[1]=Number(r15?.total_students||0);
+    if(classes.includes(6)) out[6]=Number(r67?.total_students||0);
+  } else {
+    const r15=(data||[]).find(r=>Number(r.class_number)===1);
+    const r67=(data||[]).find(r=>Number(r.class_number)===6);
+    if(classes.includes(1)) out[1]=Number(r15?.total_students||0);
+    if(classes.includes(6)) out[6]=Number(r67?.total_students||0);
+    [8,9,10].forEach(c=>{
+      const r=(data||[]).find(x=>Number(x.class_number)===c);
+      if(classes.includes(c)) out[c]=Number(r?.total_students||0);
+    });
+  }
+
   return out;
 }
 
@@ -420,7 +464,7 @@ async function loadSheet(){
   try{
     if(!currentYear) throw new Error("School Settingsನಲ್ಲಿ Active Academic Year ಹೊಂದಿಸಿಲ್ಲ.");
     const yearId=currentYear.id,year=getYearNumber(currentYear.year_name),month=Number($("month").value),group=$("classGroup").value;
-    const [counts,holidays,food]=await Promise.all([getStudentCounts(yearId,group),getHolidayMap(yearId,month,year),getFood(yearId,month,year)]);
+    const [counts,holidays,food]=await Promise.all([getStudentCounts(yearId,group,month),getHolidayMap(yearId,month,year),getFood(yearId,month,year)]);
     currentRows={yearId,year,month,group,counts,holidays,food};
     editDates.clear(); renderSheet(year,month,counts,holidays,food,group);
     applyMonthClassLock();
