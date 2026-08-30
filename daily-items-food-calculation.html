@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="kn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Daily Items & Food Ingredients Calculation</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#f3f6f4;color:#17202a;font-family:Arial,"Noto Sans Kannada","Nirmala UI",sans-serif}
+header{background:#126b38;color:#fff;padding:18px 28px}
+header h1{margin:0;font-size:27px} header p{margin:5px 0 0}
+.wrap{max-width:1500px;margin:18px auto;padding:0 14px}
+.card{background:#fff;border-radius:12px;padding:18px;margin-bottom:16px;box-shadow:0 2px 10px #0001}
+.controls{display:grid;grid-template-columns:1.2fr 1fr 1fr auto;gap:12px;align-items:end}
+label{display:block;font-weight:700;margin-bottom:6px}
+select,input,button{font:inherit}
+select,input{width:100%;height:42px;padding:9px;border:1px solid #bfc9c2;border-radius:7px;background:#fff}
+button{border:0;border-radius:7px;padding:9px 14px;font-weight:700;cursor:pointer}
+.primary{background:#126b38;color:#fff}.secondary{background:#e7ece9;color:#17202a}
+.msg{display:none;margin-top:10px;padding:9px;border-radius:7px}
+.msg.ok{display:block;background:#e5f6eb;color:#126b38}
+.msg.err{display:block;background:#fde8e7;color:#a11}
+.msg.info{display:block;background:#eaf3ff;color:#175cd1}
+.lockbox{background:#eef7f1;border:1px solid #cfe4d6;padding:12px;border-radius:8px}
+.year{font-size:20px;font-weight:700}
+.table-wrap{overflow:auto;border:1px solid #7f8b84}
+table{width:100%;border-collapse:collapse;min-width:1000px;background:#fff}
+th,td{border:1px solid #7f8b84;padding:7px;text-align:center;vertical-align:middle}
+th{background:#eef2ef}
+.section{background:#dfe7e2;font-weight:700}
+.total{font-weight:700;background:#f6f8f7}
+.amount{font-weight:700}
+.muted{color:#64748b;font-size:13px}
+.kg{font-weight:700}
+.rupee{font-weight:700}
+.empty{padding:20px;color:#64748b}
+@media(max-width:900px){.controls{grid-template-columns:1fr}}
+@media print{
+ body{background:#fff}
+ header,.no-print{display:none!important}
+ .wrap{max-width:none;margin:0;padding:0}
+ .card{box-shadow:none;padding:0;margin:0}
+ .table-wrap{overflow:visible;border:0}
+ table{width:100%;min-width:0;font-size:8px}
+ th,td{padding:3px}
+ .reportHead{display:block!important}
+ @page{size:A4 landscape;margin:5mm}
+}
+</style>
+</head>
+<body>
+
+<header>
+<h1 id="departmentTitle">ಅಕ್ಷರ ದಾಸೋಹ ಕಾರ್ಯಕ್ರಮ</h1>
+<p id="schoolTitle">ಶಾಲೆಯ ಹೆಸರು</p>
+</header>
+
+<div class="wrap">
+
+<div class="card no-print">
+<div class="controls">
+<div>
+<label>Active Academic Year</label>
+<div class="lockbox year" id="academicYear">Loading...</div>
+</div>
+<div>
+<label>ತಿಂಗಳು / Month</label>
+<input id="calcMonth" type="month">
+</div>
+<div>
+<label>Class Group / ತರಗತಿ</label>
+<select id="classGroup">
+<option value="1-7">1 - 7</option>
+<option value="8-10">8 - 10</option>
+<option value="1-10">1 - 10</option>
+</select>
+</div>
+<button class="primary" id="loadBtn">ತಿಂಗಳ ಮಾಹಿತಿ Load ಮಾಡಿ</button>
+</div>
+<div id="msg" class="msg"></div>
+<div class="muted" style="margin-top:9px">
+ಈ ಪುಟವು ವಿದ್ಯಾರ್ಥಿಗಳ ಸಂಖ್ಯೆಯನ್ನು ನಮೂದಿಸುವುದಿಲ್ಲ. <b>Daily Food Distribution</b>ನಲ್ಲಿ ಆಯ್ಕೆ ಮಾಡಿದ ತಿಂಗಳ ಪ್ರತಿಯೊಂದು ದಿನ ದಾಖಲಾದ Class-wise student count ಅನ್ನು ತೆಗೆದುಕೊಂಡು, ಆ ತಿಂಗಳ <b>ಪ್ರತಿ ದಿನದ Item ಮತ್ತು ಅಡಿಗೆ ಪದಾರ್ಥಗಳ calculation</b> ತೋರಿಸುತ್ತದೆ.
+</div>
+</div>
+
+<div class="card">
+<div class="reportHead" style="display:none;text-align:center">
+<div style="font-size:16px;font-weight:700" id="printDepartment"></div>
+<div style="font-size:14px;font-weight:700;margin-top:2px" id="printSchool"></div>
+<div style="font-weight:700;margin-top:5px">ಪ್ರತಿದಿನದ ಆಹಾರ ಪದಾರ್ಥ ಮತ್ತು ಅಡಿಗೆ ಪದಾರ್ಥಗಳ ಲೆಕ್ಕ</div>
+<div id="printDate" style="margin:2px 0 7px"></div>
+</div>
+
+<div id="summary" style="display:none;margin-bottom:12px">
+<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px">
+<div class="lockbox"><b>ತಿಂಗಳು</b><br><span id="sMonth">-</span></div>
+<div class="lockbox"><b>Class Group</b><br><span id="sGroup">-</span></div>
+<div class="lockbox"><b>ದಿನಗಳು</b><br><span id="sDays">0</span></div>
+<div class="lockbox"><b>Items</b><br><span id="sItems">0</span></div>
+</div>
+</div>
+
+<div id="tableHost">
+<div class="empty">Date ಮತ್ತು Class Group ಆಯ್ಕೆ ಮಾಡಿ Load Calculation ಒತ್ತಿರಿ.</div>
+</div>
+
+<div class="no-print" style="display:flex;gap:8px;margin-top:12px">
+<button class="secondary" id="excelBtn">📊 Excel Export</button>
+<button class="secondary" id="printBtn">🖨️ Print / PDF</button>
+</div>
+
+<div class="no-print" id="formulaNote" style="margin-top:12px"></div>
+
+</div>
+</div>
+
+<script>
+const SUPABASE_URL="https://ezmudfrpcvjsgnjibvoq.supabase.co";
+const SUPABASE_KEY="sb_publishable__FYyH6NQaqgARaq2dvuovQ_rKmus0js";
+const db=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+
+const $=id=>document.getElementById(id);
+const groups={
+ "1-7":[
+   {key:"1-5",label:"1 - 5"},
+   {key:"6-7",label:"6 - 7"}
+ ],
+ "8-10":[
+   {key:"8",label:"8"},
+   {key:"9",label:"9"},
+   {key:"10",label:"10"}
+ ],
+ "1-10":[
+   {key:"1-5",label:"1 - 5"},
+   {key:"6-7",label:"6 - 7"},
+   {key:"8-10",label:"8 - 10"}
+ ]
+};
+
+let activeYear=null;
+let currentData=null;
+
+function esc(v){
+ return String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+}
+function show(text,type="ok"){
+ $("msg").textContent=text;
+ $("msg").className="msg "+type;
+}
+function groupLabel(g){
+ return {"1-7":"1 - 7","8-10":"8 - 10","1-10":"1 - 10"}[g]||g;
+}
+function num(v){return Number(v||0)}
+function fmtQty(v,unit){
+ const n=Number(v||0);
+ return unit==="Gram"?n.toFixed(3):n.toFixed(3);
+}
+function fmtMoney(v){return "₹"+Number(v||0).toFixed(2)}
+
+async function loadSchoolSettings(){
+ try{
+  const {data,error}=await db.from("school_settings").select("*").limit(1).maybeSingle();
+  if(error)throw error;
+  const row=data||{};
+  const dept=row.department_name||"ಅಕ್ಷರ ದಾಸೋಹ ಕಾರ್ಯಕ್ರಮ";
+  const school=row.school_name||"ಶಾಲೆಯ ಹೆಸರು";
+  $("departmentTitle").textContent=dept;
+  $("schoolTitle").textContent=school;
+  $("printDepartment").textContent=dept;
+  $("printSchool").textContent=school;
+ }catch(e){console.warn("school_settings:",e.message)}
+}
+
+async function loadActiveYear(){
+ const {data,error}=await db.from("academic_years")
+  .select("id,year_name,is_active")
+  .eq("is_active",true)
+  .order("created_at",{ascending:false})
+  .limit(1)
+  .maybeSingle();
+
+ if(error){
+  $("academicYear").textContent="Load failed";
+  show("Active Academic Year load failed: "+error.message,"err");
+  return false;
+ }
+ if(!data){
+  $("academicYear").textContent="Active Year ಇಲ್ಲ";
+  show("School Settingsನಲ್ಲಿ Active Academic Year ಆಯ್ಕೆ ಮಾಡಿ.","err");
+  return false;
+ }
+ activeYear=data;
+ $("academicYear").textContent=data.year_name;
+ return true;
+}
+
+/*
+ Calculation Settings:
+ - calculation_settings = Item + KG/Gram
+ - kitchen_ingredients = ಅಡಿಗೆ ಪದಾರ್ಥ + amount
+ Month ಅನ್ನು calculation settingsನಲ್ಲಿ ಬಳಸುವುದಿಲ್ಲ.
+*/
+async function loadSettings(group){
+ const [itemsRes,ingredientsRes]=await Promise.all([
+  db.from("calculation_settings")
+    .select("id,academic_year_id,class_group,item_name,quantity_per_student,unit,is_enabled")
+    .eq("academic_year_id",activeYear.id)
+    .eq("class_group",group)
+    .order("item_name",{ascending:true}),
+  db.from("kitchen_ingredients")
+    .select("id,academic_year_id,class_group,item_name,amount_per_student,is_enabled")
+    .eq("academic_year_id",activeYear.id)
+    .eq("class_group",group)
+    .order("item_name",{ascending:true})
+ ]);
+
+ if(itemsRes.error)throw new Error("Calculation Item load failed: "+itemsRes.error.message);
+ if(ingredientsRes.error)throw new Error("ಅಡಿಗೆ ಪದಾರ್ಥ load failed: "+ingredientsRes.error.message);
+
+ return {
+  items:(itemsRes.data||[]).filter(x=>x.is_enabled!==false),
+  ingredients:(ingredientsRes.data||[]).filter(x=>x.is_enabled!==false)
+ };
+}
+
+/*
+ Daily Food Distribution is the ONLY source for daily student count.
+ Expected records:
+   item_name = "ವಿದ್ಯಾರ್ಥಿಗಳು||1-5"
+   item_name = "ವಿದ್ಯಾರ್ಥಿಗಳು||6-7"
+   item_name = "ವಿದ್ಯಾರ್ಥಿಗಳು||8"
+   item_name = "ವಿದ್ಯಾರ್ಥಿಗಳು||9"
+   item_name = "ವಿದ್ಯಾರ್ಥಿಗಳು||10"
+   item_name = "ವಿದ್ಯಾರ್ಥಿಗಳು||8-10"
+*/
+async function loadDailyStudents(month){
+ const startDate=month+"-01";
+ const [yy,mm]=month.split("-").map(Number);
+ const lastDay=new Date(yy,mm,0).getDate();
+ const endDate=`${yy}-${String(mm).padStart(2,"0")}-${String(lastDay).padStart(2,"0")}`;
+
+ // Read all columns so this page is not tied to a particular optional column name.
+ const {data,error}=await db.from("daily_food_distribution")
+  .select("*")
+  .eq("academic_year_id",activeYear.id)
+  .gte("distribution_date",startDate)
+  .lte("distribution_date",endDate)
+  .order("distribution_date",{ascending:true});
+
+ if(error)throw new Error("Daily Food Distribution load failed: "+error.message);
+
+ const result={};
+
+ function getDate(r){
+  return r.distribution_date || r.date || r.food_date || r.entry_date || null;
+ }
+ function getCount(r){
+  const candidates=[
+   r.students_count,r.student_count,r.total_students,r.students,
+   r.count,r.number_of_students,r.total_quantity
+  ];
+  for(const v of candidates){
+   if(v!==null && v!==undefined && v!=="") return num(v);
+  }
+  return 0;
+ }
+ function getGroupKey(r){
+  const raw=String(
+   r.class_group ?? r.classGroup ?? r.class ?? r.class_name ??
+   r.group_name ?? r.section_group ?? ""
+  ).trim();
+  return raw;
+ }
+
+ (data||[]).forEach(r=>{
+   const d=getDate(r);
+   if(!d)return;
+   const key=d.slice(0,10);
+   if(!result[key])result[key]={};
+
+   const rawGroup=getGroupKey(r);
+
+   // Common Daily Food Distribution layouts.
+   const name=String(r.item_name ?? r.category ?? r.name ?? "").trim();
+   const text=(rawGroup+" "+name).replace(/\s+/g," ");
+
+   let g=null;
+   if(/(^|[^0-9])1\s*-\s*5([^0-9]|$)/.test(text))g="1-5";
+   else if(/(^|[^0-9])6\s*-\s*7([^0-9]|$)/.test(text))g="6-7";
+   else if(/(^|[^0-9])8\s*-\s*10([^0-9]|$)/.test(text))g="8-10";
+   else if(/(^|[^0-9])8([^0-9]|$)/.test(text))g="8";
+   else if(/(^|[^0-9])9([^0-9]|$)/.test(text))g="9";
+   else if(/(^|[^0-9])10([^0-9]|$)/.test(text))g="10";
+
+   if(g) result[key][g]=(result[key][g]||0)+getCount(r);
+
+   // If the table stores all class counts in one row, support those columns too.
+   const aliases={
+    "1-5":["class_1_5","students_1_5","count_1_5","students_1to5"],
+    "6-7":["class_6_7","students_6_7","count_6_7","students_6to7"],
+    "8":["class_8","students_8","count_8"],
+    "9":["class_9","students_9","count_9"],
+    "10":["class_10","students_10","count_10"],
+    "8-10":["class_8_10","students_8_10","count_8_10","students_8to10"]
+   };
+   Object.entries(aliases).forEach(([k,cols])=>{
+    for(const c of cols){
+      if(r[c]!==undefined && r[c]!==null && r[c]!==""){
+       result[key][k]=num(r[c]);
+       break;
+      }
+    }
+   });
+ });
+
+ return result;
+}
+
+function getCountsForGroup(map,group){
+ const units=groups[group];
+ const out={};
+ units.forEach(u=>out[u.key]=num(map[u.key]));
+ return out;
+}
+
+function buildDailyRows(settings, dailyMap, group, month){
+ const units=groups[group];
+ const days=Object.keys(dailyMap).sort();
+ const result=[];
+
+ days.forEach(date=>{
+  const counts=getCountsForGroup(dailyMap[date],group);
+  const students=units.reduce((s,u)=>s+num(counts[u.key]),0);
+
+  settings.items.forEach(x=>{
+   const qty=num(x.quantity_per_student);
+   const grand=units.reduce((s,u)=>s+num(counts[u.key])*qty,0);
+   result.push({
+    date,section:"Item",name:x.item_name,students,counts,
+    perStudent:qty,unit:x.unit||"KG",total:grand,amount:null
+   });
+  });
+
+  settings.ingredients.forEach(x=>{
+   const amount=num(x.amount_per_student);
+   const grand=units.reduce((s,u)=>s+num(counts[u.key])*amount,0);
+   result.push({
+    date,section:"ಅಡಿಗೆ ಪದಾರ್ಥ",name:x.item_name,students,counts,
+    perStudent:amount,unit:"₹",total:null,amount:grand
+   });
+  });
+ });
+
+ return {days,result};
+}
+
+function renderMonthly(settings,dailyMap,group,month){
+ const units=groups[group];
+ const {days,result}=buildDailyRows(settings,dailyMap,group,month);
+
+ currentData={settings,dailyMap,group,month,days,result};
+
+ $("summary").style.display="block";
+ $("sMonth").textContent=month;
+ $("sGroup").textContent=groupLabel(group);
+ $("sDays").textContent=days.length;
+ $("sItems").textContent=settings.items.length+settings.ingredients.length;
+
+ $("printDate").textContent=`ತಿಂಗಳು: ${month} | ತರಗತಿ: ${groupLabel(group)}`;
+
+ if(!days.length){
+  $("tableHost").innerHTML=`<div class="empty">ಆಯ್ಕೆ ಮಾಡಿದ ತಿಂಗಳಲ್ಲಿ Daily Food Distributionನ ಯಾವುದೇ ದಿನದ ದಾಖಲೆ ಸಿಗಲಿಲ್ಲ.</div>`;
+  $("formulaNote").innerHTML="";
+  return;
+ }
+
+ let html=`
+ <table id="calcTable">
+ <thead>
+ <tr>
+  <th>Sl.No</th>
+  <th>ದಿನಾಂಕ</th>
+  <th>ವಿಭಾಗ</th>
+  <th>Item / ಅಡಿಗೆ ಪದಾರ್ಥ</th>
+  ${units.map(u=>`<th>${u.label}<br>Students</th>`).join("")}
+  <th>ಪ್ರತಿ ವಿದ್ಯಾರ್ಥಿಗೆ</th>
+  <th>Unit</th>
+  <th>ಆ ದಿನದ ಒಟ್ಟು ಪ್ರಮಾಣ / ಮೊತ್ತ</th>
+ </tr>
+ </thead><tbody>`;
+
+ let no=1;
+
+ days.forEach(date=>{
+  const counts=getCountsForGroup(dailyMap[date],group);
+
+  settings.items.forEach(x=>{
+   const qty=num(x.quantity_per_student);
+   const grand=units.reduce((s,u)=>s+num(counts[u.key])*qty,0);
+   html+=`<tr>
+    <td>${no++}</td><td>${esc(date)}</td><td class="section">Item</td>
+    <td><b>${esc(x.item_name)}</b></td>
+    ${units.map(u=>`<td>${num(counts[u.key])}</td>`).join("")}
+    <td class="kg">${fmtQty(qty,x.unit)}</td><td>${esc(x.unit||"KG")}</td>
+    <td class="total">${fmtQty(grand,x.unit||"KG")}</td>
+   </tr>`;
+  });
+
+  settings.ingredients.forEach(x=>{
+   const amount=num(x.amount_per_student);
+   const grand=units.reduce((s,u)=>s+num(counts[u.key])*amount,0);
+   html+=`<tr>
+    <td>${no++}</td><td>${esc(date)}</td><td class="section">ಅಡಿಗೆ ಪದಾರ್ಥ</td>
+    <td><b>${esc(x.item_name)}</b></td>
+    ${units.map(u=>`<td>${num(counts[u.key])}</td>`).join("")}
+    <td class="rupee">${fmtMoney(amount)}</td><td>₹</td>
+    <td class="total">${fmtMoney(grand)}</td>
+   </tr>`;
+  });
+ });
+
+ html+=`</tbody></table>`;
+ $("tableHost").innerHTML=`<div class="table-wrap">${html}</div>`;
+
+ $("formulaNote").innerHTML=
+ `<div class="lockbox"><b>ಗಮನಿಸಿ:</b> ಮೇಲಿನ ಪ್ರತಿಯೊಂದು ದಿನದ student count ಅನ್ನು Daily Food Distributionನಿಂದ ತೆಗೆದುಕೊಂಡು, Calculation Settingsನಲ್ಲಿ ಇರುವ ಪ್ರತಿ ವಿದ್ಯಾರ್ಥಿಯ Item quantity / Amount ಆಧಾರದ ಮೇಲೆ ಲೆಕ್ಕಿಸಲಾಗಿದೆ. ಈ ಪುಟವು UC/monthly total ಅನ್ನು save ಮಾಡುವುದಿಲ್ಲ.</div>`;
+}
+
+async function loadCalculation(){
+ try{
+  if(!activeYear)throw new Error("Active Academic Year ಇಲ್ಲ.");
+  const month=$("calcMonth").value;
+  const group=$("classGroup").value;
+  if(!month)throw new Error("ತಿಂಗಳು ಆಯ್ಕೆ ಮಾಡಿ.");
+
+  const [settings,dailyMap]=await Promise.all([
+   loadSettings(group),
+   loadDailyStudents(month)
+  ]);
+
+  const days=Object.keys(dailyMap).sort();
+
+  if(!days.length){
+   $("summary").style.display="none";
+   $("tableHost").innerHTML=`<div class="empty">ಈ ತಿಂಗಳಲ್ಲಿ Daily Food Distributionನಲ್ಲಿ ದಾಖಲೆ ಸಿಗಲಿಲ್ಲ.</div>`;
+   $("formulaNote").innerHTML="";
+   show("ಆಯ್ಕೆ ಮಾಡಿದ ತಿಂಗಳಿಗೆ Daily Food Distribution ದಾಖಲೆ ಸಿಗಲಿಲ್ಲ.","info");
+   currentData=null;
+   return;
+  }
+
+  renderMonthly(settings,dailyMap,group,month);
+  show(`✅ ${days.length} ದಿನಗಳ Daily Food Distribution ಮಾಹಿತಿಯಿಂದ calculation ಸಿದ್ಧವಾಗಿದೆ.`,"ok");
+ }catch(e){
+  show(e.message,"err");
+}
+
+function exportExcel(){
+ if(!currentData){
+  show("ಮೊದಲು ತಿಂಗಳ Calculation Load ಮಾಡಿ.","err");
+  return;
+ }
+ const {settings,dailyMap,group,month}=currentData;
+ const units=groups[group];
+ const dept=$("printDepartment").textContent;
+ const school=$("printSchool").textContent;
+
+ const rows=[
+  [dept],
+  [school],
+  ["ಪ್ರತಿದಿನದ ಆಹಾರ ಪದಾರ್ಥ ಮತ್ತು ಅಡಿಗೆ ಪದಾರ್ಥಗಳ ಲೆಕ್ಕ"],
+  [`ತಿಂಗಳು: ${month}`,`ತರಗತಿ: ${groupLabel(group)}`],
+  [],
+  ["Sl.No","ದಿನಾಂಕ","ವಿಭಾಗ","Item / ಅಡಿಗೆ ಪದಾರ್ಥ",
+   ...units.map(u=>`${u.label} Students`),
+   "ಪ್ರತಿ ವಿದ್ಯಾರ್ಥಿಗೆ","Unit","ಆ ದಿನದ ಒಟ್ಟು ಪ್ರಮಾಣ / ಮೊತ್ತ"]
+ ];
+
+ let no=1;
+ Object.keys(dailyMap).sort().forEach(date=>{
+  const counts=getCountsForGroup(dailyMap[date],group);
+
+  settings.items.forEach(x=>{
+   const qty=num(x.quantity_per_student);
+   const grand=units.reduce((s,u)=>s+num(counts[u.key])*qty,0);
+   rows.push([no++,date,"Item",x.item_name,
+    ...units.map(u=>num(counts[u.key])),
+    qty,x.unit||"KG",grand]);
+  });
+
+  settings.ingredients.forEach(x=>{
+   const amount=num(x.amount_per_student);
+   const grand=units.reduce((s,u)=>s+num(counts[u.key])*amount,0);
+   rows.push([no++,date,"ಅಡಿಗೆ ಪದಾರ್ಥ",x.item_name,
+    ...units.map(u=>num(counts[u.key])),
+    amount,"₹",grand]);
+  });
+ });
+
+ const ws=XLSX.utils.aoa_to_sheet(rows);
+ const totalCols=rows[5].length;
+ ws["!merges"]=[
+  {s:{r:0,c:0},e:{r:0,c:totalCols-1}},
+  {s:{r:1,c:0},e:{r:1,c:totalCols-1}},
+  {s:{r:2,c:0},e:{r:2,c:totalCols-1}}
+ ];
+ ws["!cols"]=Array.from({length:totalCols},()=>({wch:15}));
+ ws["!cols"][1]={wch:13};
+ ws["!cols"][3]={wch:28};
+
+ const border={style:"thin",color:{rgb:"000000"}};
+ const range=XLSX.utils.decode_range(ws["!ref"]);
+ for(let R=range.s.r;R<=range.e.r;R++){
+  for(let C=range.s.c;C<=range.e.c;C++){
+   const cell=ws[XLSX.utils.encode_cell({r:R,c:C})];
+   if(!cell)continue;
+   cell.s={
+    border:{top:border,bottom:border,left:border,right:border},
+    alignment:{horizontal:"center",vertical:"center",wrapText:true}
+   };
+   if(R<=2 || R===5)cell.s.font={bold:true};
+  }
+ }
+ const wb=XLSX.utils.book_new();
+ XLSX.utils.book_append_sheet(wb,ws,"Daily Calculation");
+ XLSX.writeFile(wb,`Daily-Calculation-${month}-${group}.xlsx`);
+}
+
+$("loadBtn").onclick=loadCalculation;
+$("excelBtn").onclick=exportExcel;
+$("printBtn").onclick=()=>window.print();
+
+(async function init(){
+ const now=new Date();
+ $("calcMonth").value=
+  `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}`;
+ await loadSchoolSettings();
+ await loadActiveYear();
+})();
+</script>
+</body>
+</html>
