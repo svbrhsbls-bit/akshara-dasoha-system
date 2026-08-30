@@ -522,10 +522,15 @@ async function saveAll(){
       .in("item_name",itemNames);
     if(delErr)throw delErr;
 
-    if(records.length){
-      const {error:insErr}=await db.from("daily_food_distribution").insert(records);
-      if(insErr)throw insErr;
-    }
+   if(records.length){
+  const { error: saveError } = await db
+    .from("daily_food_distribution")
+    .upsert(records, {
+      onConflict: "academic_year_id,distribution_date,item_name"
+    });
+
+  if(saveError) throw saveError;
+}
 
     editDates.clear();
     await loadSheet();
