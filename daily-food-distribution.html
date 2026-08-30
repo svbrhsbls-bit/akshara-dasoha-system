@@ -82,7 +82,8 @@ tfoot td{font-weight:700;background:#e8eee9}
 <div class="wrap">
   <div class="card no-print">
     <div class="controls">
-      <div><label>Academic Year / ಶೈಕ್ಷಣಿಕ ವರ್ಷ</label><select id="year"></select></div>
+      <div><label>Academic Year / ಶೈಕ್ಷಣಿಕ ವರ್ಷ</label><select id="year"></select>
+<div id="settingsYearNote" class="small" style="margin-top:5px"></div></div>
       <div><label>Month / ತಿಂಗಳು</label><select id="month"></select></div>
       <div><label>Class / ತರಗತಿ</label>
         <select id="classGroup">
@@ -147,7 +148,7 @@ const groups={
   "1-10":[1,2,3,4,5,6,7,8,9,10]
 };
 const $=id=>document.getElementById(id);
-let currentYear=null,currentRows=null;
+let currentYear=null,currentRows=null,settingsAcademicYear="";
 let editDates=new Set();
 
 function show(el,text,type="ok"){el.textContent=text;el.className="msg "+type}
@@ -178,9 +179,17 @@ async function loadYears(){
   $("year").innerHTML=(data||[]).map(y=>
     `<option value="${y.id}" data-year="${esc(y.year_name)}">${esc(y.year_name)}${y.is_active?" — Active":""}</option>`
   ).join("");
+  const settingsMatch=(data||[]).find(y=>String(y.year_name||"").trim()===settingsAcademicYear);
   const active=(data||[]).find(y=>y.is_active);
-  const chosen=active||data?.[0];
-  if(chosen){$("year").value=chosen.id;currentYear=chosen}
+  const chosen=settingsMatch||active||data?.[0];
+  if(chosen){
+    $("year").value=chosen.id;
+    currentYear=chosen;
+    const note=$("settingsYearNote");
+    if(note) note.textContent=settingsAcademicYear
+      ? `School Settingsನಲ್ಲಿ save ಮಾಡಿದ Academic Year: ${settingsAcademicYear}`
+      : "School Settingsನಲ್ಲಿ Academic Year save ಮಾಡಿಲ್ಲ.";
+  }
 }
 
 function setMonthDefault(){$("month").value=new Date().getMonth()+1}
