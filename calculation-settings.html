@@ -427,105 +427,103 @@ async function saveItem(){
     return;
   }
 
-  const name=$("itemName").value.trim();
-  const qtyText=$("itemQty").value;
-  const unit=$("itemUnit").value;
+  const name = $("itemName").value.trim();
+  const qtyText = $("itemQty").value;
+  const unit = $("itemUnit").value;
 
   if(!name){
     show("Item ನಮೂದಿಸಿ.","err");
     return;
   }
 
-  if(qtyText==="" || Number(qtyText)<0){
+  if(qtyText === "" || Number(qtyText) < 0){
     show("KG / Gram ಪ್ರಮಾಣ ನಮೂದಿಸಿ.","err");
     return;
   }
 
-  const payload={
-    academic_year_id:activeYear.id,
-    class_group:selectedGroup,
-    month_number:Number(selectedMonth),
-    item_name:name,
-    quantity_per_student:Number(qtyText),
-    unit:unit,
-    is_enabled:true
+  const payload = {
+    academic_year_id: activeYear.id,
+    class_group: selectedGroup,
+    month_number: Number(selectedMonth),
+    item_name: name,
+    quantity_per_student: Number(qtyText),
+    unit: unit,
+    is_enabled: true,
+    updated_at: new Date().toISOString()
   };
 
   let result;
 
+  /* EDIT ಆಗಿದ್ದರೆ ಅದೇ row update */
   if(editingItemId){
-    result=await db
+
+    result = await db
       .from("calculation_settings")
       .update(payload)
-      .eq("id",editingItemId)
-      .eq("academic_year_id",activeYear.id)
+      .eq("id", editingItemId)
+      .eq("academic_year_id", activeYear.id)
       .select()
       .single();
+
   }else{
-    result=await db
+
+    /*
+      ಹೊಸ Item:
+      ಮೊದಲು ಇದೇ Academic Year + Class + Month + Item
+      ಈಗಾಗಲೇ ಇದೆಯೇ ಎಂದು ಪರಿಶೀಲನೆ
+    */
+
+    const { data: existing, error: checkError } = await db
       .from("calculation_settings")
-      .insert(payload)
-      .select()
-      .single();
+      .select("id")
+      .eq("academic_year_id", activeYear.id)
+      .eq("class_group", selectedGroup)
+      .eq("month_number", Number(selectedMonth))
+      .eq("item_name", name)
+      .maybeSingle();
+
+    if(checkError){
+      show("Item check failed: " + checkError.message,"err");
+      return;
+    }
+
+    if(existing){
+
+      /* ಇದ್ದರೆ ಹೊಸ row ಮಾಡದೆ UPDATE */
+      result = await db
+        .from("calculation_settings")
+        .update(payload)
+        .eq("id", existing.id)
+        .select()
+        .single();
+
+    }else{
+
+      /* ಇಲ್ಲದಿದ್ದರೆ ಮಾತ್ರ INSERT */
+      result = await db
+        .from("calculation_settings")
+        .insert(payload)
+        .select()
+        .single();
+    }
   }
 
   if(result.error){
-    show("Item Save failed: "+result.error.message,"err");
+    show("Item Save failed: " + result.error.message,"err");
     return;
   }
 
-  const wasEditing=!!editingItemId;
+  const wasEditing = !!editingItemId;
+
   resetItem();
   await loadItems();
-  show(wasEditing?"Item Update ಆಯಿತು.":"Item Save ಆಯಿತು.","ok");
-}
 
-async function editItem(id){
-  const {data,error}=await db
-    .from("calculation_settings")
-    .select("*")
-    .eq("id",id)
-    .eq("academic_year_id",activeYear.id)
-    .single();
-
-  if(error){
-    show("Item edit load failed: "+error.message,"err");
-    return;
-  }
-
-  editingItemId=data.id;
-  $("itemName").value=data.item_name||"";
-  $("itemQty").value=data.quantity_per_student??"";
-  $("itemUnit").value=data.unit==="Gram"?"Gram":"KG";
-  $("itemSaveBtn").textContent="💾 Update";
-  $("itemCancelBtn").style.display="inline-block";
-}
-
-async function deleteItem(id){
-  if(!confirm("ಈ Item ಅಳಿಸಬೇಕೇ?"))return;
-
-  const {error}=await db
-    .from("calculation_settings")
-    .delete()
-    .eq("id",id)
-    .eq("academic_year_id",activeYear.id);
-
-  if(error){
-    show("Item Delete failed: "+error.message,"err");
-    return;
-  }
-
-  await loadItems();
-  show("Item Delete ಆಯಿತು.","ok");
-}
-
-function resetItem(){
-  editingItemId=null;
-  $("itemName").value="";
-  $("itemQty").value="";
-  $("itemUnit").value="KG";
-  $("itemSaveBtn").textContent="💾 Save";
-  $("itemCancelBtn").style.display="none";
+  show(
+    wasEditing
+      ? "Item Update ಆಯಿತು."
+      : "Item Save ಆಯಿತು.",
+    "ok"
+  );
 }
 
 /* =========================================================
