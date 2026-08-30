@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="kn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ಅಕ್ಷರ ದಾಸೋಹ - Students Number</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:Arial,"Noto Sans Kannada",sans-serif;background:#f3f6fa;color:#1f2937}
+header{background:#146c38;color:#fff;padding:22px 28px}
+header h1{margin:0 0 6px;font-size:29px}
+header p{margin:0;font-size:15px}
+.wrap{max-width:1100px;margin:28px auto;padding:0 18px}
+.card{background:#fff;border-radius:14px;padding:24px;margin-bottom:22px;box-shadow:0 3px 15px rgba(0,0,0,.08)}
+h2{margin:0 0 20px;font-size:22px}
+.filters{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+label{display:block;font-weight:600;margin-bottom:7px}
+select,input{width:100%;height:44px;border:1px solid #cbd5e1;border-radius:8px;padding:0 12px;font-size:16px;background:#fff}
+input[type=number]{text-align:center}
+table{width:100%;border-collapse:collapse}
+th,td{border:1px solid #dbe2ea;padding:12px 10px;text-align:center}
+th{background:#eef3f8;font-size:15px}
+th:first-child,td:first-child{text-align:left;font-weight:700}
+.total-cell{background:#f8fafc;font-weight:700}
+.grand td{background:#e8f5ed;font-weight:800;font-size:16px}
+.actions{display:flex;gap:10px;justify-content:flex-end;margin-top:18px;flex-wrap:wrap}
+button{border:0;border-radius:8px;padding:11px 18px;font-size:15px;font-weight:600;cursor:pointer}
+.save{background:#146c38;color:#fff}.reset{background:#64748b;color:#fff}
+.edit{background:#2563eb;color:#fff;padding:7px 12px}.delete{background:#dc2626;color:#fff;padding:7px 12px}
+.status{margin-top:15px;padding:12px;border-radius:8px;display:none}
+.success{display:block;background:#dcfce7;color:#166534}.error{display:block;background:#fee2e2;color:#991b1b}
+.small{font-size:13px;color:#64748b;margin-top:7px}
+.table-wrap{overflow-x:auto}
+.saved-table{margin-top:20px}
+.empty{text-align:center;padding:28px;color:#64748b}
+@media(max-width:650px){.filters{grid-template-columns:1fr}header h1{font-size:23px}}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>ಅಕ್ಷರ ದಾಸೋಹ ಕಾರ್ಯಕ್ರಮ</h1>
+  <p>Students Number / ವಿದ್ಯಾರ್ಥಿಗಳ ಸಂಖ್ಯೆ</p>
+</header>
+
+<div class="wrap">
+
+<section class="card">
+<h2>ವರ್ಷ ಮತ್ತು ತಿಂಗಳು</h2>
+
+<div class="filters">
+  <div>
+    <label for="academicYear">Academic Year</label>
+    <select id="academicYear">
+      <option value="">Loading...</option>
+    </select>
+  </div>
+
+  <div>
+    <label for="month">Month / ತಿಂಗಳು</label>
+    <select id="month">
+      <option value="">ತಿಂಗಳು ಆಯ್ಕೆ ಮಾಡಿ</option>
+      <option value="1">ಜನವರಿ</option>
+      <option value="2">ಫೆಬ್ರವರಿ</option>
+      <option value="3">ಮಾರ್ಚ್</option>
+      <option value="4">ಏಪ್ರಿಲ್</option>
+      <option value="5">ಮೇ</option>
+      <option value="6">ಜೂನ್</option>
+      <option value="7">ಜುಲೈ</option>
+      <option value="8">ಆಗಸ್ಟ್</option>
+      <option value="9">ಸೆಪ್ಟೆಂಬರ್</option>
+      <option value="10">ಅಕ್ಟೋಬರ್</option>
+      <option value="11">ನವೆಂಬರ್</option>
+      <option value="12">ಡಿಸೆಂಬರ್</option>
+    </select>
+  </div>
+</div>
+
+<div id="message" class="status"></div>
+</section>
+
+<section class="card">
+<h2>ವಿದ್ಯಾರ್ಥಿಗಳ ಸಂಖ್ಯೆ</h2>
+
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+  <th>ತರಗತಿ / Group</th>
+  <th>ಹುಡುಗರು (Boys)</th>
+  <th>ಹುಡುಗಿಯರು (Girls)</th>
+  <th>ಒಟ್ಟು (Total)</th>
+</tr>
+</thead>
+<tbody>
+<tr data-group="1-5">
+  <td>1–5</td>
+  <td><input class="boys" type="number" min="0" step="1" value="0"></td>
+  <td><input class="girls" type="number" min="0" step="1" value="0"></td>
+  <td class="total-cell total">0</td>
+</tr>
+<tr data-group="6-7">
+  <td>6–7</td>
+  <td><input class="boys" type="number" min="0" step="1" value="0"></td>
+  <td><input class="girls" type="number" min="0" step="1" value="0"></td>
+  <td class="total-cell total">0</td>
+</tr>
+<tr data-group="8">
+  <td>8</td>
+  <td><input class="boys" type="number" min="0" step="1" value="0"></td>
+  <td><input class="girls" type="number" min="0" step="1" value="0"></td>
+  <td class="total-cell total">0</td>
+</tr>
+<tr data-group="9">
+  <td>9</td>
+  <td><input class="boys" type="number" min="0" step="1" value="0"></td>
+  <td><input class="girls" type="number" min="0" step="1" value="0"></td>
+  <td class="total-cell total">0</td>
+</tr>
+<tr data-group="10">
+  <td>10</td>
+  <td><input class="boys" type="number" min="0" step="1" value="0"></td>
+  <td><input class="girls" type="number" min="0" step="1" value="0"></td>
+  <td class="total-cell total">0</td>
+</tr>
+<tr class="grand">
+  <td>ಒಟ್ಟು</td>
+  <td id="grandBoys">0</td>
+  <td id="grandGirls">0</td>
+  <td id="grandTotal">0</td>
+</tr>
+</tbody>
+</table>
+</div>
+
+<div class="actions">
+  <button class="reset" onclick="resetForm()">Clear</button>
+  <button class="save" id="saveBtn" onclick="saveNumbers()">💾 Save</button>
+</div>
+
+<div class="small">
+ಒಟ್ಟು ಸಂಖ್ಯೆಗಳು Boys + Girls ಆಧಾರದ ಮೇಲೆ ಸ್ವಯಂಚಾಲಿತವಾಗಿ ಲೆಕ್ಕವಾಗುತ್ತವೆ.
+</div>
+</section>
+
+<section class="card">
+<h2>ಉಳಿಸಿದ ಮಾಹಿತಿ</h2>
+<div class="table-wrap saved-table">
+<table>
+<thead>
+<tr>
+<th>ತಿಂಗಳು</th>
+<th>1–5</th>
+<th>6–7</th>
+<th>8</th>
+<th>9</th>
+<th>10</th>
+<th>ಒಟ್ಟು</th>
+<th>Action</th>
+</tr>
+</thead>
+<tbody id="savedBody">
+<tr><td colspan="8" class="empty">Academic Year ಮತ್ತು Month ಆಯ್ಕೆ ಮಾಡಿ.</td></tr>
+</tbody>
+</table>
+</div>
+</section>
+
+</div>
+
+<script>
+const SUPABASE_URL = "https://ezmudfrpcvjsgnjibvoq.supabase.co";
+const SUPABASE_KEY = "sb_publishable__FYyH6NQaqgARaq2dvuovQ_rKmus0js";
+const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+const groups = ["1-5","6-7","8","9","10"];
+const groupClassNumbers = {"1-5":1,"6-7":6,"8":8,"9":9,"10":10};
+const monthNames = ["","ಜನವರಿ","ಫೆಬ್ರವರಿ","ಮಾರ್ಚ್","ಏಪ್ರಿಲ್","ಮೇ","ಜೂನ್","ಜುಲೈ","ಆಗಸ್ಟ್","ಸೆಪ್ಟೆಂಬರ್","ಅಕ್ಟೋಬರ್","ನವೆಂಬರ್","ಡಿಸೆಂಬರ್"];
+
+let years = [];
+let editingRows = {};
+
+document.addEventListener("DOMContentLoaded", async () => {
+  attachCalculationListeners();
+  await loadYears();
+});
+
+document.getElementById("academicYear").addEventListener("change", async () => {
+  resetForm();
+  await loadSaved();
+});
+
+document.getElementById("month").addEventListener("change", async () => {
+  await loadSaved();
+  await loadSelectedMonthIntoForm();
+});
+
+function attachCalculationListeners(){
+  document.querySelectorAll("#studentsTable input").forEach(input => {
+    input.addEventListener("input", calculateTotals);
+  });
+  document.querySelectorAll("tbody tr[data-group] input").forEach(input => {
+    input.addEventListener("input", calculateTotals);
+  });
+}
+
+function calculateTotals(){
+  let grandBoys=0, grandGirls=0;
+
+  document.querySelectorAll("tbody tr[data-group]").forEach(row => {
+    const boys = Math.max(0, parseInt(row.querySelector(".boys")?.value || 0,10));
+    const girls = Math.max(0, parseInt(row.querySelector(".girls")?.value || 0,10));
+    const total = boys + girls;
+
+    const totalCell = row.querySelector(".total");
+    if(totalCell) totalCell.textContent = total;
+
+    grandBoys += boys;
+    grandGirls += girls;
+  });
+
+  document.getElementById("grandBoys").textContent = grandBoys;
+  document.getElementById("grandGirls").textContent = grandGirls;
+  document.getElementById("grandTotal").textContent = grandBoys + grandGirls;
+}
+
+function getFormData(){
+  const result = {};
+  document.querySelectorAll("tbody tr[data-group]").forEach(row => {
+    const group = row.dataset.group;
+    result[group] = {
+      boys: Math.max(0, parseInt(row.querySelector(".boys").value || 0,10)),
+      girls: Math.max(0, parseInt(row.querySelector(".girls").value || 0,10))
+    };
+  });
+  return result;
+}
+
+function setGroup(group,boys,girls){
+  const row = document.querySelector(`tr[data-group="${group}"]`);
+  if(!row) return;
+  row.querySelector(".boys").value = boys || 0;
+  row.querySelector(".girls").value = girls || 0;
+}
+
+function resetForm(){
+  editingRows = {};
+  document.querySelectorAll("tbody tr[data-group] input").forEach(i => i.value=0);
+  calculateTotals();
+  document.getElementById("saveBtn").textContent="💾 Save";
+}
+
+function showMessage(text,type="success"){
+  const box=document.getElementById("message");
+  box.textContent=text;
+  box.className="status "+type;
+  setTimeout(()=>{box.className="status";box.textContent=""},4500);
+}
+
+async function loadYears(){
+  const select=document.getElementById("academicYear");
+  select.innerHTML='<option value="">ಶೈಕ್ಷಣಿಕ ವರ್ಷ ಆಯ್ಕೆ ಮಾಡಿ</option>';
+
+  const {data,error}=await db
+    .from("academic_years")
+    .select("id,year_name,is_active")
+    .order("year_name",{ascending:false});
+
+  if(error){
+    showMessage("Academic Year load failed: "+error.message,"error");
+    return;
+  }
+
+  years=data||[];
+
+  // Students Number page should use the Academic Year that was
+  // explicitly marked Active in Settings.
+  const active=years.find(y=>y.is_active);
+
+  if(active){
+    const opt=document.createElement("option");
+    opt.value=active.id;
+    opt.textContent=active.year_name + " — Active";
+    select.appendChild(opt);
+    select.value=active.id;
+    await loadSaved();
+  }else{
+    select.innerHTML='<option value="">ಯಾವುದೇ Active Academic Year ಇಲ್ಲ</option>';
+    showMessage("ಮೊದಲು Settingsನಲ್ಲಿ ಬೇಕಾದ Academic Year ಅನ್ನು Active ಮಾಡಿ.","error");
+  }
+}
+
+async function saveNumbers(){
+  const yearId=document.getElementById("academicYear").value;
+  const monthNumber=Number(document.getElementById("month").value);
+
+  if(!yearId){
+    showMessage("Academic Year ಆಯ್ಕೆ ಮಾಡಿ.","error");
+    return;
+  }
+  if(!monthNumber){
+    showMessage("Month ಆಯ್ಕೆ ಮಾಡಿ.","error");
+    return;
+  }
+
+  const data=getFormData();
+  const saveBtn=document.getElementById("saveBtn");
+  saveBtn.disabled=true;
+
+  try{
+    for(const group of groups){
+      const row=data[group];
+
+      const {data:existing,error:findError}=await db
+        .from("student_numbers")
+        .select("id")
+        .eq("academic_year_id",yearId)
+        .eq("month_number",monthNumber)
+        .eq("class_number",groupClassNumbers[group])
+        .eq("division_name","ALL")
+        .maybeSingle();
+
+      if(findError) throw findError;
+
+      const payload={
+        academic_year_id:yearId,
+        month_number:monthNumber,
+        class_number:groupClassNumbers[group],
+        division_name:"ALL",
+        total_students:row.boys+row.girls,
+        boys:row.boys,
+        girls:row.girls,
+        updated_at:new Date().toISOString()
+      };
+
+      let result;
+
+      if(existing){
+        result=await db.from("student_numbers")
+          .update(payload)
+          .eq("id",existing.id);
+      }else{
+        result=await db.from("student_numbers")
+          .insert(payload);
+      }
+
+      if(result.error) throw result.error;
+    }
+
+    showMessage("Students Number successfully saved.");
+    await loadSaved();
+
+  }catch(error){
+    console.error(error);
+    showMessage("Save failed: "+error.message,"error");
+  }finally{
+    saveBtn.disabled=false;
+  }
+}
+
+async function loadSaved(){
+  const yearId=document.getElementById("academicYear").value;
+  const tbody=document.getElementById("savedBody");
+
+  if(!yearId){
+    tbody.innerHTML='<tr><td colspan="8" class="empty">Academic Year ಆಯ್ಕೆ ಮಾಡಿ.</td></tr>';
+    return;
+  }
+
+  const {data,error}=await db
+    .from("student_numbers")
+    .select("*")
+    .eq("academic_year_id",yearId)
+    .eq("division_name","ALL")
+    .order("month_number",{ascending:true})
+    .order("class_number",{ascending:true});
+
+  if(error){
+    tbody.innerHTML='<tr><td colspan="8" class="empty">Data load failed.</td></tr>';
+    showMessage("Saved data load failed: "+error.message,"error");
+    return;
+  }
+
+  const byMonth={};
+
+  (data||[]).forEach(row=>{
+    if(!byMonth[row.month_number]) byMonth[row.month_number]={};
+    byMonth[row.month_number][String(row.class_number)]=row;
+  });
+
+  const months=Object.keys(byMonth).map(Number).sort((a,b)=>a-b);
+
+  if(!months.length){
+    tbody.innerHTML='<tr><td colspan="8" class="empty">ಇನ್ನೂ ಯಾವುದೇ Students Number save ಮಾಡಿಲ್ಲ.</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML="";
+
+  months.forEach(month=>{
+    const m=byMonth[month];
+    let total=0;
+
+    const cells=groups.map(g=>{
+      const r=m[g];
+      const value=r ? Number(r.total_students) : 0;
+      total+=value;
+      return value;
+    });
+
+    const tr=document.createElement("tr");
+    tr.innerHTML=`
+      <td>${monthNames[month]}</td>
+      <td>${cells[0]}</td>
+      <td>${cells[1]}</td>
+      <td>${cells[2]}</td>
+      <td>${cells[3]}</td>
+      <td>${cells[4]}</td>
+      <td><strong>${total}</strong></td>
+      <td>
+        <button class="edit" onclick="editMonth(${month})">✏️ Edit</button>
+        <button class="delete" onclick="deleteMonth(${month})">🗑️ Delete</button>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+async function loadSelectedMonthIntoForm(){
+  const yearId=document.getElementById("academicYear").value;
+  const month=Number(document.getElementById("month").value);
+  if(!yearId || !month) return;
+
+  const {data,error}=await db
+    .from("student_numbers")
+    .select("*")
+    .eq("academic_year_id",yearId)
+    .eq("month_number",month)
+    .eq("division_name","ALL");
+
+  if(error){
+    showMessage("Month data load failed: "+error.message,"error");
+    return;
+  }
+
+  resetForm();
+
+  (data||[]).forEach(r=>{
+    setGroup(String(r.class_number),r.boys,r.girls);
+  });
+
+  calculateTotals();
+
+  if(data && data.length){
+    document.getElementById("saveBtn").textContent="💾 Update";
+  }
+}
+
+async function editMonth(month){
+  document.getElementById("month").value=month;
+  await loadSelectedMonthIntoForm();
+  window.scrollTo({top:0,behavior:"smooth"});
+}
+
+async function deleteMonth(month){
+  const yearId=document.getElementById("academicYear").value;
+  if(!yearId) return;
+
+  if(!confirm(monthNames[month]+" ತಿಂಗಳ Students Number ಅನ್ನು Delete ಮಾಡಬೇಕೇ?")) return;
+
+  const {error}=await db
+    .from("student_numbers")
+    .delete()
+    .eq("academic_year_id",yearId)
+    .eq("month_number",month)
+    .eq("division_name","ALL");
+
+  if(error){
+    showMessage("Delete failed: "+error.message,"error");
+    return;
+  }
+
+  resetForm();
+  showMessage(monthNames[month]+" ತಿಂಗಳ ಮಾಹಿತಿ Delete ಆಗಿದೆ.");
+  await loadSaved();
+}
+
+function escapeHtml(v){
+  return String(v).replace(/[&<>"']/g,c=>({
+    "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"
+  }[c]));
+}
+</script>
+</body>
+</html>
