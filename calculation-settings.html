@@ -279,50 +279,61 @@ function restoreSelection(){
 }
 
 /* School Settings Active Academic Year ಮಾತ್ರ */
-async function loadActiveAcademicYear(){
-  const {data,error}=await db
-    .from("academic_years")
-    .select("id,year_name,is_active")
-    .eq("is_active",true)
-    .order("year_name",{ascending:false})
-    .limit(1)
-    .maybeSingle();
+async function loadActiveAcademicYear() {
+  try {
 
-  if(error){
-    $("academicYear").textContent="Load failed";
-    show("Academic Year load failed: "+error.message,"err");
-    return false;
-  }
-
-  if(!data){
-    $("academicYear").textContent="Active Year ಇಲ್ಲ";
-    show("School Settingsನಲ್ಲಿ Active Academic Year ಆಯ್ಕೆ ಮಾಡಿ.","err");
-    return false;
-  }
-
-  activeYear=data;
-  $("academicYear").textContent=data.year_name;
-  return true;
-}
-
-async function loadSchoolSettings(){
-  try{
-    const {data,error}=await db
-      .from("school_settings")
-      .select("*")
+    const { data, error } = await db
+      .from("academic_years")
+      .select("id, year_name, is_active")
+      .eq("is_active", true)
       .limit(1)
       .maybeSingle();
 
-    if(error)throw error;
+    if (error) {
+      console.error("Active Academic Year Error:", error);
 
-    if(data){
-      $("departmentTitle").textContent =
-        data.department_name || "ಅಕ್ಷರ ದಾಸೋಹ ಕಾರ್ಯಕ್ರಮ";
-      $("schoolTitle").textContent =
-        data.school_name || "ಶಾಲೆಯ ಹೆಸರು";
+      $("academicYear").textContent = "Load failed";
+
+      show(
+        "Active Academic Year load failed: " + error.message,
+        "err"
+      );
+
+      return false;
     }
-  }catch(e){
-    console.warn("school_settings:",e.message);
+
+    if (!data) {
+      $("academicYear").textContent = "Active Year ಇಲ್ಲ";
+
+      show(
+        "School Settingsನಲ್ಲಿ ಒಂದು Academic Year ಅನ್ನು Active ಮಾಡಿ.",
+        "err"
+      );
+
+      return false;
+    }
+
+    // Active Academic Year
+    activeYear = data;
+
+    $("academicYear").textContent = data.year_name;
+
+    console.log("Active Academic Year:", data);
+
+    return true;
+
+  } catch (err) {
+
+    console.error(err);
+
+    $("academicYear").textContent = "Load failed";
+
+    show(
+      "Academic Year load failed: " + err.message,
+      "err"
+    );
+
+    return false;
   }
 }
 
