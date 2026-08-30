@@ -14,7 +14,7 @@ header p{margin:0;font-size:15px}
 .wrap{max-width:1100px;margin:28px auto;padding:0 18px}
 .card{background:#fff;border-radius:14px;padding:24px;margin-bottom:22px;box-shadow:0 3px 15px rgba(0,0,0,.08)}
 h2{margin:0 0 20px;font-size:22px}
-.filters{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.filters{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px}
 label{display:block;font-weight:600;margin-bottom:7px}
 select,input{width:100%;height:44px;border:1px solid #cbd5e1;border-radius:8px;padding:0 12px;font-size:16px;background:#fff}
 input[type=number]{text-align:center}
@@ -34,7 +34,7 @@ button{border:0;border-radius:8px;padding:11px 18px;font-size:15px;font-weight:6
 .table-wrap{overflow-x:auto}
 .saved-table{margin-top:20px}
 .empty{text-align:center;padding:28px;color:#64748b}
-@media(max-width:650px){.filters{grid-template-columns:1fr}header h1{font-size:23px}}
+@media(max-width:850px){.filters{grid-template-columns:1fr 1fr}header h1{font-size:23px}} @media(max-width:560px){.filters{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -54,6 +54,16 @@ button{border:0;border-radius:8px;padding:11px 18px;font-size:15px;font-weight:6
     <label for="academicYear">Academic Year</label>
     <select id="academicYear">
       <option value="">Loading...</option>
+    </select>
+  </div>
+
+  <div>
+    <label for="classRange">Class / ತರಗತಿ</label>
+    <select id="classRange">
+      <option value="">ತರಗತಿ ಆಯ್ಕೆ ಮಾಡಿ</option>
+      <option value="1-7">1–7</option>
+      <option value="8-10">8–10</option>
+      <option value="1-10">1–10</option>
     </select>
   </div>
 
@@ -183,6 +193,7 @@ let editingRows = {};
 
 document.addEventListener("DOMContentLoaded", async () => {
   attachCalculationListeners();
+  applyClassRange();
   await loadYears();
 });
 
@@ -196,6 +207,30 @@ document.getElementById("month").addEventListener("change", async () => {
   await loadSelectedMonthIntoForm();
 });
 
+document.getElementById("classRange").addEventListener("change", async () => {
+  applyClassRange();
+  resetForm();
+  await loadSaved();
+});
+
+function selectedGroups(){
+  const range = document.getElementById("classRange").value;
+  if(range === "1-7") return ["1-5","6-7"];
+  if(range === "8-10") return ["8","9","10"];
+  if(range === "1-10") return ["1-5","6-7","8","9","10"];
+  return [];
+}
+
+function applyClassRange(){
+  const allowed = new Set(selectedGroups());
+
+  document.querySelectorAll("tbody tr[data-group]").forEach(row => {
+    row.style.display = allowed.has(row.dataset.group) ? "" : "none";
+  });
+
+  calculateTotals();
+}
+
 function attachCalculationListeners(){
   document.querySelectorAll("#studentsTable input").forEach(input => {
     input.addEventListener("input", calculateTotals);
@@ -208,7 +243,9 @@ function attachCalculationListeners(){
 function calculateTotals(){
   let grandBoys=0, grandGirls=0;
 
+  const allowed = new Set(selectedGroups());
   document.querySelectorAll("tbody tr[data-group]").forEach(row => {
+    if(!allowed.has(row.dataset.group)) return;
     const boys = Math.max(0, parseInt(row.querySelector(".boys")?.value || 0,10));
     const girls = Math.max(0, parseInt(row.querySelector(".girls")?.value || 0,10));
     const total = boys + girls;
@@ -227,8 +264,10 @@ function calculateTotals(){
 
 function getFormData(){
   const result = {};
+  const allowed = new Set(selectedGroups());
   document.querySelectorAll("tbody tr[data-group]").forEach(row => {
     const group = row.dataset.group;
+    if(!allowed.has(group)) return;
     result[group] = {
       boys: Math.max(0, parseInt(row.querySelector(".boys").value || 0,10)),
       girls: Math.max(0, parseInt(row.querySelector(".girls").value || 0,10))
@@ -246,7 +285,12 @@ function setGroup(group,boys,girls){
 
 function resetForm(){
   editingRows = {};
-  document.querySelectorAll("tbody tr[data-group] input").forEach(i => i.value=0);
+  document.querySelectorAll("tbody tr[data-group]").forEach(row => {
+    if(row.style.display !== "none"){
+      row.querySelectorAll("input").forEach(i => i.value=0);
+    }
+  });
+  applyClassRange();
   calculateTotals();
   document.getElementById("saveBtn").textContent="💾 Save";
 }
@@ -294,6 +338,8 @@ async function loadYears(){
 async function saveNumbers(){
   const yearId=document.getElementById("academicYear").value;
   const monthNumber=Number(document.getElementById("month").value);
+  const classRange=document.getElementById("classRange").value;
+  const selected=selectedGroups();
 
   if(!yearId){
     showMessage("Academic Year ಆಯ್ಕೆ ಮಾಡಿ.","error");
@@ -301,6 +347,10 @@ async function saveNumbers(){
   }
   if(!monthNumber){
     showMessage("Month ಆಯ್ಕೆ ಮಾಡಿ.","error");
+    return;
+  }
+  if(!classRange || !selected.length){
+    showMessage("Class ಆಯ್ಕೆ ಮಾಡಿ.","error");
     return;
   }
 
@@ -361,9 +411,10 @@ async function saveNumbers(){
 
 async function loadSaved(){
   const yearId=document.getElementById("academicYear").value;
+  const classRange=document.getElementById("classRange").value;
   const tbody=document.getElementById("savedBody");
 
-  if(!yearId){
+  if(!yearId || !classRange){
     tbody.innerHTML='<tr><td colspan="8" class="empty">Academic Year ಆಯ್ಕೆ ಮಾಡಿ.</td></tr>';
     return;
   }
@@ -384,9 +435,15 @@ async function loadSaved(){
 
   const byMonth={};
 
+  const allowed = new Set(selectedGroups());
+
   (data||[]).forEach(row=>{
+    const group = String(row.class_number) === "1" ? "1-5"
+                : String(row.class_number) === "6" ? "6-7"
+                : String(row.class_number);
+    if(!allowed.has(group)) return;
     if(!byMonth[row.month_number]) byMonth[row.month_number]={};
-    byMonth[row.month_number][String(row.class_number)]=row;
+    byMonth[row.month_number][group]=row;
   });
 
   const months=Object.keys(byMonth).map(Number).sort((a,b)=>a-b);
@@ -430,7 +487,8 @@ async function loadSaved(){
 async function loadSelectedMonthIntoForm(){
   const yearId=document.getElementById("academicYear").value;
   const month=Number(document.getElementById("month").value);
-  if(!yearId || !month) return;
+  const classRange=document.getElementById("classRange").value;
+  if(!yearId || !month || !classRange) return;
 
   const {data,error}=await db
     .from("student_numbers")
@@ -447,7 +505,12 @@ async function loadSelectedMonthIntoForm(){
   resetForm();
 
   (data||[]).forEach(r=>{
-    setGroup(String(r.class_number),r.boys,r.girls);
+    const group = String(r.class_number) === "1" ? "1-5"
+                : String(r.class_number) === "6" ? "6-7"
+                : String(r.class_number);
+    if(selectedGroups().includes(group)){
+      setGroup(group,r.boys,r.girls);
+    }
   });
 
   calculateTotals();
@@ -469,12 +532,21 @@ async function deleteMonth(month){
 
   if(!confirm(monthNames[month]+" ತಿಂಗಳ Students Number ಅನ್ನು Delete ಮಾಡಬೇಕೇ?")) return;
 
+  const selected=selectedGroups();
+  if(!selected.length){
+    showMessage("ಮೊದಲು Class ಆಯ್ಕೆ ಮಾಡಿ.","error");
+    return;
+  }
+
+  const classNumbers=selected.map(g=>groupClassNumbers[g]);
+
   const {error}=await db
     .from("student_numbers")
     .delete()
     .eq("academic_year_id",yearId)
     .eq("month_number",month)
-    .eq("division_name","ALL");
+    .eq("division_name","ALL")
+    .in("class_number",classNumbers);
 
   if(error){
     showMessage("Delete failed: "+error.message,"error");
