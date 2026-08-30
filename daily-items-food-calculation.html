@@ -47,7 +47,7 @@ label{display:block;font-weight:700;margin-bottom:6px}input,select,button{font:i
   <div><label>ಗೋಧಿ ವಿದ್ಯಾರ್ಥಿಗಳ ಸಂಖ್ಯೆ (ಐಚ್ಛಿಕ)</label><input id="wheatStudents" type="number" min="0" step="1" placeholder="ಖಾಲಿ = Daily 8ನೇ ತರಗತಿ ಸಂಖ್ಯೆ"></div>
   <div style="display:flex;align-items:end;gap:8px"><button class="primary" id="wheatSaveBtn">💾 Save</button><button class="secondary" id="wheatCancelBtn" style="display:none">Cancel</button></div>
  </div>
- <div class="small" style="margin-top:8px">ಈ ನಿಯಮ <b>8ನೇ ತರಗತಿಗೆ ಮಾತ್ರ</b>. 8-10 ಆಯ್ಕೆ ಮಾಡಿದಾಗ ಗೋಧಿ ದಿನ 8ನೇ ತರಗತಿಯ ಅಕ್ಕಿ = 0, ಗೋಧಿ = Calculation Settings ಪ್ರಮಾಣ × 8ನೇ ತರಗತಿ ವಿದ್ಯಾರ್ಥಿಗಳು. 9 ಮತ್ತು 10ನೇ ತರಗತಿಗೆ ಅಕ್ಕಿ ಸಾಮಾನ್ಯವಾಗಿ ಲೆಕ್ಕವಾಗುತ್ತದೆ. 1-10 ಆಯ್ಕೆ ಮಾಡಿದರೂ ಇದೇ 8ನೇ ತರಗತಿ ನಿಯಮ ಅನ್ವಯಿಸುತ್ತದೆ.</div>
+ <div class="small" style="margin-top:8px">ಈ ನಿಯಮ: <b>1–7 ಮತ್ತು 8ನೇ ತರಗತಿಗೆ</b> ಗೋಧಿ ದಿನ ಅಕ್ಕಿ = 0, ಗೋಧಿ = Calculation Settings ಪ್ರಮಾಣ × ಸಂಬಂಧಿತ ವಿದ್ಯಾರ್ಥಿಗಳ ಸಂಖ್ಯೆ. <b>9–10ನೇ ತರಗತಿಗೆ</b> ಗೋಧಿ ದಿನವೂ ಅಕ್ಕಿ ಸಾಮಾನ್ಯವಾಗಿ ಲೆಕ್ಕವಾಗುತ್ತದೆ ಮತ್ತು ಗೋಧಿ = 0. <b>1–10</b> ಆಯ್ಕೆ ಮಾಡಿದಾಗಲೂ ಇದೇ ನಿಯಮ ಅನ್ವಯಿಸುತ್ತದೆ. ರಾಗಿ ಮಾಲ್ಟ್ ಸೋಮವಾರ / ಬುಧವಾರ / ಶುಕ್ರವಾರ ಮಾತ್ರ ಲೆಕ್ಕವಾಗುತ್ತದೆ.</div>
  <div id="wheatList" style="margin-top:8px"></div>
 </section>
 
@@ -104,16 +104,67 @@ function editClassGroup(){
 }
 function academicStartYear(s){const m=String(s||"").match(/\d{4}/);return m?Number(m[0]):new Date().getFullYear()}
 function reportYear(m){const y=academicStartYear(activeYear?.year_name||school?.academic_year);return m>=6?y:y+1}
-function settingGroupFor(bucket,selected){
- if(selected==="8-10")return "8-10";
- return bucket;
+function applicableSettingGroups(selected){
+ if(selected==="1-7")return ["1-5","6-7"];
+ if(selected==="8-10")return ["8","9","10"];
+ if(selected==="1-10")return ["1-5","6-7","8-10"];
+ return [selected];
 }
-function itemRate(name,bucket){return settings.items.filter(x=>String(x.class_group)===settingGroupFor(bucket,current.group)&&String(x.item_name||x.item_name).trim()===name&&x.is_enabled!==false).reduce((s,x)=>s+num(x.quantity_per_student),0)}
-function ingredientRate(name,bucket){return settings.ingredients.filter(x=>String(x.class_group)===settingGroupFor(bucket,current.group)&&String(x.item_name||x.ingredient_name).trim()===name&&x.is_enabled!==false).reduce((s,x)=>s+num(x.amount_per_student),0)}
+function settingGroupFor(bucket,selected){
+  // Daily Food Distribution uses 8/9/10, while Calculation Settings
+  // stores one common rate under 8-10.
+  if(selected==="8-10" && ["8","9","10"].includes(String(bucket))) return "8-10";
+  return String(bucket);
+}
+function itemRate(name,bucket){
+  const settingGroup=settingGroupFor(bucket,current.group);
+  const clean=String(name||"").trim();
+  const row=settings.items.find(x =>
+    String(x.class_group||"").trim()===settingGroup &&
+    String(x.item_name||"").trim()===clean &&
+    x.is_enabled!==false
+  );
+  return num(row?.quantity_per_student);
+}
+function ingredientRate(name,bucket){
+  const settingGroup=settingGroupFor(bucket,current.group);
+  const clean=String(name||"").trim();
+  const row=settings.ingredients.find(x =>
+    String(x.class_group||"").trim()===settingGroup &&
+    String(x.ingredient_name||"").trim()===clean &&
+    x.is_enabled!==false
+  );
+  return num(row?.amount_per_student);
+}
 function namesFor(type){
- const arr=type==="item"?settings.items:settings.ingredients; const map=new Map();
- arr.forEach(x=>{const name=String(x.item_name||x.ingredient_name||"").trim();if(name&&!map.has(name))map.set(name,{name,type,unit:type==="item"?(x.unit||"KG"):"₹"})});
- return [...map.values()];
+  const arr=type==="item"?settings.items:settings.ingredients;
+  /*
+    Calculation Settings uses 8-10 as one common setting group.
+    Daily Food Distribution, however, exposes 8, 9 and 10 separately.
+    Therefore 8-10 must also be accepted when building the item list;
+    otherwise the table header appears but no Items are rendered.
+  */
+  const allowed=new Set(applicableSettingGroups(current.group));
+  if(current.group==="8-10"){
+    allowed.delete("8");
+    allowed.delete("9");
+    allowed.delete("10");
+    allowed.add("8-10");
+  }
+  const map=new Map();
+  arr.forEach(x=>{
+    if(!allowed.has(String(x.class_group||"").trim()))return;
+    const name=String(x.item_name||x.ingredient_name||"").trim();
+    if(!name)return;
+    if(!map.has(name)){
+      map.set(name,{
+        name,
+        type,
+        unit:type==="item"?(x.unit||"KG"):"₹"
+      });
+    }
+  });
+  return [...map.values()];
 }
 function fmt(v,unit){return unit==="₹"?`₹ ${num(v).toFixed(2)}`:num(v).toFixed(3)}
 function normalizeYear(s){return String(s||"").trim().replace(/\s+/g,"")}
@@ -135,12 +186,39 @@ async function loadActiveYear(){
 }
 function fillMonths(){ $("month").innerHTML=months.map((m,i)=>`<option value="${i+1}">${m}</option>`).join("");$("month").value=new Date().getMonth()+1; }
 async function loadSettings(){
- const [a,b]=await Promise.all([
-  db.from("calculation_settings").select("id,academic_year_id,class_group,item_name,quantity_per_student,unit,is_enabled").eq("academic_year_id",activeYear.id).order("created_at",{ascending:true}),
-  db.from("kitchen_ingredients").select("id,academic_year_id,class_group,ingredient_name,amount_per_student,unit,is_enabled").eq("academic_year_id",activeYear.id).order("created_at",{ascending:true})
- ]);
- if(a.error)throw new Error("Calculation Settings Item load failed: "+a.error.message);if(b.error)throw new Error("ಅಡಿಗೆ ಪದಾರ್ಥ load failed: "+b.error.message);
- settings.items=(a.data||[]).filter(x=>x.is_enabled!==false);settings.ingredients=(b.data||[]).filter(x=>x.is_enabled!==false);
+  // Calculation Settings is the single source of truth for the rate.
+  // It has no month selection: use the active Academic Year's
+  // Class Group + Item/Ingredient values.
+  const [a,b]=await Promise.all([
+    db.from("calculation_settings")
+      .select("id,academic_year_id,class_group,item_name,quantity_per_student,unit,is_enabled,updated_at,created_at")
+      .eq("academic_year_id",activeYear.id)
+      .order("created_at",{ascending:true}),
+    db.from("kitchen_ingredients")
+      .select("id,academic_year_id,class_group,ingredient_name,amount_per_student,unit,is_enabled,updated_at,created_at")
+      .eq("academic_year_id",activeYear.id)
+      .order("created_at",{ascending:true})
+  ]);
+  if(a.error)throw new Error("Calculation Settings Item load failed: "+a.error.message);
+  if(b.error)throw new Error("ಅಡಿಗೆ ಪದಾರ್ಥ load failed: "+b.error.message);
+
+  // If old month-based/duplicate rows still exist, do not add them together.
+  // Keep only the latest row for each Class Group + Item.
+  const itemMap=new Map();
+  (a.data||[]).forEach(x=>{
+    if(x.is_enabled===false)return;
+    const key=`${x.class_group}|${String(x.item_name||"").trim()}`;
+    itemMap.set(key,x);
+  });
+  const ingredientMap=new Map();
+  (b.data||[]).forEach(x=>{
+    if(x.is_enabled===false)return;
+    const key=`${x.class_group}|${String(x.ingredient_name||"").trim()}`;
+    ingredientMap.set(key,x);
+  });
+
+  settings.items=[...itemMap.values()];
+  settings.ingredients=[...ingredientMap.values()];
 }
 function addDailyCount(map,date,key,count){if(!map[date])map[date]={};map[date][key]=(map[date][key]||0)+num(count)}
 async function loadDaily(){
@@ -219,24 +297,83 @@ function bucketCount(date,b){
  if(b.key==="8-10")return [8,9,10].reduce((s,c)=>s+num(m[String(c)]),0);
  return 0;
 }
-function wheatStudentsForDate(date){const r=wheatDays.get(date);if(!r)return 0;return num(r.wheat_students)>0?num(r.wheat_students):num((current.counts[date]||{})["8"])}
+function normalizeItemName(v){
+  return String(v||"").replace(/[\s\u200B-\u200D\uFEFF]+/g,"").trim();
+}
+function isRagiMalt(name){
+  const n=normalizeItemName(name);
+  return n.includes("ರಾಗಿ") && n.includes("ಮಾಲ್ಟ್");
+}
+function isNamedItem(name, variants){
+  const n=normalizeItemName(name);
+  return variants.some(v=>normalizeItemName(v)===n);
+}
+function wheatStudentsForDate(date){
+  const r=wheatDays.get(String(date).slice(0,10));
+  if(!r)return 0;
+  const manual=num(r.wheat_students);
+  return manual>0?manual:num((current.counts[String(date).slice(0,10)]||{})["8"]);
+}
 function expense(type,name,date){
- if(current.holidays.has(date))return 0;
- if(type==="item"&&name.trim()==="ರಾಗಿ ಮಾಲ್ಟ್"){const wd=new Date(date+"T00:00:00").getDay();if(![1,3,5].includes(wd))return 0;}
- const bs=groups[current.group];let total=0;
- bs.forEach(b=>{
-  let count=bucketCount(date,b),rate=type==="item"?itemRate(name,b.key):ingredientRate(name,b.key);
-  if(type==="item"&&name.trim()==="ಅಕ್ಕಿ"&&wheatDays.has(date)){
-   // Wheat replacement is ONLY for class 8.
-   if(current.group==="8-10"&&b.key==="8")count=0;
-   if(current.group==="1-10"&&b.key==="8-10")count=num((current.counts[date]||{})["9"])+num((current.counts[date]||{})["10"]);
+  if(current.holidays.has(date))return 0;
+
+  const counts=current.counts[date]||{};
+  const wheatDay=wheatDays.has(String(date).slice(0,10));
+  const bs=groups[current.group]||[];
+  const riceItem=type==="item" && isNamedItem(name,["ಅಕ್ಕಿ","ಅಕ್ಕಿ "]);
+  const wheatItem=type==="item" && isNamedItem(name,["ಗೋಧಿ","ಗೋಧಿ "]);
+  const ragiMaltItem=type==="item" && isRagiMalt(name);
+
+  // ರಾಗಿ ಮಾಲ್ಟ್: ಸೋಮವಾರ, ಬುಧವಾರ, ಶುಕ್ರವಾರ ಮಾತ್ರ.
+  if(ragiMaltItem){
+    const day=new Date(date+"T00:00:00").getDay();
+    if(![1,3,5].includes(day))return 0;
   }
-  if(type==="item"&&name.trim()==="ಗೋಧಿ"&&wheatDays.has(date)){
-   if(current.group==="8-10"&&b.key==="8")count=wheatStudentsForDate(date);else if(current.group==="1-10"&&b.key==="8-10")count=wheatStudentsForDate(date);else count=0;
-  }
-  total+=count*rate;
- });
- return total;
+
+  // Wheat-day rules apply ONLY to classes 1-8.
+  // 9 ಮತ್ತು 10ಕ್ಕೆ ಅಕ್ಕಿ ಪ್ರತಿದಿನವೂ ಲೆಕ್ಕವಾಗುತ್ತದೆ; ಗೋಧಿ ಎಂದಿಗೂ 0.
+  let total=0;
+  bs.forEach(b=>{
+    let count=bucketCount(date,b);
+    const rate=type==="item"?itemRate(name,b.key):ingredientRate(name,b.key);
+
+    if(type==="item" && wheatDay){
+      if(riceItem){
+        if(current.group==="1-7") {
+          // 1-7: wheat day means rice is not used.
+          count=0;
+        } else if(current.group==="8-10" && b.key==="8") {
+          // 8-10: only 8th gets wheat, so 8th rice is 0.
+          count=0;
+        } else if(current.group==="1-10"){
+          if(b.key==="1-5" || b.key==="6-7") count=0;
+          if(b.key==="8-10") count=num(counts["9"])+num(counts["10"]);
+        }
+      }
+
+      if(wheatItem){
+        if(current.group==="1-7"){
+          // 1-7: all students use wheat on wheat day.
+          count=bucketCount(date,b);
+        } else if(current.group==="8-10"){
+          // 8-10: ONLY 8th uses wheat; 9-10 never use wheat.
+          count=b.key==="8" ? wheatStudentsForDate(date) : 0;
+        } else if(current.group==="1-10"){
+          // 1-10: 1-5 + 6-7 + 8 use wheat; 9-10 do not.
+          if(b.key==="1-5" || b.key==="6-7") count=bucketCount(date,b);
+          else if(b.key==="8-10") count=num(counts["8"]);
+        } else {
+          count=0;
+        }
+      }
+    } else if(type==="item" && wheatItem){
+      // No wheat entry for this date => wheat expense MUST be 0.
+      count=0;
+    }
+
+    total += count * rate;
+  });
+  return total;
 }
 function openingFor(type,name){const m=current.month,prev=m===1?12:m-1;const p=closingMap.get(`${prev}|${type}|${name}`);if(p)return num(p.closing_balance);const o=openingMap.get(`${type}|${name}`);return num(o?.opening_balance)}
 function ledger(type,name){const days=new Date(current.year,current.month,0).getDate();let bal=openingFor(type,name),rows=[];for(let d=1;d<=days;d++){const date=iso(current.year,current.month,d),r=receipts.get(`${type}|${name}|${date}`),stock=num(r?.quantity),exp=expense(type,name,date),close=bal+stock-exp;rows.push({date,stock,expense:exp,closing:close,holiday:current.holidays.get(date)});bal=close;}return {opening:openingFor(type,name),rows,closing:bal}}
@@ -254,12 +391,108 @@ function renderReport(){
  const cols=2+bs.length+1+names.length*3;$("reportMonth").textContent=`ತಿಂಗಳು:- ${months[current.month-1]}-${current.year}`;
  let h=`<div class="table-wrap"><table><thead><tr><th colspan="${cols}" class="group-head">${label} — ${esc(groupLabel(current.group))}</th></tr><tr><th rowspan="2">ಕ್ರ.ಸಂ</th><th rowspan="2">ದಿನಾಂಕ</th>${bs.map(b=>`<th rowspan="2">${b.label}<br><small>ವಿದ್ಯಾರ್ಥಿಗಳು</small></th>`).join("")}<th rowspan="2">ಒಟ್ಟು<br>ವಿದ್ಯಾರ್ಥಿಗಳು</th>${names.map(x=>`<th colspan="3" class="group-head">${esc(x.name)}<br><small>${esc(x.unit)}</small></th>`).join("")}</tr><tr>${names.map(()=>`<th>ದಾಸ್ತಾನು</th><th>ಖರ್ಚು</th><th>ಉಳಿಕೆ</th>`).join("")}</tr></thead><tbody>`;
  const led=names.map(x=>({x,l:ledger(x.type,x.name)}));const days=new Date(current.year,current.month,0).getDate();
+
+ // Opening balance row — shown once immediately before the first date.
+ // It is the previous month's Closing Balance, or the saved Initial Opening.
+ h+=`<tr class="opening-row"><td>—</td><td><b>ಪ್ರಾರಂಭಿಕ ಶಿಲ್ಕು</b></td>${bs.map(()=>`<td>—</td>`).join("")}<td class="total">—</td>`;
+ led.forEach(z=>{
+   h+=`<td>—</td><td>—</td><td class="total"><b>${fmt(z.l.opening,z.x.unit)}</b></td>`;
+ });
+ h+=`</tr>`;
+
  for(let d=1;d<=days;d++){const date=iso(current.year,current.month,d),holiday=current.holidays.get(date),counts=bs.map(b=>bucketCount(date,b)),total=counts.reduce((a,b)=>a+b,0);h+=`<tr class="${holiday?'holiday':''}"><td>${d}</td><td>${date}${holiday?`<br>${esc(holiday.holiday_reason||"ರಜೆ")}`:""}</td>${counts.map(v=>`<td>${v}</td>`).join("")}<td class="total">${total}</td>`;led.forEach(z=>{const r=z.l.rows[d-1],rec=receipts.get(`${z.x.type}|${z.x.name}|${date}`);h+=`<td><input class="stock-input no-print" type="number" min="0" step="0.001" data-receipt-type="${z.x.type}" data-receipt-name="${esc(z.x.name)}" data-receipt-date="${date}" value="${rec?num(rec.quantity):""}"><span class="screen-only" style="display:none">${rec?fmt(rec.quantity,z.x.unit):""}</span></td><td>${fmt(r.expense,z.x.unit)}</td><td class="total">${fmt(r.closing,z.x.unit)}</td>`});h+=`</tr>`}
  h+=`</tbody><tfoot><tr><td colspan="${2+bs.length+1}">TOTAL</td>`;led.forEach(z=>{const stock=z.l.rows.reduce((s,r)=>s+r.stock,0),exp=z.l.rows.reduce((s,r)=>s+r.expense,0);h+=`<td>${fmt(stock,z.x.unit)}</td><td>${fmt(exp,z.x.unit)}</td><td class="total">${fmt(z.l.closing,z.x.unit)}</td>`});h+=`</tr></tfoot></table></div>`;$("tableHost").innerHTML=h;
 }
 async function loadAll(){try{if(!activeYear)throw new Error("Active Academic Year ಇಲ್ಲ.");current={group:$("classGroup").value,month:num($("month").value),year:reportYear(num($("month").value))};await loadSettings();await loadDaily();await loadReceipts();await loadWheat();await loadOpening();renderOpening();renderReport();renderWheatList();lockClassGroup();show($("msg"),"ಮಾಹಿತಿ Loaded: Daily Food Distribution + Calculation Settings + School Settings. Class-wise students count Daily Food Distributionನಿಂದ ತೆಗೆದುಕೊಳ್ಳಲಾಗಿದೆ.","ok")}catch(e){console.error(e);show($("msg"),"Load failed: "+e.message,"err")}}
 async function saveOpenings(){try{const inputs=[...document.querySelectorAll("[data-open-type]")];for(const i of inputs){const type=i.dataset.openType,name=i.dataset.openName;if(closingMap.has(`${current.month===1?12:current.month-1}|${type}|${name}`))continue;const unit=type==="ingredient"?"₹":(namesFor("item").find(x=>x.name===name)?.unit||"KG");const q=await db.from("food_stock_opening_balances").upsert({academic_year_id:activeYear.id,item_type:type,item_name:name,opening_balance:num(i.value),unit,updated_at:new Date().toISOString()},{onConflict:"academic_year_id,item_type,item_name"});if(q.error)throw q.error}await loadOpening();renderOpening();renderReport();show($("openingMsg"),"Opening Balance Save ಆಯಿತು.","ok")}catch(e){show($("openingMsg"),"Opening Save failed: "+e.message,"err")}}
-async function saveReceipts(){try{const inputs=[...document.querySelectorAll("[data-receipt-type]")],q=await db.from("food_stock_receipts").select("id,item_type,item_name,receipt_date").eq("academic_year_id",activeYear.id).gte("receipt_date",current.start).lte("receipt_date",current.end);if(q.error)throw q.error;const wanted=new Set(inputs.map(i=>`${i.dataset.receiptType}|${i.dataset.receiptName}|${i.dataset.receiptDate}`));const del=(q.data||[]).filter(r=>!wanted.has(`${r.item_type}|${r.item_name}|${r.receipt_date}`));if(del.length){const z=await db.from("food_stock_receipts").delete().in("id",del.map(x=>x.id));if(z.error)throw z.error}const rows=inputs.map(i=>({academic_year_id:activeYear.id,item_type:i.dataset.receiptType,item_name:i.dataset.receiptName,receipt_date:i.dataset.receiptDate,quantity:num(i.value),unit:i.dataset.receiptType==="ingredient"?"₹":(namesFor("item").find(x=>x.name===i.dataset.receiptName)?.unit||"KG"),updated_at:new Date().toISOString()})).filter(x=>x.quantity>0);if(rows.length){const z=await db.from("food_stock_receipts").upsert(rows,{onConflict:"academic_year_id,item_type,item_name,receipt_date"});if(z.error)throw z.error}const all=[...namesFor("item"),...namesFor("ingredient")];for(const x of all){const l=ledger(x.type,x.name),z=await db.from("food_stock_monthly_closing").upsert({academic_year_id:activeYear.id,item_type:x.type,item_name:x.name,month_number:current.month,closing_balance:l.closing,unit:x.unit,updated_at:new Date().toISOString()},{onConflict:"academic_year_id,item_type,item_name,month_number"});if(z.error)throw z.error}await loadReceipts();await loadOpening();renderOpening();renderReport();show($("saveMsg"),"ದಾಸ್ತಾನು Save ಆಯಿತು. ಈ ತಿಂಗಳ Closing ಮುಂದಿನ ತಿಂಗಳ Opening ಆಗುತ್ತದೆ.","ok")}catch(e){show($("saveMsg"),"Save failed: "+e.message,"err")}}
+async function saveReceipts(){
+  try{
+    const inputs=[...document.querySelectorAll("[data-receipt-type]")];
+    if(!inputs.length)throw new Error("ದಾಸ್ತಾನು ನಮೂದಿಸಲು ಯಾವುದೇ Item / ಅಡುಗೆ ಪದಾರ್ಥ ಲಭ್ಯವಿಲ್ಲ.");
+
+    // Save each day's stock against the exact unique key:
+    // Academic Year + Type + Item + Date.
+    // Blank/zero means there is no receipt on that date.
+    const existingQ=await db.from("food_stock_receipts")
+      .select("id,item_type,item_name,receipt_date")
+      .eq("academic_year_id",activeYear.id)
+      .gte("receipt_date",current.start)
+      .lte("receipt_date",current.end);
+    if(existingQ.error)throw existingQ.error;
+
+    const wanted=new Set();
+    const rows=[];
+    for(const i of inputs){
+      const type=i.dataset.receiptType;
+      const name=i.dataset.receiptName;
+      const date=i.dataset.receiptDate;
+      const quantity=num(i.value);
+      const key=`${type}|${name}|${date}`;
+      wanted.add(key);
+
+      // Do not create rows for blank/zero entries.
+      if(quantity<=0)continue;
+
+      const unit=type==="ingredient"
+        ?"₹"
+        :(namesFor("item").find(x=>x.name===name)?.unit||"KG");
+
+      rows.push({
+        academic_year_id:activeYear.id,
+        item_type:type,
+        item_name:name,
+        receipt_date:date,
+        quantity,
+        unit,
+        updated_at:new Date().toISOString()
+      });
+    }
+
+    // Remove an old receipt when the user clears that day's stock field.
+    const del=(existingQ.data||[]).filter(r=>
+      !wanted.has(`${r.item_type}|${r.item_name}|${r.receipt_date}`) ||
+      !rows.some(x=>x.item_type===r.item_type && x.item_name===r.item_name && x.receipt_date===r.receipt_date)
+    );
+    if(del.length){
+      const z=await db.from("food_stock_receipts").delete().in("id",del.map(x=>x.id));
+      if(z.error)throw z.error;
+    }
+
+    // Upsert receipts so entering stock on a date adds it to that day's ledger.
+    if(rows.length){
+      const z=await db.from("food_stock_receipts")
+        .upsert(rows,{onConflict:"academic_year_id,item_type,item_name,receipt_date"});
+      if(z.error)throw z.error;
+    }
+
+    // Recalculate closing balance from:
+    // Previous balance + that day's stock - that day's calculated expense.
+    // Therefore a stock entry is immediately carried into the balance.
+    const all=[...namesFor("item"),...namesFor("ingredient")];
+    for(const x of all){
+      const l=ledger(x.type,x.name);
+      const z=await db.from("food_stock_monthly_closing").upsert({
+        academic_year_id:activeYear.id,
+        item_type:x.type,
+        item_name:x.name,
+        month_number:current.month,
+        closing_balance:l.closing,
+        unit:x.unit,
+        updated_at:new Date().toISOString()
+      },{onConflict:"academic_year_id,item_type,item_name,month_number"});
+      if(z.error)throw z.error;
+    }
+
+    await loadReceipts();
+    await loadOpening();
+    renderOpening();
+    renderReport();
+    show($("saveMsg"),"ದಾಸ್ತಾನು Save ಆಯಿತು. ನಮೂದಿಸಿದ ದಾಸ್ತಾನು ಆ ದಿನದ Closingಗೆ ಸೇರಿಸಲಾಗಿದೆ; ಮುಂದಿನ ದಿನಕ್ಕೆ ಅದೇ ಉಳಿಕೆ ಸಾಗುತ್ತದೆ.","ok");
+  }catch(e){
+    console.error(e);
+    show($("saveMsg"),"Save failed: "+e.message,"err");
+  }
+}
 async function saveWheat(){try{const date=$("wheatDate").value;if(!date)return show($("msg"),"ಗೋಧಿ ದಿನಾಂಕ ಆಯ್ಕೆ ಮಾಡಿ.","err");const q=await db.from("food_wheat_days").upsert({academic_year_id:activeYear.id,wheat_date:date,wheat_students:num($("wheatStudents").value),updated_at:new Date().toISOString()},{onConflict:"academic_year_id,wheat_date"});if(q.error)throw q.error;editingWheatId=null;$("wheatDate").value="";$("wheatStudents").value="";$("wheatCancelBtn").style.display="none";await loadWheat();renderWheatList();renderReport();show($("msg"),"ಗೋಧಿ ದಿನ Save ಆಯಿತು.","ok")}catch(e){show($("msg"),"Wheat Save failed: "+e.message,"err")}}
 function exportExcel(){
  if(!current)return show($("saveMsg"),"ಮೊದಲು Load ಮಾಡಿ.","err");
@@ -270,19 +503,25 @@ function exportExcel(){
  let h=`<table><tr><th colspan="${totalCols}">${escX(dept)}</th></tr><tr><th colspan="${totalCols}">${escX(sch)}</th></tr><tr><th colspan="${totalCols}">ತಿಂಗಳು:- ${months[current.month-1]}-${current.year}</th></tr><tr><th colspan="${totalCols}">${type==="item"?"Items (ಆಹಾರ ಪದಾರ್ಥಗಳು)":"ಅಡುಗೆ ಪದಾರ್ಥಗಳು"} — ${escX(groupLabel(current.group))}</th></tr>`;
  h+=`<tr><th>ಕ್ರ.ಸಂ</th><th>ದಿನಾಂಕ</th>${bs.map(b=>`<th>${escX(b.label)}<br>ವಿದ್ಯಾರ್ಥಿಗಳು</th>`).join("")}<th>ಒಟ್ಟು ವಿದ್ಯಾರ್ಥಿಗಳು</th>${names.map(x=>`<th>ದಾಸ್ತಾನು</th><th>ಖರ್ಚು</th><th>ಉಳಿಕೆ</th>`).join("")}</tr>`;
  const led=names.map(x=>({x,l:ledger(x.type,x.name)}));const days=new Date(current.year,current.month,0).getDate();
+
+ // Same opening-balance row as the on-screen / print report.
+ h+=`<tr><th>—</th><th>ಪ್ರಾರಂಭಿಕ ಶಿಲ್ಕು</th>${bs.map(()=>`<th>—</th>`).join("")}<th>—</th>`;
+ led.forEach(z=>{h+=`<th>—</th><th>—</th><th>${fmt(z.l.opening,z.x.unit)}</th>`});h+=`</tr>`;
+
  for(let d=1;d<=days;d++){
   const date=iso(current.year,current.month,d),holiday=current.holidays.get(date),counts=bs.map(b=>bucketCount(date,b));
   h+=`<tr class="${holiday?'holiday':''}"><td>${d}</td><td>${escX(date)}${holiday?`<br>${escX(holiday.holiday_reason||"ರಜೆ")}`:""}</td>${counts.map(v=>`<td>${v}</td>`).join("")}<td>${counts.reduce((a,b)=>a+b,0)}</td>`;
   led.forEach(z=>{const r=z.l.rows[d-1],rec=receipts.get(`${z.x.type}|${z.x.name}|${date}`);h+=`<td>${rec?fmt(rec.quantity,z.x.unit):""}</td><td>${fmt(r.expense,z.x.unit)}</td><td>${fmt(r.closing,z.x.unit)}</td>`});h+=`</tr>`;
  }
  h+=`<tr><th colspan="${2+bs.length+1}">TOTAL</th>`;led.forEach(z=>{const stock=z.l.rows.reduce((s,r)=>s+r.stock,0),exp=z.l.rows.reduce((s,r)=>s+r.expense,0);h+=`<th>${fmt(stock,z.x.unit)}</th><th>${fmt(exp,z.x.unit)}</th><th>${fmt(z.l.closing,z.x.unit)}</th>`});h+=`</tr></table>`;
- const html=`<!DOCTYPE html><html lang="kn"><head><meta charset="UTF-8"><style>@page{size:A4 landscape;margin:5mm}body{font-family:"Noto Sans Kannada","Nirmala UI",Arial,sans-serif;margin:0}table{border-collapse:collapse;width:100%;font-size:10pt}th,td{border:1px solid #000;padding:5px;text-align:center;vertical-align:middle}th{font-weight:700;background:#e4ebe5}.holiday td{background:#fff3df;font-weight:700}</style></head><body>${h}</body></html>`;
+ const html=`<!DOCTYPE html><html lang="kn"><head><meta charset="UTF-8"><style>@page{size:A4 landscape;margin:5mm}body{font-family:"Noto Sans Kannada","Nirmala UI",Arial,sans-serif;margin:0}table{border-collapse:collapse;width:100%;font-size:10pt}th,td{border:1px solid #000;padding:5px;text-align:center;vertical-align:middle}th{font-weight:700;background:#e4ebe5}.holiday td{background:#fff3df;font-weight:700}.opening-row td{font-weight:700;background:#f3f6f3}</style></head><body>${h}</body></html>`;
  const blob=new Blob(["\ufeff",html],{type:"application/vnd.ms-excel;charset=utf-8"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=`Daily-${type==="item"?"Items":"Kitchen-Ingredients"}-${current.year}-${pad(current.month)}.xls`;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),1000);
 }
 $("loadBtn").onclick=loadAll;
 $("editClassGroupBtn").onclick=editClassGroup;
 applyClassGroupLock();$("month").onchange=loadAll;$("classGroup").onchange=loadAll;$("reportType").onchange=()=>{if(current)renderReport()};$("saveBtn").onclick=saveReceipts;$("saveOpeningBtn").onclick=saveOpenings;$("refreshOpeningBtn").onclick=async()=>{try{await loadOpening();renderOpening();renderReport()}catch(e){show($("openingMsg"),"Refresh failed: "+e.message,"err")}};$("wheatSaveBtn").onclick=saveWheat;$("wheatCancelBtn").onclick=()=>{editingWheatId=null;$("wheatDate").value="";$("wheatStudents").value="";$("wheatCancelBtn").style.display="none"};$("excelBtn").onclick=exportExcel;$("printBtn").onclick=()=>window.print();
 (async function(){try{fillMonths();await loadSchool();await loadActiveYear();await loadAll()}catch(e){console.error(e);show($("msg"),"Initial load failed: "+e.message,"err")}})();
+
 </script>
 </body>
 </html>
