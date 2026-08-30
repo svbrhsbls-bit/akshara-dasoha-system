@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="kn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ಅಕ್ಷರ ದಾಸೋಹ - ದಿನವಹಿ ಆಹಾರ ವಿತರಣೆ</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#f3f6f4;color:#17202a;font-family:Arial,"Noto Sans Kannada","Nirmala UI",sans-serif}
+header{background:#126b38;color:#fff;padding:18px 28px}
+header h1{margin:0;font-size:29px} header p{margin:5px 0 0;font-size:15px}
+.wrap{max-width:1500px;margin:18px auto;padding:0 14px}
+.card{background:#fff;border-radius:12px;padding:18px;margin-bottom:16px;box-shadow:0 2px 10px #0001}
+.controls{display:grid;grid-template-columns:1.2fr 1fr 1fr 1fr auto;gap:12px;align-items:end}
+label{display:block;font-weight:700;margin-bottom:6px}
+select,input,button{font:inherit}
+select,input{width:100%;padding:10px;border:1px solid #bfc9c2;border-radius:7px;background:#fff}
+button{border:0;border-radius:7px;padding:10px 15px;font-weight:700;cursor:pointer}
+.primary{background:#126b38;color:#fff}.secondary{background:#e7ece9}.danger{background:#b42318;color:#fff}
+.msg{display:none;margin-top:10px;padding:9px;border-radius:7px}.msg.ok{display:block;background:#e5f6eb;color:#126b38}.msg.err{display:block;background:#fde8e7;color:#a11}
+.small{font-size:13px;color:#64748b}
+.sheet-wrap{overflow:auto;border:1px solid #9aa5a0}
+.sheet{border-collapse:collapse;width:100%;min-width:1200px;table-layout:fixed;background:#fff}
+.sheet th,.sheet td{border:1px solid #7f8b84;padding:5px;text-align:center;vertical-align:middle}
+.sheet th{background:#eef2ef;font-weight:700}
+.title{font-size:19px;font-weight:700}
+.school{font-weight:700;text-align:left!important;padding:10px!important}
+.monthbox{text-align:right!important;font-weight:700}
+.group{background:#dfe7e2!important;font-size:15px}
+.day{width:90px}.enroll{width:90px}.att{width:90px}.n{width:55px}
+.sheet input.num{width:52px;padding:5px;text-align:center;border-radius:3px;border:1px solid #b9c2bd}
+.totalcell{font-weight:700;background:#f5f7f6}
+.holiday-row td{background:#fff3df;color:#9a4d00;font-weight:700;height:34px}
+.sun-row td{background:#f8f8f8;color:#777}
+tfoot td{font-weight:700;background:#e8eee9}
+.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.status{font-size:12px;padding:4px 7px;border-radius:10px;background:#e9f6ed;color:#126b38}
+@media(max-width:900px){.controls{grid-template-columns:1fr 1fr}.controls button{width:100%}}
+@media print{
+ body{background:#fff}.no-print,header .no-print{display:none!important}.wrap{max-width:none;margin:0;padding:0}.card{box-shadow:none;padding:0}
+ .sheet{min-width:0;font-size:10px}.sheet input{border:0;background:transparent}
+ @page{size:A4 landscape;margin:7mm}
+}
+</style>
+</head>
+<body>
+<header>
+ <h1>ಅಕ್ಷರ ದಾಸೋಹ ಕಾರ್ಯಕ್ರಮ</h1>
+ <p>ಶಾಲಾ ಶಿಕ್ಷಣ ಮತ್ತು ಸಾಕ್ಷರತಾ ಇಲಾಖೆ — ಪ್ರತಿ ನಿತ್ಯ ಶಾಲೆಯಲ್ಲಿ ಬಿಸಿಊಟ, ಮೊಟ್ಟೆ &amp; ಬಾಳೆಹಣ್ಣು ಸೇವಿಸಿದ ಮಕ್ಕಳ ಮಾಹಿತಿ</p>
+</header>
+
+<div class="wrap">
+ <div class="card no-print">
+  <div class="controls">
+   <div><label>Academic Year / ಶೈಕ್ಷಣಿಕ ವರ್ಷ</label><select id="year"></select></div>
+   <div><label>Month / ತಿಂಗಳು</label><select id="month"></select></div>
+   <div><label>Class / ತರಗತಿ</label>
+    <select id="classGroup">
+     <option value="1-7">1 - 7</option>
+     <option value="8-10" selected>8 - 10</option>
+     <option value="1-10">1 - 10</option>
+    </select>
+   </div>
+   <div><label>School Name / ಶಾಲೆಯ ಹೆಸರು</label><input id="schoolName" value="ಶ್ರೀ ವೀರಬಲ್ಲಾಳ ಗ್ರಾಮಾಂತರ ಪ್ರೌಢಶಾಲೆ ಬಲ್ಲಾಳಸಮುದ್ರ ಹೊಸದುರ್ಗ ತಾ||"></div>
+   <button class="primary" id="loadBtn">Load</button>
+  </div>
+  <div id="msg" class="msg"></div>
+  <div class="small" style="margin-top:8px">ತಿಂಗಳು ಬದಲಿಸಿದಾಗ ಆ ತಿಂಗಳ ಎಲ್ಲಾ ದಿನಗಳು ಬರುತ್ತವೆ. ರಜೆ ದಿನದಲ್ಲಿ ಖರ್ಚು/quantity ತೋರಿಸುವುದಿಲ್ಲ; ನೀವು ನಮೂದಿಸಿದ ರಜೆಯ ಕಾರಣ ಮಾತ್ರ ತೋರಿಸುತ್ತದೆ.</div>
+ </div>
+
+ <div class="card">
+  <div style="text-align:center;font-weight:700;font-size:20px">
+   ಅಕ್ಷರ ದಾಸೋಹ ಕಾರ್ಯಕ್ರಮ ಶಾಲಾ ಶಿಕ್ಷಣ ಮತ್ತು ಸಾಕ್ಷರತಾ ಇಲಾಖೆ ಹೊಸದುರ್ಗ
+  </div>
+  <div style="text-align:center;font-weight:700;margin:4px 0 12px">
+   ಪ್ರತಿ ನಿತ್ಯ ಶಾಲೆಯಲ್ಲಿ ಬಿಸಿಊಟ ಮೊಟ್ಟೆ &amp; ಬಾಳೆಹಣ್ಣು ಸೇವಿಸಿದ ಮಕ್ಕಳ ಮಾಹಿತಿ
+  </div>
+  <div id="sheetHost"></div>
+  <div class="actions no-print">
+   <button class="primary" id="saveBtn">💾 Save Month</button>
+   <button class="secondary" id="printBtn">🖨️ Print</button>
+  </div>
+  <div id="saveMsg" class="msg no-print"></div>
+ </div>
+</div>
+
+<script>
+const SUPABASE_URL="https://ezmudfrpcvjsgnjibvoq.supabase.co";
+const SUPABASE_KEY="sb_publishable__FYyH6NQaqgARaq2dvuovQ_rKmus0js";
+const db=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+
+const months=["ಜನವರಿ","ಫೆಬ್ರವರಿ","ಮಾರ್ಚ್","ಏಪ್ರಿಲ್","ಮೇ","ಜೂನ್","ಜುಲೈ","ಆಗಸ್ಟ್","ಸೆಪ್ಟೆಂಬರ್","ಅಕ್ಟೋಬರ್","ನವೆಂಬರ್","ಡಿಸೆಂಬರ್"];
+const groups={ "1-7":[1,2,3,4,5,6,7], "8-10":[8,9,10], "1-10":[1,2,3,4,5,6,7,8,9,10] };
+const $=id=>document.getElementById(id);
+let currentYear=null, currentRows=[], currentHolidays=new Map();
+
+function show(el,text,type="ok"){el.textContent=text;el.className="msg "+type}
+function pad(n){return String(n).padStart(2,"0")}
+function dateISO(y,m,d){return `${y}-${pad(m)}-${pad(d)}`}
+function esc(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+function selectedClasses(){return groups[$("classGroup").value]||groups["8-10"]}
+
+async function loadYears(){
+ const {data,error}=await db.from("academic_years").select("id,year_name,is_active").order("year_name",{ascending:false});
+ if(error){show($("msg"),"Academic Year load failed: "+error.message,"err");return}
+ $("year").innerHTML=(data||[]).map(y=>`<option value="${y.id}" data-active="${y.is_active?'1':'0'}">${esc(y.year_name)}${y.is_active?' — Active':''}</option>`).join("");
+ const active=(data||[]).find(y=>y.is_active);
+ if(active){$("year").value=active.id;currentYear=active}
+ else if(data?.[0]){currentYear=data[0];$("year").value=data[0].id}
+}
+
+function setMonthDefault(){
+ const now=new Date(); $("month").value=now.getMonth()+1;
+}
+
+async function getStudentCounts(yearId,month,group){
+ const classes=groups[group];
+ const {data,error}=await db.from("student_numbers")
+   .select("class_number,division_name,total_students,boys,girls")
+   .eq("academic_year_id",yearId)
+   .eq("month_number",month)
+   .in("class_number",classes);
+ if(error) throw error;
+ const out={}; classes.forEach(c=>out[c]=0);
+ (data||[]).forEach(r=>{out[r.class_number]=(out[r.class_number]||0)+Number(r.total_students||0)});
+ return out;
+}
+
+async function getHolidayMap(yearId,month,year){
+ const start=dateISO(year,month,1), endDate=new Date(year,month,0).getDate(), end=dateISO(year,month,endDate);
+ const {data,error}=await db.from("school_holidays").select("holiday_date,holiday_reason").eq("academic_year_id",yearId).gte("holiday_date",start).lte("holiday_date",end);
+ if(error) throw error;
+ const map=new Map(); (data||[]).forEach(x=>map.set(x.holiday_date,x.holiday_reason)); return map;
+}
+
+async function getFood(yearId,month,year){
+ const start=dateISO(year,month,1), end=dateISO(year,month,new Date(year,month,0).getDate());
+ const {data,error}=await db.from("daily_food_distribution")
+   .select("distribution_date,item_name,students_count,quantity_per_student,total_quantity,unit")
+   .eq("academic_year_id",yearId).gte("distribution_date",start).lte("distribution_date",end);
+ if(error) throw error;
+ const map=new Map();
+ (data||[]).forEach(r=>{
+   const key=r.distribution_date+"|"+r.item_name;
+   map.set(key,r);
+ });
+ return map;
+}
+
+function itemRowsForDate(date,studentCounts,foodMap){
+ const classes=selectedClasses();
+ const items=[
+   {name:"ಮೊಟ್ಟೆ", key:"egg", unit:"", q:null},
+   {name:"ಬಾಳೆಹಣ್ಣು", key:"banana", unit:"", q:null},
+   {name:"ಬಿಸಿಊಟ", key:"meal", unit:"", q:null}
+ ];
+ return items.map(item=>{
+   const vals={};
+   classes.forEach(c=>{
+     const rec=foodMap.get(date+"|"+item.name+"|"+c);
+     vals[c]=rec?Number(rec.students_count||0):0;
+   });
+   return vals;
+ })
+}
+
+function renderSheet(year,month,counts,holidays,foodRecords,group){
+ const classes=groups[group];
+ const days=new Date(year,month,0).getDate();
+ let h=`<div class="sheet-wrap"><table class="sheet">
+ <thead>
+  <tr><th colspan="${3+classes.length*4}" class="title">ಅಕ್ಷರ ದಾಸೋಹ ಕಾರ್ಯಕ್ರಮ ಶಾಲಾ ಶಿಕ್ಷಣ ಮತ್ತು ಸಾಕ್ಷರತಾ ಇಲಾಖೆ ಹೊಸದುರ್ಗ</th></tr>
+  <tr><th colspan="${3+classes.length*4}" class="school">ಶಾಲೆಯ ಹೆಸರು : ${esc($("schoolName").value)} <span style="float:right">ತಿಂಗಳು: <b>${months[month-1]} ${year}</b></span></th></tr>
+  <tr>
+   <th rowspan="2" class="day">ದಿನಾಂಕ</th><th rowspan="2" class="enroll">ದಾಖಲಾತಿ</th><th rowspan="2" class="att">ಹಾಜರಾತಿ</th>
+   <th colspan="${classes.length+1}" class="group">ಮೊಟ್ಟೆ</th>
+   <th colspan="${classes.length+1}" class="group">ಬಾಳೆಹಣ್ಣು</th>
+   <th colspan="${classes.length+1}" class="group">ಬಿಸಿಊಟ</th>
+  </tr>
+  <tr>
+   ${classes.map(c=>`<th class="n">${c}</th>`).join("")}<th class="n">ಒಟ್ಟು</th>
+   ${classes.map(c=>`<th class="n">${c}</th>`).join("")}<th class="n">ಒಟ್ಟು</th>
+   ${classes.map(c=>`<th class="n">${c}</th>`).join("")}<th class="n">ಒಟ್ಟು</th>
+  </tr>
+ </thead><tbody>`;
+
+ for(let d=1;d<=days;d++){
+   const iso=dateISO(year,month,d), dt=new Date(year,month-1,d), dow=dt.getDay();
+   const isSun=dow===0, holiday=holidays.get(iso);
+   if(isSun || holiday){
+     const reason=holiday||"ಭಾನುವಾರ";
+     h+=`<tr class="${isSun&&!holiday?'sun-row':'holiday-row'}"><td>${pad(d)}-${pad(month)}-${year}</td><td colspan="${2+classes.length*4}">${esc(reason)}</td></tr>`;
+     continue;
+   }
+   const enroll=classes.reduce((s,c)=>s+(counts[c]||0),0);
+   let egg=[],banana=[],meal=[];
+   classes.forEach(c=>{
+      egg.push(getSaved(foodRecords,iso,"ಮೊಟ್ಟೆ",c));
+      banana.push(getSaved(foodRecords,iso,"ಬಾಳೆಹಣ್ಣು",c));
+      meal.push(getSaved(foodRecords,iso,"ಬಿಸಿಊಟ",c));
+   });
+   const eggT=egg.reduce((a,b)=>a+b,0), banT=banana.reduce((a,b)=>a+b,0), mealT=meal.reduce((a,b)=>a+b,0);
+   const attendance=mealT;
+   h+=`<tr data-date="${iso}">
+    <td>${pad(d)}-${pad(month)}-${year}</td>
+    <td>${enroll}</td>
+    <td class="attCell">${attendance}</td>
+    ${egg.map((v,i)=>`<td><input class="num egg" data-class="${classes[i]}" value="${v||""}" inputmode="numeric"></td>`).join("")}
+    <td class="totalcell eggTotal">${eggT}</td>
+    ${banana.map((v,i)=>`<td><input class="num banana" data-class="${classes[i]}" value="${v||""}" inputmode="numeric"></td>`).join("")}
+    <td class="totalcell bananaTotal">${banT}</td>
+    ${meal.map((v,i)=>`<td><input class="num meal" data-class="${classes[i]}" value="${v||""}" inputmode="numeric"></td>`).join("")}
+    <td class="totalcell mealTotal">${mealT}</td>
+   </tr>`;
+ }
+ h+=`</tbody><tfoot><tr><td>ಒಟ್ಟು</td><td></td><td id="grandAtt">0</td>
+   <td colspan="${classes.length+1}" id="grandEgg">0</td>
+   <td colspan="${classes.length+1}" id="grandBanana">0</td>
+   <td colspan="${classes.length+1}" id="grandMeal">0</td>
+ </tr></tfoot></table></div>`;
+ $("sheetHost").innerHTML=h;
+ recalc();
+}
+
+function getSaved(records,date,item,classNo){
+ const r=records.get(date+"|"+item+"|"+classNo);
+ return r?Number(r.students_count||0):0;
+}
+
+function recalc(){
+ document.querySelectorAll("tr[data-date]").forEach(tr=>{
+   let egg=0,ban=0,meal=0;
+   tr.querySelectorAll(".egg").forEach(x=>egg+=Number(x.value||0));
+   tr.querySelectorAll(".banana").forEach(x=>ban+=Number(x.value||0));
+   tr.querySelectorAll(".meal").forEach(x=>meal+=Number(x.value||0));
+   tr.querySelector(".eggTotal").textContent=egg;
+   tr.querySelector(".bananaTotal").textContent=ban;
+   tr.querySelector(".mealTotal").textContent=meal;
+   tr.querySelector(".attCell").textContent=meal;
+ });
+ let a=0,e=0,b=0,m=0;
+ document.querySelectorAll("tr[data-date]").forEach(tr=>{
+   a+=Number(tr.querySelector(".attCell")?.textContent||0);
+   e+=Number(tr.querySelector(".eggTotal")?.textContent||0);
+   b+=Number(tr.querySelector(".bananaTotal")?.textContent||0);
+   m+=Number(tr.querySelector(".mealTotal")?.textContent||0);
+ });
+ $("grandAtt").textContent=a;$("grandEgg").textContent=e;$("grandBanana").textContent=b;$("grandMeal").textContent=m;
+}
+
+document.addEventListener("input",e=>{if(e.target.matches(".num"))recalc()});
+
+async function loadSheet(){
+ try{
+  currentYear=[...$("year").options].find(o=>o.value===$("year").value);
+  if(!currentYear) throw new Error("Academic Year ಆಯ್ಕೆ ಆಗಿಲ್ಲ.");
+  const yearId=currentYear.value, year=parseInt(currentYear.textContent.match(/\d{4}/)?.[0]||new Date().getFullYear());
+  const month=Number($("month").value), group=$("classGroup").value;
+  const [counts,holidays,rawFood]=await Promise.all([
+    getStudentCounts(yearId,month,group),getHolidayMap(yearId,month,year),getFood(yearId,month,year)
+  ]);
+  // existing table has no class column, so old generic rows are only used for item/date totals.
+  // For this Excel-style page, entries are saved one class at a time using item_name = item + "||" + class.
+  const food=new Map();
+  rawFood.forEach((r)=>{
+    const m=r.item_name.match(/^(ಮೊಟ್ಟೆ|ಬಾಳೆಹಣ್ಣು|ಬಿಸಿಊಟ)\|\|(\d+)$/);
+    if(m) food.set(r.distribution_date+"|"+m[1]+"|"+m[2],r);
+  });
+  currentRows={yearId,year,month,group,counts,holidays,food};
+  renderSheet(year,month,counts,holidays,food,group);
+  show($("msg"),"ಮಾಹಿತಿ Loaded. Student Number ಆಧಾರದಲ್ಲಿ ದಾಖಲಾತಿ ಸಿದ್ಧವಾಗಿದೆ.","ok");
+ }catch(e){show($("msg"),"Load failed: "+e.message,"err")}
+}
+
+async function saveMonth(){
+ try{
+  if(!currentRows?.yearId){await loadSheet(); if(!currentRows?.yearId)return}
+  const {yearId,year,month,group}=currentRows, classes=groups[group];
+  const records=[];
+  document.querySelectorAll("tr[data-date]").forEach(tr=>{
+    const date=tr.dataset.date;
+    [["egg","ಮೊಟ್ಟೆ"],["banana","ಬಾಳೆಹಣ್ಣು"],["meal","ಬಿಸಿಊಟ"]].forEach(([cls,name])=>{
+      tr.querySelectorAll("."+cls).forEach(inp=>{
+        const classNo=inp.dataset.class, n=Number(inp.value||0);
+        if(n>0) records.push({
+          academic_year_id:yearId,distribution_date:date,
+          item_name:name+"||"+classNo,students_count:n,
+          quantity_per_student:1,total_quantity:n,unit:"ಮಕ್ಕಳು"
+        });
+      });
+    });
+  });
+  // Remove this month's Excel-style entries for the selected class group, then insert current values.
+  // This keeps one clean record per date/item/class.
+  const start=dateISO(year,month,1), end=dateISO(year,month,new Date(year,month,0).getDate());
+  const names=["ಮೊಟ್ಟೆ","ಬಾಳೆಹಣ್ಣು","ಬಿಸಿಊಟ"].flatMap(n=>classes.map(c=>n+"||"+c));
+  const {error:delErr}=await db.from("daily_food_distribution")
+    .delete().eq("academic_year_id",yearId).gte("distribution_date",start).lte("distribution_date",end).in("item_name",names);
+  if(delErr)throw delErr;
+  if(records.length){
+    const {error:insErr}=await db.from("daily_food_distribution").insert(records);
+    if(insErr)throw insErr;
+  }
+  await loadSheet();
+  show($("saveMsg"),"ಈ ತಿಂಗಳ ಆಹಾರ ವಿತರಣೆ ಮಾಹಿತಿ ಯಶಸ್ವಿಯಾಗಿ Save ಆಯಿತು.","ok");
+ }catch(e){show($("saveMsg"),"Save failed: "+e.message,"err")}
+}
+
+$("loadBtn").onclick=loadSheet;
+$("saveBtn").onclick=saveMonth;
+$("printBtn").onclick=()=>window.print();
+$("month").onchange=loadSheet;
+$("classGroup").onchange=loadSheet;
+$("year").onchange=loadSheet;
+
+(async function init(){
+ for(let i=1;i<=12;i++) $("month").insertAdjacentHTML("beforeend",`<option value="${i}">${months[i-1]}</option>`);
+ setMonthDefault();
+ await loadYears();
+ await loadSheet();
+})();
+</script>
+</body>
+</html>
