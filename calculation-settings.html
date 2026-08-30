@@ -3,522 +3,2472 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ಅಕ್ಷರ ದಾಸೋಹ - ಲೆಕ್ಕಾಚಾರ ಸೆಟ್ಟಿಂಗ್ಸ್</title>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<title>Calculation Settings</title>
+
 <style>
-  *{box-sizing:border-box}
-  body{margin:0;font-family:Arial,"Noto Sans Kannada",sans-serif;background:#f3f6fa;color:#1f2937}
-  header{background:#146c38;color:#fff;padding:22px 28px}
-  header h1{margin:0 0 6px;font-size:30px}
-  header p{margin:0;font-size:15px}
-  .wrap{max-width:1150px;margin:28px auto;padding:0 18px}
-  .card{background:#fff;border-radius:14px;padding:24px;margin-bottom:22px;box-shadow:0 3px 15px rgba(0,0,0,.08)}
-  h2{margin:0 0 20px;font-size:23px}
-  .grid{display:grid;grid-template-columns:1.2fr 1fr 1fr auto;gap:14px;align-items:end}
-  .year-grid{display:grid;grid-template-columns:minmax(260px,420px) auto;gap:14px;align-items:end}
-  .year-actions{padding-bottom:0}
-  label{display:block;font-weight:600;margin-bottom:7px}
-  input,select{width:100%;height:44px;border:1px solid #cbd5e1;border-radius:8px;padding:0 12px;font-size:16px;background:#fff}
-  input:focus,select:focus{outline:none;border-color:#16834a;box-shadow:0 0 0 3px rgba(22,131,74,.12)}
-  button{border:0;border-radius:8px;padding:11px 18px;font-size:15px;font-weight:600;cursor:pointer}
-  .btn-save{background:#146c38;color:#fff}
-  .btn-cancel{background:#e5e7eb;color:#111827;margin-left:8px}
-  .btn-edit{background:#2563eb;color:#fff;padding:7px 12px}
-  .btn-delete{background:#dc2626;color:#fff;padding:7px 12px;margin-left:6px}
-  .status{margin-top:15px;padding:12px;border-radius:8px;display:none}
-  .success{display:block;background:#dcfce7;color:#166534}
-  .error{display:block;background:#fee2e2;color:#991b1b}
-  .muted{color:#64748b}
-  .table-wrap{overflow-x:auto}
-  table{width:100%;border-collapse:collapse}
-  th,td{padding:13px 10px;border-bottom:1px solid #e5e7eb;text-align:left}
-  th{background:#eef3f8}
-  .empty{text-align:center;padding:30px;color:#64748b}
-  .check{display:flex;align-items:center;gap:8px;height:44px;white-space:nowrap}
-  .check input{width:18px;height:18px}
-  .topline{display:flex;justify-content:space-between;gap:15px;align-items:center}
-  .badge{display:inline-block;padding:4px 9px;border-radius:20px;font-size:13px;font-weight:600}
-  .on{background:#dcfce7;color:#166534}.off{background:#fee2e2;color:#991b1b}
-  .small{font-size:13px;color:#64748b;margin-top:7px}
-  @media(max-width:800px){
-    .grid,.year-grid{grid-template-columns:1fr}
-    .topline{align-items:flex-start;flex-direction:column}
+*{
+  box-sizing:border-box;
+}
+
+body{
+  margin:0;
+  font-family:Arial,"Noto Sans Kannada",sans-serif;
+  background:#f4f7fb;
+  color:#222;
+}
+
+.container{
+  max-width:1200px;
+  margin:25px auto;
+  padding:0 16px;
+}
+
+h1{
+  margin:0 0 20px;
+  font-size:28px;
+}
+
+.card{
+  background:#fff;
+  border-radius:12px;
+  padding:22px;
+  margin-bottom:20px;
+  box-shadow:0 2px 10px rgba(0,0,0,.08);
+}
+
+.card h2{
+  margin-top:0;
+  margin-bottom:18px;
+  font-size:21px;
+}
+
+.grid{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:16px;
+}
+
+.year-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:16px;
+}
+
+label{
+  display:block;
+  font-weight:600;
+  margin-bottom:7px;
+}
+
+input,
+select{
+  width:100%;
+  padding:11px 12px;
+  border:1px solid #ccd3dd;
+  border-radius:7px;
+  font-size:15px;
+  background:#fff;
+}
+
+input:disabled,
+select:disabled{
+  background:#f0f2f5;
+  cursor:not-allowed;
+}
+
+button{
+  border:0;
+  border-radius:7px;
+  padding:10px 15px;
+  font-size:14px;
+  cursor:pointer;
+  margin-right:5px;
+}
+
+.btn-save{
+  background:#1677ff;
+  color:#fff;
+}
+
+.btn-edit{
+  background:#f59e0b;
+  color:#fff;
+}
+
+.btn-delete{
+  background:#dc3545;
+  color:#fff;
+}
+
+.btn-cancel{
+  background:#6c757d;
+  color:#fff;
+}
+
+button:disabled{
+  opacity:.6;
+  cursor:not-allowed;
+}
+
+.status{
+  margin-top:15px;
+  padding:10px 12px;
+  border-radius:7px;
+  display:none;
+}
+
+.status.success{
+  display:block;
+  background:#e8f7ee;
+  color:#176b38;
+}
+
+.status.error{
+  display:block;
+  background:#fdeaea;
+  color:#a11a1a;
+}
+
+.small{
+  color:#666;
+  font-size:13px;
+  margin-top:8px;
+}
+
+.muted{
+  color:#666;
+  font-size:13px;
+}
+
+.topline{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:10px;
+}
+
+.table-wrap{
+  width:100%;
+  overflow-x:auto;
+}
+
+table{
+  width:100%;
+  border-collapse:collapse;
+  min-width:850px;
+}
+
+th,
+td{
+  border:1px solid #d7dce3;
+  padding:10px 9px;
+  text-align:left;
+  vertical-align:middle;
+}
+
+th{
+  background:#f0f3f7;
+  font-weight:700;
+}
+
+.empty{
+  text-align:center;
+  color:#777;
+  padding:20px;
+}
+
+.badge{
+  display:inline-block;
+  padding:4px 8px;
+  border-radius:20px;
+  font-size:12px;
+}
+
+.badge.on{
+  background:#dff5e7;
+  color:#176b38;
+}
+
+.badge.off{
+  background:#eee;
+  color:#666;
+}
+
+.check{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  padding-top:28px;
+}
+
+.check input{
+  width:auto;
+}
+
+@media(max-width:800px){
+  .grid,
+  .year-grid{
+    grid-template-columns:1fr;
   }
+
+  .container{
+    margin-top:10px;
+  }
+}
 </style>
 </head>
+
 <body>
 
-<header>
-  <h1>ಅಕ್ಷರ ದಾಸೋಹ ಕಾರ್ಯಕ್ರಮ</h1>
-  <p>Calculation Settings / ಲೆಕ್ಕಾಚಾರ ಸೆಟ್ಟಿಂಗ್ಸ್</p>
-</header>
+<div class="container">
 
-<div class="wrap">
+<h1>Calculation Settings</h1>
 
-  <div class="card">
-    <h2>ಶೈಕ್ಷಣಿಕ ವರ್ಷ</h2>
+<!-- =====================================================
+     ACTIVE ACADEMIC YEAR
+====================================================== -->
 
-    <div class="year-grid">
-      <div>
-        <label for="yearInput">Academic Year type ಮಾಡಿ</label>
-        <input id="yearInput" type="text" maxlength="20"
-               placeholder="ಉದಾ: 2026-27"
-               autocomplete="off">
-      </div>
-      <div class="year-actions">
-        <button class="btn-save" id="addYearBtn" onclick="addAcademicYear()">➕ Add Year</button>
-      </div>
+<div class="card">
+
+  <h2>ಶೈಕ್ಷಣಿಕ ವರ್ಷ</h2>
+
+  <div class="year-grid">
+
+    <div>
+
+      <label for="academicYearDisplay">
+        Settings → Active Academic Year
+      </label>
+
+      <input
+        id="academicYearDisplay"
+        type="text"
+        readonly
+        placeholder="School Settingsನಲ್ಲಿ Active Year ಹೊಂದಿಸಿ"
+      >
+
+      <input
+        id="academicYear"
+        type="hidden"
+      >
+
     </div>
 
-    <div style="margin-top:18px">
-      <label for="academicYear">Academic Year ಆಯ್ಕೆ ಮಾಡಿ</label>
-      <select id="academicYear">
-        <option value="">ಶೈಕ್ಷಣಿಕ ವರ್ಷ ಆಯ್ಕೆ ಮಾಡಿ</option>
+    <div style="display:flex;align-items:end">
+
+      <div
+        id="yearInfo"
+        class="small"
+        style="margin:0"
+      ></div>
+
+    </div>
+
+  </div>
+
+  <div id="message" class="status"></div>
+
+</div>
+
+
+<!-- =====================================================
+     CLASS + MONTH
+====================================================== -->
+
+<div class="card">
+
+  <h2>ತರಗತಿ ಮತ್ತು ತಿಂಗಳು</h2>
+
+  <div class="grid">
+
+    <div>
+
+      <label for="calcClass">
+        Class / ತರಗತಿ
+      </label>
+
+      <select id="calcClass">
+
+        <option value="">
+          ತರಗತಿ ಆಯ್ಕೆ ಮಾಡಿ
+        </option>
+
+        <option value="1">
+          1ನೇ ತರಗತಿ
+        </option>
+
+        <option value="2">
+          2ನೇ ತರಗತಿ
+        </option>
+
+        <option value="3">
+          3ನೇ ತರಗತಿ
+        </option>
+
+        <option value="4">
+          4ನೇ ತರಗತಿ
+        </option>
+
+        <option value="5">
+          5ನೇ ತರಗತಿ
+        </option>
+
+        <option value="6">
+          6ನೇ ತರಗತಿ
+        </option>
+
+        <option value="7">
+          7ನೇ ತರಗತಿ
+        </option>
+
+        <option value="8">
+          8ನೇ ತರಗತಿ
+        </option>
+
+        <option value="9">
+          9ನೇ ತರಗತಿ
+        </option>
+
+        <option value="10">
+          10ನೇ ತರಗತಿ
+        </option>
+
       </select>
+
     </div>
 
-    <div style="margin-top:12px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
-      <button class="btn-save" id="setActiveBtn" onclick="setSelectedYearActive()">⭐ ಈ Year ಅನ್ನು Active ಮಾಡಿ</button>
-      <span id="yearInfo" class="small" style="margin-top:0"></span>
+
+    <div>
+
+      <label for="calcMonth">
+        Month / ತಿಂಗಳು
+      </label>
+
+      <select id="calcMonth">
+
+        <option value="">
+          ತಿಂಗಳು ಆಯ್ಕೆ ಮಾಡಿ
+        </option>
+
+        <option value="1">
+          January / ಜನವರಿ
+        </option>
+
+        <option value="2">
+          February / ಫೆಬ್ರವರಿ
+        </option>
+
+        <option value="3">
+          March / ಮಾರ್ಚ್
+        </option>
+
+        <option value="4">
+          April / ಏಪ್ರಿಲ್
+        </option>
+
+        <option value="5">
+          May / ಮೇ
+        </option>
+
+        <option value="6">
+          June / ಜೂನ್
+        </option>
+
+        <option value="7">
+          July / ಜುಲೈ
+        </option>
+
+        <option value="8">
+          August / ಆಗಸ್ಟ್
+        </option>
+
+        <option value="9">
+          September / ಸೆಪ್ಟೆಂಬರ್
+        </option>
+
+        <option value="10">
+          October / ಅಕ್ಟೋಬರ್
+        </option>
+
+        <option value="11">
+          November / ನವೆಂಬರ್
+        </option>
+
+        <option value="12">
+          December / ಡಿಸೆಂಬರ್
+        </option>
+
+      </select>
+
     </div>
 
-    <div id="message" class="status"></div>
+
+    <div style="display:flex;align-items:end;gap:8px">
+
+      <button
+        class="btn-save"
+        type="button"
+        id="calcApplyBtn"
+      >
+        Load
+      </button>
+
+      <button
+        class="btn-edit"
+        type="button"
+        id="calcEditSelectionBtn"
+        style="display:none"
+      >
+        ✏️ Edit
+      </button>
+
+    </div>
+
   </div>
 
-  <div class="card">
-    <h2 id="formTitle">➕ ಹೊಸ Item ಸೇರಿಸಿ</h2>
-
-    <div class="grid">
-      <div>
-        <label for="itemName">Item Name / ವಸ್ತುವಿನ ಹೆಸರು</label>
-        <input id="itemName" type="text" placeholder="ಉದಾ: ರಾಗಿ ಮಾಲ್ಟ್">
-      </div>
-
-      <div>
-        <label for="quantity">ಪ್ರತಿ ಮಗುವಿಗೆ ಪ್ರಮಾಣ</label>
-        <input id="quantity" type="number" step="0.001" min="0" placeholder="ಉದಾ: 0.050">
-      </div>
-
-      <div>
-        <label for="unit">Unit / ಅಳತೆ</label>
-        <input id="unit" type="text" placeholder="ಉದಾ: ಕೆಜಿ / ಗ್ರಾಂ / ಲೀಟರ್">
-      </div>
-
-      <div class="check">
-        <input id="enabled" type="checkbox" checked>
-        <label for="enabled" style="margin:0">Enable</label>
-      </div>
-    </div>
-
-    <div style="margin-top:18px">
-      <button class="btn-save" id="saveBtn" onclick="saveItem()">💾 Save</button>
-      <button class="btn-cancel" id="cancelBtn" onclick="cancelEdit()" style="display:none">Cancel</button>
-    </div>
-    <div class="small">Item ಹೆಸರು ಮತ್ತು Unit ಅನ್ನು ನೀವೇ type ಮಾಡಿ. ಉದಾ: ರಾಗಿ ಮಾಲ್ಟ್, ಸಕ್ಕರೆ.</div>
-  </div>
-
-  <div class="card">
-    <div class="topline">
-      <h2 style="margin:0">Calculation Items</h2>
-      <span id="selectedYearLabel" class="muted">ಶೈಕ್ಷಣಿಕ ವರ್ಷ ಆಯ್ಕೆ ಮಾಡಿ</span>
-    </div>
-
-    <div class="table-wrap" style="margin-top:18px">
-      <table>
-        <thead>
-          <tr>
-            <th>Sl.No</th>
-            <th>Item Name</th>
-            <th>ಪ್ರತಿ ಮಗುವಿಗೆ ಪ್ರಮಾಣ</th>
-            <th>Unit</th>
-            <th>Status</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody id="itemsBody">
-          <tr><td colspan="6" class="empty">ಶೈಕ್ಷಣಿಕ ವರ್ಷ ಆಯ್ಕೆ ಮಾಡಿ.</td></tr>
-        </tbody>
-      </table>
-    </div>
+  <div
+    id="calcSelectionInfo"
+    class="small"
+  >
+    Active Academic Year, Class ಮತ್ತು Month ಆಯ್ಕೆ ಮಾಡಿ Load ಒತ್ತಿ.
   </div>
 
 </div>
 
-<script>
-const SUPABASE_URL = "https://ezmudfrpcvjsgnjibvoq.supabase.co";
-const SUPABASE_KEY = "sb_publishable__FYyH6NQaqgARaq2dvuovQ_rKmus0js";
 
-const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+<!-- =====================================================
+     CALCULATION ITEMS
+====================================================== -->
+
+<div class="card">
+
+  <div class="topline">
+
+    <div>
+
+      <h2 id="formTitle">
+        ➕ ಹೊಸ Calculation Item ಸೇರಿಸಿ
+      </h2>
+
+      <div class="muted">
+        Class + Month ಪ್ರಕಾರ calculation item
+      </div>
+
+    </div>
+
+  </div>
+
+
+  <div class="grid">
+
+    <div>
+
+      <label for="itemName">
+        Item Name
+      </label>
+
+      <input
+        id="itemName"
+        type="text"
+        placeholder="ಉದಾ: Egg"
+      >
+
+    </div>
+
+
+    <div>
+
+      <label for="quantity">
+        ಪ್ರತಿ ವಿದ್ಯಾರ್ಥಿಗೆ ಪ್ರಮಾಣ
+      </label>
+
+      <input
+        id="quantity"
+        type="number"
+        step="0.01"
+        min="0"
+        placeholder="ಉದಾ: 1"
+      >
+
+    </div>
+
+
+    <div>
+
+      <label for="unit">
+        Unit / ಅಳತೆ
+      </label>
+
+      <input
+        id="unit"
+        type="text"
+        placeholder="ಉದಾ: ಸಂಖ್ಯೆ / ಕೆಜಿ"
+      >
+
+    </div>
+
+  </div>
+
+
+  <div class="check">
+
+    <input
+      id="enabled"
+      type="checkbox"
+      checked
+    >
+
+    <label
+      for="enabled"
+      style="margin:0"
+    >
+      Enable
+    </label>
+
+  </div>
+
+
+  <div style="margin-top:18px">
+
+    <button
+      class="btn-save"
+      id="saveBtn"
+      onclick="saveItem()"
+    >
+      💾 Save
+    </button>
+
+    <button
+      class="btn-cancel"
+      id="cancelBtn"
+      onclick="cancelEdit()"
+      style="display:none"
+    >
+      Cancel
+    </button>
+
+  </div>
+
+
+  <div
+    class="table-wrap"
+    style="margin-top:20px"
+  >
+
+    <table>
+
+      <thead>
+
+        <tr>
+
+          <th>Sl.No</th>
+
+          <th>Class</th>
+
+          <th>Month</th>
+
+          <th>Item</th>
+
+          <th>ಪ್ರತಿ ವಿದ್ಯಾರ್ಥಿಗೆ ಪ್ರಮಾಣ</th>
+
+          <th>Unit</th>
+
+          <th>Status</th>
+
+          <th>Actions</th>
+
+        </tr>
+
+      </thead>
+
+      <tbody id="itemsBody">
+
+        <tr>
+
+          <td
+            colspan="8"
+            class="empty"
+          >
+            Class ಮತ್ತು Month ಆಯ್ಕೆ ಮಾಡಿ.
+
+          </td>
+
+        </tr>
+
+      </tbody>
+
+    </table>
+
+  </div>
+
+</div>
+
+
+<!-- =====================================================
+     KITCHEN INGREDIENTS
+====================================================== -->
+
+<div class="card">
+
+  <div class="topline">
+
+    <div>
+
+      <h2>
+        ಅಡಿಗೆ ಪದಾರ್ಥಗಳು
+      </h2>
+
+      <div class="muted">
+        ತರಕಾರಿ, ಸಾಂಬಾರು ಪದಾರ್ಥ, ಸಿಲಿಂಡರ್, ಉಪ್ಪು ಮತ್ತು ಇತರೆ ಅಡಿಗೆ ಪದಾರ್ಥಗಳು
+      </div>
+
+    </div>
+
+  </div>
+
+
+  <div class="grid">
+
+    <div>
+
+      <label for="ingredientName">
+        ಪದಾರ್ಥದ ಹೆಸರು
+      </label>
+
+      <input
+        id="ingredientName"
+        type="text"
+        placeholder="ಉದಾ: ತರಕಾರಿ"
+      >
+
+    </div>
+
+
+    <div>
+
+      <label for="ingredientAmount">
+        ಪ್ರತಿ ವಿದ್ಯಾರ್ಥಿಗೆ ಮೊತ್ತ (₹)
+      </label>
+
+      <input
+        id="ingredientAmount"
+        type="number"
+        step="0.01"
+        min="0"
+        placeholder="ಉದಾ: 2.50"
+      >
+
+    </div>
+
+
+    <div>
+
+      <label for="ingredientUnit">
+        Unit / ಅಳತೆ
+      </label>
+
+      <input
+        id="ingredientUnit"
+        type="text"
+        placeholder="ಉದಾ: ಕೆಜಿ / ಲೀಟರ್ / ಸಂಖ್ಯೆ"
+      >
+
+    </div>
+
+  </div>
+
+
+  <div class="check">
+
+    <input
+      id="ingredientEnabled"
+      type="checkbox"
+      checked
+    >
+
+    <label
+      for="ingredientEnabled"
+      style="margin:0"
+    >
+      Enable
+    </label>
+
+  </div>
+
+
+  <div style="margin-top:18px">
+
+    <button
+      class="btn-save"
+      id="ingredientSaveBtn"
+      onclick="saveIngredient()"
+    >
+      💾 Save
+    </button>
+
+    <button
+      class="btn-cancel"
+      id="ingredientCancelBtn"
+      onclick="cancelIngredientEdit()"
+      style="display:none"
+    >
+      Cancel
+    </button>
+
+  </div>
+
+
+  <div class="small">
+
+    ಉದಾಹರಣೆ:
+    ತರಕಾರಿ ₹2.00,
+    ಸಾಂಬಾರು ಪದಾರ್ಥ ₹1.00,
+    ಸಿಲಿಂಡರ್ ₹0.50,
+    ಉಪ್ಪು ₹0.20 —
+    ಪ್ರತಿ ವಿದ್ಯಾರ್ಥಿಗೆ ಇರುವ ಮೊತ್ತವನ್ನು ನಮೂದಿಸಬಹುದು.
+
+  </div>
+
+
+  <div
+    class="table-wrap"
+    style="margin-top:20px"
+  >
+
+    <table>
+
+      <thead>
+
+        <tr>
+
+          <th>Sl.No</th>
+
+          <th>Class</th>
+
+          <th>Month</th>
+
+          <th>ಪದಾರ್ಥ</th>
+
+          <th>ಪ್ರತಿ ವಿದ್ಯಾರ್ಥಿಗೆ ಮೊತ್ತ</th>
+
+          <th>Unit</th>
+
+          <th>Status</th>
+
+          <th>Actions</th>
+
+        </tr>
+
+      </thead>
+
+      <tbody id="ingredientsBody">
+
+        <tr>
+
+          <td
+            colspan="8"
+            class="empty"
+          >
+            Class ಮತ್ತು Month ಆಯ್ಕೆ ಮಾಡಿ.
+
+          </td>
+
+        </tr>
+
+      </tbody>
+
+    </table>
+
+  </div>
+
+</div>
+
+</div>
+
+
+<!-- =====================================================
+     SUPABASE
+====================================================== -->
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<script>
+
+/*
+=========================================================
+SUPABASE CONFIG
+=========================================================
+ನಿಮ್ಮ systemನಲ್ಲಿ ಈಗಾಗಲೇ ಬಳಸುತ್ತಿರುವ
+SUPABASE_URL ಮತ್ತು SUPABASE_ANON_KEY
+ಇಲ್ಲಿ ಹಾಕಿ.
+=========================================================
+*/
+
+const SUPABASE_URL = "YOUR_SUPABASE_URL";
+
+const SUPABASE_ANON_KEY = "YOUR_SUPABASE_ANON_KEY";
+
+const db = window.supabase.createClient(
+  SUPABASE_URL,
+  SUPABASE_ANON_KEY
+);
+
+
+/* ======================================================
+   GLOBAL VARIABLES
+====================================================== */
 
 let editingId = null;
-let years = [];
 
-const yearSelect = document.getElementById("academicYear");
-const itemsBody = document.getElementById("itemsBody");
-const messageBox = document.getElementById("message");
-const yearInput = document.getElementById("yearInput");
+let editingIngredientId = null;
 
-document.addEventListener("DOMContentLoaded", loadYears);
-yearSelect.addEventListener("change", async () => {
-  resetForm();
-  const y = years.find(x => x.id === yearSelect.value);
-  document.getElementById("selectedYearLabel").textContent =
-    y ? y.year_name : "ಶೈಕ್ಷಣಿಕ ವರ್ಷ ಆಯ್ಕೆ ಮಾಡಿ";
-  document.getElementById("yearInfo").textContent =
-    y ? ("ಆಯ್ಕೆ ಮಾಡಿದ ವರ್ಷ: " + y.year_name + (y.is_active ? " (Active)" : " (Inactive)")) : "";
+let activeAcademicYear = null;
 
-  const activeBtn = document.getElementById("setActiveBtn");
-  if (activeBtn) {
-    activeBtn.disabled = !y || !!y.is_active;
-    activeBtn.textContent = y && y.is_active
-      ? "⭐ Active Year"
-      : "⭐ ಈ Year ಅನ್ನು Active ಮಾಡಿ";
-  }
+let selectedClass = "";
 
-  await loadItems();
-});
+let selectedMonth = "";
 
-function showMessage(text, type="success") {
+
+const monthNames = {
+
+  1:"ಜನವರಿ",
+
+  2:"ಫೆಬ್ರವರಿ",
+
+  3:"ಮಾರ್ಚ್",
+
+  4:"ಏಪ್ರಿಲ್",
+
+  5:"ಮೇ",
+
+  6:"ಜೂನ್",
+
+  7:"ಜುಲೈ",
+
+  8:"ಆಗಸ್ಟ್",
+
+  9:"ಸೆಪ್ಟೆಂಬರ್",
+
+  10:"ಅಕ್ಟೋಬರ್",
+
+  11:"ನವೆಂಬರ್",
+
+  12:"ಡಿಸೆಂಬರ್"
+
+};
+
+
+const yearHidden =
+  document.getElementById("academicYear");
+
+
+const yearDisplay =
+  document.getElementById("academicYearDisplay");
+
+
+const itemsBody =
+  document.getElementById("itemsBody");
+
+
+const ingredientsBody =
+  document.getElementById("ingredientsBody");
+
+
+const messageBox =
+  document.getElementById("message");
+
+
+/* ======================================================
+   MESSAGE
+====================================================== */
+
+function showMessage(
+  text,
+  type = "success"
+){
+
   messageBox.textContent = text;
-  messageBox.className = "status " + type;
+
+  messageBox.className =
+    "status " + type;
+
   setTimeout(() => {
-    messageBox.className = "status";
+
     messageBox.textContent = "";
-  }, 4500);
+
+    messageBox.className =
+      "status";
+
+  },4500);
+
 }
 
 
-async function addAcademicYear() {
-  const yearName = yearInput.value.trim();
+/* ======================================================
+   HTML ESCAPE
+====================================================== */
 
-  if (!yearName) {
-    showMessage("Academic Year ನಮೂದಿಸಿ. ಉದಾ: 2026-27", "error");
-    yearInput.focus();
-    return;
-  }
+function esc(value){
 
-  const btn = document.getElementById("addYearBtn");
-  btn.disabled = true;
+  return String(value ?? "")
 
-  // If the entered year already exists, select it instead of creating a duplicate.
-  const { data: existing, error: checkError } = await db
+    .replaceAll("&","&amp;")
+
+    .replaceAll("<","&lt;")
+
+    .replaceAll(">","&gt;")
+
+    .replaceAll('"',"&quot;")
+
+    .replaceAll("'","&#039;");
+
+}
+
+
+/* ======================================================
+   CLASS LABEL
+====================================================== */
+
+function classLabel(value){
+
+  return value
+    ? value + "ನೇ ತರಗತಿ"
+    : "";
+
+}
+
+
+/* ======================================================
+   LOAD ACTIVE ACADEMIC YEAR
+====================================================== */
+
+async function loadActiveAcademicYear(){
+
+  const {
+
+    data,
+    error
+
+  } = await db
+
     .from("academic_years")
-    .select("id, year_name, is_active")
-    .eq("year_name", yearName)
+
+    .select(
+      "id, year_name, is_active"
+    )
+
+    .eq(
+      "is_active",
+      true
+    )
+
+    .order(
+      "created_at",
+      {
+        ascending:false
+      }
+    )
+
+    .limit(1)
+
     .maybeSingle();
 
-  if (checkError) {
-    console.error(checkError);
-    btn.disabled = false;
-    showMessage("Academic Year check failed: " + checkError.message, "error");
+
+  if(error){
+
+    showMessage(
+      "Active Academic Year load failed: "
+      + error.message,
+      "error"
+    );
+
     return;
+
   }
 
-  if (existing) {
-    yearInput.value = "";
-    await loadYears(existing.id);
-    btn.disabled = false;
-    showMessage(yearName + " ಈಗಾಗಲೇ ಇದೆ. ಅದನ್ನು ಆಯ್ಕೆ ಮಾಡಲಾಗಿದೆ.");
+
+  if(!data){
+
+    activeAcademicYear = null;
+
+    yearHidden.value = "";
+
+    yearDisplay.value = "";
+
+    document.getElementById(
+      "yearInfo"
+    ).textContent =
+      "School Settingsನಲ್ಲಿ Active Academic Year ಹೊಂದಿಸಿ.";
+
     return;
+
   }
 
-  // New years are added as inactive.
-  // You can choose any year and explicitly make it Active.
-  const { data, error } = await db
-    .from("academic_years")
-    .insert({
-      year_name: yearName,
-      is_active: false
+
+  activeAcademicYear = data;
+
+  yearHidden.value = data.id;
+
+  yearDisplay.value = data.year_name;
+
+  document.getElementById(
+    "yearInfo"
+  ).textContent =
+    "School Settings Active Year: "
+    + data.year_name;
+
+}
+
+
+/* ======================================================
+   SELECTION STORAGE
+====================================================== */
+
+function selectionKey(){
+
+  return (
+    "calculation_selection_"
+    + yearHidden.value
+  );
+
+}
+
+
+function saveSelectionState(){
+
+  localStorage.setItem(
+
+    selectionKey(),
+
+    JSON.stringify({
+
+      classNumber:
+        selectedClass,
+
+      monthNumber:
+        Number(selectedMonth),
+
+      locked:true
+
     })
-    .select("id, year_name, is_active, created_at")
-    .single();
 
-  if (error) {
-    console.error(error);
-    btn.disabled = false;
-    showMessage("Academic Year save failed: " + error.message, "error");
-    return;
-  }
+  );
 
-  yearInput.value = "";
-  await loadYears(data.id);
-  btn.disabled = false;
-  showMessage(yearName + " Academic Year successfully added.");
 }
 
 
-async function setSelectedYearActive() {
-  const yearId = yearSelect.value;
+/* ======================================================
+   RESTORE SELECTION
+====================================================== */
 
-  if (!yearId) {
-    showMessage("ಮೊದಲು Academic Year ಆಯ್ಕೆ ಮಾಡಿ.", "error");
+function restoreSelection(){
+
+  if(!yearHidden.value){
+
     return;
+
   }
 
-  const selectedYear = years.find(y => y.id === yearId);
-  if (!selectedYear) {
-    showMessage("Academic Year ಕಂಡುಬಂದಿಲ್ಲ.", "error");
+
+  const raw =
+    localStorage.getItem(
+      selectionKey()
+    );
+
+
+  if(!raw){
+
     return;
+
   }
 
-  if (selectedYear.is_active) {
-    showMessage(selectedYear.year_name + " ಈಗಾಗಲೇ Active ಇದೆ.");
-    return;
+
+  try{
+
+    const data =
+      JSON.parse(raw);
+
+
+    if(
+
+      data &&
+      data.locked &&
+      data.classNumber &&
+      data.monthNumber
+
+    ){
+
+      selectedClass =
+        String(data.classNumber);
+
+      selectedMonth =
+        String(data.monthNumber);
+
+
+      document.getElementById(
+        "calcClass"
+      ).value =
+        selectedClass;
+
+
+      document.getElementById(
+        "calcMonth"
+      ).value =
+        selectedMonth;
+
+
+      lockSelection(true);
+
+      loadItems();
+
+      loadIngredients();
+
+    }
+
+  }catch(e){
+
+    console.log(e);
+
   }
 
-  const btn = document.getElementById("setActiveBtn");
-  btn.disabled = true;
-
-  // First deactivate all years.
-  const { error: deactivateError } = await db
-    .from("academic_years")
-    .update({ is_active: false })
-    .neq("id", yearId);
-
-  if (deactivateError) {
-    console.error(deactivateError);
-    btn.disabled = false;
-    showMessage("Active Year change failed: " + deactivateError.message, "error");
-    return;
-  }
-
-  // Then activate the selected year.
-  const { error: activateError } = await db
-    .from("academic_years")
-    .update({ is_active: true })
-    .eq("id", yearId);
-
-  btn.disabled = false;
-
-  if (activateError) {
-    console.error(activateError);
-    showMessage("Active Year save failed: " + activateError.message, "error");
-    await loadYears(yearId);
-    return;
-  }
-
-  await loadYears(yearId);
-  showMessage(selectedYear.year_name + " ಅನ್ನು Active Year ಆಗಿ ಮಾಡಲಾಗಿದೆ.");
 }
 
-async function loadYears(selectId = null) {
-  yearSelect.innerHTML = '<option value="">ಶೈಕ್ಷಣಿಕ ವರ್ಷ ಆಯ್ಕೆ ಮಾಡಿ</option>';
 
-  const { data, error } = await db
-    .from("academic_years")
-    .select("id, year_name, is_active, created_at")
-    .order("year_name", { ascending: false });
+/* ======================================================
+   LOCK CLASS + MONTH
+====================================================== */
 
-  if (error) {
-    console.error(error);
-    showMessage("Academic Year load failed: " + error.message, "error");
-    return;
+function lockSelection(
+  locked
+){
+
+  const classSelect =
+    document.getElementById(
+      "calcClass"
+    );
+
+
+  const monthSelect =
+    document.getElementById(
+      "calcMonth"
+    );
+
+
+  const loadButton =
+    document.getElementById(
+      "calcApplyBtn"
+    );
+
+
+  const editButton =
+    document.getElementById(
+      "calcEditSelectionBtn"
+    );
+
+
+  const info =
+    document.getElementById(
+      "calcSelectionInfo"
+    );
+
+
+  classSelect.disabled =
+    locked;
+
+
+  monthSelect.disabled =
+    locked;
+
+
+  loadButton.style.display =
+    locked
+      ? "none"
+      : "inline-block";
+
+
+  editButton.style.display =
+    locked
+      ? "inline-block"
+      : "none";
+
+
+  if(locked){
+
+    info.textContent =
+      "🔒 "
+      + classLabel(selectedClass)
+      + " — "
+      + monthNames[
+          Number(selectedMonth)
+        ]
+      + " Lock ಆಗಿದೆ. Edit ಒತ್ತಿ ಬದಲಾಯಿಸಿ.";
+
+  }else{
+
+    info.textContent =
+      "Active Academic Year, Class ಮತ್ತು Month ಆಯ್ಕೆ ಮಾಡಿ Load ಒತ್ತಿ.";
+
   }
 
-  years = data || [];
-
-  years.forEach(y => {
-    const opt = document.createElement("option");
-    opt.value = y.id;
-    opt.textContent = y.year_name + (y.is_active ? " — Active" : "");
-    yearSelect.appendChild(opt);
-  });
-
-  if (!years.length) {
-    showMessage("academic_years tableನಲ್ಲಿ ಯಾವುದೇ ವರ್ಷಗಳಿಲ್ಲ. ಮೊದಲು Academic Year ಸೇರಿಸಿ.", "error");
-    return;
-  }
-
-  const active = years.find(y => y.is_active);
-
-  // Prefer a newly added/explicitly requested year; otherwise use active year.
-  const selected = selectId
-    ? years.find(y => y.id === selectId)
-    : active;
-
-  if (selected) {
-    yearSelect.value = selected.id;
-    yearSelect.dispatchEvent(new Event("change"));
-  }
 }
 
-async function loadItems() {
-  const yearId = yearSelect.value;
 
-  if (!yearId) {
-    itemsBody.innerHTML = '<tr><td colspan="6" class="empty">ಶೈಕ್ಷಣಿಕ ವರ್ಷ ಆಯ್ಕೆ ಮಾಡಿ.</td></tr>';
+/* ======================================================
+   APPLY CLASS + MONTH
+====================================================== */
+
+async function applySelection(){
+
+  if(!yearHidden.value){
+
+    showMessage(
+      "School Settingsನಲ್ಲಿ Active Academic Year ಹೊಂದಿಸಿ.",
+      "error"
+    );
+
     return;
+
   }
 
-  itemsBody.innerHTML = '<tr><td colspan="6" class="empty">Loading...</td></tr>';
 
-  const { data, error } = await db
-    .from("calculation_settings")
-    .select("id, academic_year_id, item_name, quantity_per_student, unit, is_enabled, created_at, updated_at")
-    .eq("academic_year_id", yearId)
-    .order("created_at", { ascending: true });
+  selectedClass =
+    document.getElementById(
+      "calcClass"
+    ).value;
 
-  if (error) {
-    console.error(error);
-    itemsBody.innerHTML = '<tr><td colspan="6" class="empty">Data load failed.</td></tr>';
-    showMessage("Calculation items load failed: " + error.message, "error");
+
+  selectedMonth =
+    document.getElementById(
+      "calcMonth"
+    ).value;
+
+
+  if(
+
+    !selectedClass ||
+    !selectedMonth
+
+  ){
+
+    showMessage(
+      "Class ಮತ್ತು Month ಎರಡನ್ನೂ ಆಯ್ಕೆ ಮಾಡಿ.",
+      "error"
+    );
+
     return;
+
   }
 
-  renderItems(data || []);
+
+  saveSelectionState();
+
+  lockSelection(true);
+
+  await loadItems();
+
+  await loadIngredients();
+
 }
 
-function renderItems(items) {
-  if (!items.length) {
-    itemsBody.innerHTML = '<tr><td colspan="6" class="empty">ಈ Academic Yearಗೆ ಯಾವುದೇ item ಇಲ್ಲ. ಮೇಲಿನ form ಬಳಸಿ Add ಮಾಡಿ.</td></tr>';
+
+/* ======================================================
+   EDIT SELECTION
+====================================================== */
+
+function editSelection(){
+
+  localStorage.removeItem(
+    selectionKey()
+  );
+
+  lockSelection(false);
+
+}
+
+
+/* ======================================================
+   CALCULATION ITEMS LOAD
+====================================================== */
+
+async function loadItems(){
+
+  if(
+
+    !yearHidden.value ||
+    !selectedClass ||
+    !selectedMonth
+
+  ){
+
+    itemsBody.innerHTML =
+
+      `<tr>
+        <td colspan="8" class="empty">
+          Class ಮತ್ತು Month ಆಯ್ಕೆ ಮಾಡಿ.
+        </td>
+      </tr>`;
+
     return;
+
   }
+
+
+  const {
+
+    data,
+    error
+
+  } = await db
+
+    .from(
+      "calculation_settings"
+    )
+
+    .select("*")
+
+    .eq(
+      "academic_year_id",
+      yearHidden.value
+    )
+
+    .eq(
+      "class_number",
+      Number(selectedClass)
+    )
+
+    .eq(
+      "month_number",
+      Number(selectedMonth)
+    )
+
+    .order(
+      "created_at",
+      {
+        ascending:true
+      }
+    );
+
+
+  if(error){
+
+    itemsBody.innerHTML =
+
+      `<tr>
+        <td colspan="8" class="empty">
+          Data load failed.
+        </td>
+      </tr>`;
+
+    showMessage(
+      "Calculation items load failed: "
+      + error.message,
+      "error"
+    );
+
+    return;
+
+  }
+
+
+  renderItems(
+    data || []
+  );
+
+}
+
+
+/* ======================================================
+   RENDER ITEMS
+====================================================== */
+
+function renderItems(items){
+
+  if(!items.length){
+
+    itemsBody.innerHTML =
+
+      `<tr>
+        <td colspan="8" class="empty">
+          ಈ Class + Monthಗೆ ಯಾವುದೇ calculation item ಇಲ್ಲ.
+        </td>
+      </tr>`;
+
+    return;
+
+  }
+
 
   itemsBody.innerHTML = "";
 
-  items.forEach((item, index) => {
-    const tr = document.createElement("tr");
 
-    const status = item.is_enabled
-      ? '<span class="badge on">Enabled</span>'
-      : '<span class="badge off">Disabled</span>';
+  items.forEach(
+    (item,index) => {
 
-    tr.innerHTML = `
-      <td>${index + 1}</td>
-      <td>${escapeHtml(item.item_name)}</td>
-      <td>${escapeHtml(String(item.quantity_per_student))}</td>
-      <td>${escapeHtml(item.unit)}</td>
-      <td>${status}</td>
-      <td>
-        <button class="btn-edit" onclick='editItem(${JSON.stringify(item)})'>✏️ Edit</button>
-        <button class="btn-delete" onclick="deleteItem('${item.id}')">🗑️ Delete</button>
-      </td>
-    `;
+      const tr =
+        document.createElement(
+          "tr"
+        );
 
-    itemsBody.appendChild(tr);
-  });
+
+      tr.innerHTML = `
+
+        <td>
+          ${index + 1}
+        </td>
+
+        <td>
+          ${esc(
+            classLabel(
+              item.class_number
+            )
+          )}
+        </td>
+
+        <td>
+          ${esc(
+            monthNames[
+              Number(
+                item.month_number
+              )
+            ]
+          )}
+        </td>
+
+        <td>
+          ${esc(
+            item.item_name
+          )}
+        </td>
+
+        <td>
+          ${esc(
+            item.quantity_per_student
+          )}
+        </td>
+
+        <td>
+          ${esc(
+            item.unit
+          )}
+        </td>
+
+        <td>
+
+          ${
+            item.is_enabled
+
+              ? '<span class="badge on">Enabled</span>'
+
+              : '<span class="badge off">Disabled</span>'
+          }
+
+        </td>
+
+        <td>
+
+          <button
+            class="btn-edit"
+            onclick='editItem(${JSON.stringify(item)})'
+          >
+            ✏️ Edit
+          </button>
+
+          <button
+            class="btn-delete"
+            onclick="deleteItem('${item.id}')"
+          >
+            🗑️ Delete
+          </button>
+
+        </td>
+
+      `;
+
+
+      itemsBody.appendChild(
+        tr
+      );
+
+    }
+  );
+
 }
 
-async function saveItem() {
-  const academicYearId = yearSelect.value;
-  const itemName = document.getElementById("itemName").value.trim();
-  const quantity = document.getElementById("quantity").value;
-  const unit = document.getElementById("unit").value.trim();
-  const enabled = document.getElementById("enabled").checked;
 
-  if (!academicYearId) {
-    showMessage("ಮೊದಲು Academic Year ಆಯ್ಕೆ ಮಾಡಿ.", "error");
+/* ======================================================
+   SAVE CALCULATION ITEM
+====================================================== */
+
+async function saveItem(){
+
+  if(
+
+    !yearHidden.value ||
+    !selectedClass ||
+    !selectedMonth
+
+  ){
+
+    showMessage(
+      "ಮೊದಲು Active Academic Year, Class ಮತ್ತು Month ಆಯ್ಕೆ ಮಾಡಿ.",
+      "error"
+    );
+
     return;
+
   }
-  if (!itemName) {
-    showMessage("Item Name ನಮೂದಿಸಿ.", "error");
+
+
+  const itemName =
+    document.getElementById(
+      "itemName"
+    ).value.trim();
+
+
+  const quantity =
+    document.getElementById(
+      "quantity"
+    ).value;
+
+
+  const unit =
+    document.getElementById(
+      "unit"
+    ).value.trim();
+
+
+  const enabled =
+    document.getElementById(
+      "enabled"
+    ).checked;
+
+
+  if(
+
+    !itemName ||
+    quantity === "" ||
+    Number(quantity) < 0 ||
+    !unit
+
+  ){
+
+    showMessage(
+      "Item Name, ಪ್ರಮಾಣ ಮತ್ತು Unit ಸರಿಯಾಗಿ ನಮೂದಿಸಿ.",
+      "error"
+    );
+
     return;
+
   }
-  if (quantity === "" || Number(quantity) < 0) {
-    showMessage("ಪ್ರತಿ ಮಗುವಿಗೆ ಪ್ರಮಾಣ ಸರಿಯಾಗಿ ನಮೂದಿಸಿ.", "error");
-    return;
-  }
-  if (!unit) {
-    showMessage("Unit ನಮೂದಿಸಿ.", "error");
-    return;
-  }
+
 
   const payload = {
-    academic_year_id: academicYearId,
-    item_name: itemName,
-    quantity_per_student: Number(quantity),
-    unit: unit,
-    is_enabled: enabled,
-    updated_at: new Date().toISOString()
+
+    academic_year_id:
+      yearHidden.value,
+
+    class_number:
+      Number(selectedClass),
+
+    month_number:
+      Number(selectedMonth),
+
+    item_name:
+      itemName,
+
+    quantity_per_student:
+      Number(quantity),
+
+    unit:
+      unit,
+
+    is_enabled:
+      enabled,
+
+    updated_at:
+      new Date().toISOString()
+
   };
 
-  document.getElementById("saveBtn").disabled = true;
+
+  const button =
+    document.getElementById(
+      "saveBtn"
+    );
+
+
+  button.disabled =
+    true;
+
 
   let result;
 
-  if (editingId) {
-    result = await db
-      .from("calculation_settings")
-      .update(payload)
-      .eq("id", editingId)
-      .eq("academic_year_id", academicYearId)
-      .select()
-      .single();
-  } else {
-    result = await db
-      .from("calculation_settings")
-      .insert(payload)
-      .select()
-      .single();
+
+  if(editingId){
+
+    result =
+      await db
+
+        .from(
+          "calculation_settings"
+        )
+
+        .update(
+          payload
+        )
+
+        .eq(
+          "id",
+          editingId
+        )
+
+        .eq(
+          "academic_year_id",
+          yearHidden.value
+        )
+
+        .select()
+
+        .single();
+
+  }else{
+
+    result =
+      await db
+
+        .from(
+          "calculation_settings"
+        )
+
+        .insert(
+          payload
+        )
+
+        .select()
+
+        .single();
+
   }
 
-  document.getElementById("saveBtn").disabled = false;
 
-  if (result.error) {
-    console.error(result.error);
-    showMessage("Save failed: " + result.error.message, "error");
+  button.disabled =
+    false;
+
+
+  if(result.error){
+
+    showMessage(
+      "Save failed: "
+      + result.error.message,
+      "error"
+    );
+
     return;
+
   }
 
-  showMessage(editingId ? "Item successfully updated." : "Item successfully saved.");
+
+  showMessage(
+    editingId
+      ? "Calculation item updated."
+      : "Calculation item saved."
+  );
+
+
   resetForm();
+
   await loadItems();
+
 }
 
-function editItem(item) {
-  editingId = item.id;
-  document.getElementById("formTitle").textContent = "✏️ Item Edit ಮಾಡಿ";
-  document.getElementById("itemName").value = item.item_name || "";
-  document.getElementById("quantity").value = item.quantity_per_student ?? "";
-  document.getElementById("unit").value = item.unit || "";
-  document.getElementById("enabled").checked = !!item.is_enabled;
-  document.getElementById("saveBtn").textContent = "💾 Update";
-  document.getElementById("cancelBtn").style.display = "inline-block";
-  window.scrollTo({top: 0, behavior: "smooth"});
+
+/* ======================================================
+   EDIT ITEM
+====================================================== */
+
+function editItem(item){
+
+  editingId =
+    item.id;
+
+
+  document.getElementById(
+    "formTitle"
+  ).textContent =
+    "✏️ Calculation Item Edit ಮಾಡಿ";
+
+
+  document.getElementById(
+    "itemName"
+  ).value =
+    item.item_name || "";
+
+
+  document.getElementById(
+    "quantity"
+  ).value =
+    item.quantity_per_student ?? "";
+
+
+  document.getElementById(
+    "unit"
+  ).value =
+    item.unit || "";
+
+
+  document.getElementById(
+    "enabled"
+  ).checked =
+    !!item.is_enabled;
+
+
+  document.getElementById(
+    "saveBtn"
+  ).textContent =
+    "💾 Update";
+
+
+  document.getElementById(
+    "cancelBtn"
+  ).style.display =
+    "inline-block";
+
 }
 
-async function deleteItem(id) {
-  if (!confirm("ಈ item ಅನ್ನು ಅಳಿಸಬೇಕೇ?")) return;
 
-  const { error } = await db
-    .from("calculation_settings")
+/* ======================================================
+   DELETE ITEM
+====================================================== */
+
+async function deleteItem(id){
+
+  if(
+    !confirm(
+      "ಈ calculation item ಅನ್ನು ಅಳಿಸಬೇಕೇ?"
+    )
+  ){
+
+    return;
+
+  }
+
+
+  const {
+
+    error
+
+  } = await db
+
+    .from(
+      "calculation_settings"
+    )
+
     .delete()
-    .eq("id", id)
-    .eq("academic_year_id", yearSelect.value);
 
-  if (error) {
-    console.error(error);
-    showMessage("Delete failed: " + error.message, "error");
+    .eq(
+      "id",
+      id
+    )
+
+    .eq(
+      "academic_year_id",
+      yearHidden.value
+    );
+
+
+  if(error){
+
+    showMessage(
+      "Delete failed: "
+      + error.message,
+      "error"
+    );
+
     return;
+
   }
 
-  showMessage("Item deleted.");
+
+  showMessage(
+    "Calculation item deleted."
+  );
+
+
   await loadItems();
+
 }
 
-function cancelEdit() {
+
+/* ======================================================
+   RESET ITEM FORM
+====================================================== */
+
+function cancelEdit(){
+
   resetForm();
+
 }
 
-function resetForm() {
-  editingId = null;
-  document.getElementById("formTitle").textContent = "➕ ಹೊಸ Item ಸೇರಿಸಿ";
-  document.getElementById("itemName").value = "";
-  document.getElementById("quantity").value = "";
-  document.getElementById("unit").value = "";
-  document.getElementById("enabled").checked = true;
-  document.getElementById("saveBtn").textContent = "💾 Save";
-  document.getElementById("cancelBtn").style.display = "none";
+
+function resetForm(){
+
+  editingId =
+    null;
+
+
+  document.getElementById(
+    "formTitle"
+  ).textContent =
+    "➕ ಹೊಸ Calculation Item ಸೇರಿಸಿ";
+
+
+  document.getElementById(
+    "itemName"
+  ).value =
+    "";
+
+
+  document.getElementById(
+    "quantity"
+  ).value =
+    "";
+
+
+  document.getElementById(
+    "unit"
+  ).value =
+    "";
+
+
+  document.getElementById(
+    "enabled"
+  ).checked =
+    true;
+
+
+  document.getElementById(
+    "saveBtn"
+  ).textContent =
+    "💾 Save";
+
+
+  document.getElementById(
+    "cancelBtn"
+  ).style.display =
+    "none";
+
 }
 
-function escapeHtml(value) {
-  return String(value)
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
+
+/* ======================================================
+   KITCHEN INGREDIENTS LOAD
+====================================================== */
+
+async function loadIngredients(){
+
+  if(
+
+    !yearHidden.value ||
+    !selectedClass ||
+    !selectedMonth
+
+  ){
+
+    ingredientsBody.innerHTML =
+
+      `<tr>
+        <td colspan="8" class="empty">
+          Class ಮತ್ತು Month ಆಯ್ಕೆ ಮಾಡಿ.
+        </td>
+      </tr>`;
+
+    return;
+
+  }
+
+
+  const {
+
+    data,
+    error
+
+  } = await db
+
+    .from(
+      "kitchen_ingredients"
+    )
+
+    .select("*")
+
+    .eq(
+      "academic_year_id",
+      yearHidden.value
+    )
+
+    .eq(
+      "class_number",
+      Number(selectedClass)
+    )
+
+    .eq(
+      "month_number",
+      Number(selectedMonth)
+    )
+
+    .order(
+      "created_at",
+      {
+        ascending:true
+      }
+    );
+
+
+  if(error){
+
+    ingredientsBody.innerHTML =
+
+      `<tr>
+        <td colspan="8" class="empty">
+          ಅಡಿಗೆ ಪದಾರ್ಥಗಳ data load failed.
+        </td>
+      </tr>`;
+
+    showMessage(
+      "Kitchen ingredients load failed: "
+      + error.message,
+      "error"
+    );
+
+    return;
+
+  }
+
+
+  renderIngredients(
+    data || []
+  );
+
 }
+
+
+/* ======================================================
+   RENDER INGREDIENTS
+====================================================== */
+
+function renderIngredients(
+  items
+){
+
+  if(!items.length){
+
+    ingredientsBody.innerHTML =
+
+      `<tr>
+        <td colspan="8" class="empty">
+          ಈ Class + Monthಗೆ ಯಾವುದೇ ಅಡಿಗೆ ಪದಾರ್ಥ ಸೇರಿಸಿಲ್ಲ.
+        </td>
+      </tr>`;
+
+    return;
+
+  }
+
+
+  ingredientsBody.innerHTML = "";
+
+
+  items.forEach(
+    (item,index) => {
+
+      const tr =
+        document.createElement(
+          "tr"
+        );
+
+
+      tr.innerHTML = `
+
+        <td>
+          ${index + 1}
+        </td>
+
+        <td>
+          ${esc(
+            classLabel(
+              item.class_number
+            )
+          )}
+        </td>
+
+        <td>
+          ${esc(
+            monthNames[
+              Number(
+                item.month_number
+              )
+            ]
+          )}
+        </td>
+
+        <td>
+          ${esc(
+            item.ingredient_name
+          )}
+        </td>
+
+        <td>
+          ₹
+          ${Number(
+            item.amount_per_student || 0
+          ).toFixed(2)}
+        </td>
+
+        <td>
+          ${esc(
+            item.unit || ""
+          )}
+        </td>
+
+        <td>
+
+          ${
+            item.is_enabled
+
+              ? '<span class="badge on">Enabled</span>'
+
+              : '<span class="badge off">Disabled</span>'
+          }
+
+        </td>
+
+        <td>
+
+          <button
+            class="btn-edit"
+            onclick='editIngredient(${JSON.stringify(item)})'
+          >
+            ✏️ Edit
+          </button>
+
+          <button
+            class="btn-delete"
+            onclick="deleteIngredient('${item.id}')"
+          >
+            🗑️ Delete
+          </button>
+
+        </td>
+
+      `;
+
+
+      ingredientsBody.appendChild(
+        tr
+      );
+
+    }
+  );
+
+}
+
+
+/* ======================================================
+   SAVE KITCHEN INGREDIENT
+====================================================== */
+
+async function saveIngredient(){
+
+  if(
+
+    !yearHidden.value ||
+    !selectedClass ||
+    !selectedMonth
+
+  ){
+
+    showMessage(
+      "ಮೊದಲು Active Academic Year, Class ಮತ್ತು Month ಆಯ್ಕೆ ಮಾಡಿ.",
+      "error"
+    );
+
+    return;
+
+  }
+
+
+  const name =
+    document.getElementById(
+      "ingredientName"
+    ).value.trim();
+
+
+  const amount =
+    document.getElementById(
+      "ingredientAmount"
+    ).value;
+
+
+  const unit =
+    document.getElementById(
+      "ingredientUnit"
+    ).value.trim();
+
+
+  const enabled =
+    document.getElementById(
+      "ingredientEnabled"
+    ).checked;
+
+
+  if(
+
+    !name ||
+    amount === "" ||
+    Number(amount) < 0 ||
+    !unit
+
+  ){
+
+    showMessage(
+      "ಪದಾರ್ಥದ ಹೆಸರು, ಪ್ರತಿ ವಿದ್ಯಾರ್ಥಿಗೆ ಮೊತ್ತ ಮತ್ತು Unit ಸರಿಯಾಗಿ ನಮೂದಿಸಿ.",
+      "error"
+    );
+
+    return;
+
+  }
+
+
+  const payload = {
+
+    academic_year_id:
+      yearHidden.value,
+
+    class_number:
+      Number(selectedClass),
+
+    month_number:
+      Number(selectedMonth),
+
+    ingredient_name:
+      name,
+
+    amount_per_student:
+      Number(amount),
+
+    unit:
+      unit,
+
+    is_enabled:
+      enabled,
+
+    updated_at:
+      new Date().toISOString()
+
+  };
+
+
+  const button =
+    document.getElementById(
+      "ingredientSaveBtn"
+    );
+
+
+  button.disabled =
+    true;
+
+
+  let result;
+
+
+  if(editingIngredientId){
+
+    result =
+      await db
+
+        .from(
+          "kitchen_ingredients"
+        )
+
+        .update(
+          payload
+        )
+
+        .eq(
+          "id",
+          editingIngredientId
+        )
+
+        .eq(
+          "academic_year_id",
+          yearHidden.value
+        )
+
+        .select()
+
+        .single();
+
+  }else{
+
+    result =
+      await db
+
+        .from(
+          "kitchen_ingredients"
+        )
+
+        .insert(
+          payload
+        )
+
+        .select()
+
+        .single();
+
+  }
+
+
+  button.disabled =
+    false;
+
+
+  if(result.error){
+
+    showMessage(
+      "Kitchen ingredient save failed: "
+      + result.error.message,
+      "error"
+    );
+
+    return;
+
+  }
+
+
+  showMessage(
+    editingIngredientId
+      ? "ಅಡಿಗೆ ಪದಾರ್ಥ updated."
+      : "ಅಡಿಗೆ ಪದಾರ್ಥ saved."
+  );
+
+
+  resetIngredientForm();
+
+  await loadIngredients();
+
+}
+
+
+/* ======================================================
+   EDIT INGREDIENT
+====================================================== */
+
+function editIngredient(
+  item
+){
+
+  editingIngredientId =
+    item.id;
+
+
+  document.getElementById(
+    "ingredientName"
+  ).value =
+    item.ingredient_name || "";
+
+
+  document.getElementById(
+    "ingredientAmount"
+  ).value =
+    item.amount_per_student ?? "";
+
+
+  document.getElementById(
+    "ingredientUnit"
+  ).value =
+    item.unit || "";
+
+
+  document.getElementById(
+    "ingredientEnabled"
+  ).checked =
+    !!item.is_enabled;
+
+
+  document.getElementById(
+    "ingredientSaveBtn"
+  ).textContent =
+    "💾 Update";
+
+
+  document.getElementById(
+    "ingredientCancelBtn"
+  ).style.display =
+    "inline-block";
+
+}
+
+
+/* ======================================================
+   DELETE INGREDIENT
+====================================================== */
+
+async function deleteIngredient(
+  id
+){
+
+  if(
+    !confirm(
+      "ಈ ಅಡಿಗೆ ಪದಾರ್ಥವನ್ನು ಅಳಿಸಬೇಕೇ?"
+    )
+  ){
+
+    return;
+
+  }
+
+
+  const {
+
+    error
+
+  } = await db
+
+    .from(
+      "kitchen_ingredients"
+    )
+
+    .delete()
+
+    .eq(
+      "id",
+      id
+    )
+
+    .eq(
+      "academic_year_id",
+      yearHidden.value
+    );
+
+
+  if(error){
+
+    showMessage(
+      "Delete failed: "
+      + error.message,
+      "error"
+    );
+
+    return;
+
+  }
+
+
+  showMessage(
+    "ಅಡಿಗೆ ಪದಾರ್ಥ deleted."
+  );
+
+
+  await loadIngredients();
+
+}
+
+
+/* ======================================================
+   RESET INGREDIENT FORM
+====================================================== */
+
+function cancelIngredientEdit(){
+
+  resetIngredientForm();
+
+}
+
+
+function resetIngredientForm(){
+
+  editingIngredientId =
+    null;
+
+
+  document.getElementById(
+    "ingredientName"
+  ).value =
+    "";
+
+
+  document.getElementById(
+    "ingredientAmount"
+  ).value =
+    "";
+
+
+  document.getElementById(
+    "ingredientUnit"
+  ).value =
+    "";
+
+
+  document.getElementById(
+    "ingredientEnabled"
+  ).checked =
+    true;
+
+
+  document.getElementById(
+    "ingredientSaveBtn"
+  ).textContent =
+    "💾 Save";
+
+
+  document.getElementById(
+    "ingredientCancelBtn"
+  ).style.display =
+    "none";
+
+}
+
+
+/* ======================================================
+   BUTTON EVENTS
+====================================================== */
+
+document
+  .getElementById(
+    "calcApplyBtn"
+  )
+  .addEventListener(
+    "click",
+    applySelection
+  );
+
+
+document
+  .getElementById(
+    "calcEditSelectionBtn"
+  )
+  .addEventListener(
+    "click",
+    editSelection
+  );
+
+
+/* ======================================================
+   INITIAL LOAD
+====================================================== */
+
+document.addEventListener(
+  "DOMContentLoaded",
+  async function(){
+
+    await loadActiveAcademicYear();
+
+    restoreSelection();
+
+  }
+);
+
 </script>
 
 </body>
