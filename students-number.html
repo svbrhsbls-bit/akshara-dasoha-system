@@ -51,10 +51,10 @@ button{border:0;border-radius:8px;padding:11px 18px;font-size:15px;font-weight:6
 
 <div class="filters">
   <div>
-    <label for="academicYear">Academic Year</label>
-    <select id="academicYear">
-      <option value="">Loading...</option>
-    </select>
+    <label for="academicYearDisplay">Academic Year</label>
+    <input id="academicYearDisplay" type="text"
+           readonly placeholder="Settings → Active Academic Year">
+    <input id="academicYear" type="hidden">
   </div>
 
   <div>
@@ -152,8 +152,15 @@ button{border:0;border-radius:8px;padding:11px 18px;font-size:15px;font-weight:6
 </div>
 
 <div class="actions">
-  <button class="reset" onclick="resetForm()">Clear</button>
+  <button class="reset" id="clearBtn" onclick="resetForm()">Clear</button>
+  <button class="edit" id="editMonthClassBtn" onclick="unlockMonthClass()" style="display:none">
+    ✏️ Edit
+  </button>
   <button class="save" id="saveBtn" onclick="saveNumbers()">💾 Save</button>
+</div>
+
+<div id="selectionLockInfo" class="small" style="margin-top:10px">
+  Month ಮತ್ತು Class ಆಯ್ಕೆ ಮಾಡಿ Save ಒತ್ತಿ.
 </div>
 
 <div class="small">
@@ -201,24 +208,20 @@ let editingRows = {};
 document.addEventListener("DOMContentLoaded", async () => {
   attachCalculationListeners();
   applyClassRange();
-  setClassRangeLocked(false);
   await loadYears();
 });
 
-document.getElementById("academicYear").addEventListener("change", async () => {
-  resetForm();
-  setClassRangeLocked(false);
-  document.getElementById("editClassBtn").style.display="none";
-  await loadSaved();
-});
+// Academic Year is controlled only by Settings → Active Academic Year.
 
 document.getElementById("month").addEventListener("change", async () => {
+  if(document.getElementById("month").disabled) return;
   await loadSaved();
   await loadSelectedMonthIntoForm();
-  await updateClassLockForSelection();
 });
 
 document.getElementById("classRange").addEventListener("change", async () => {
+  if(document.getElementById("classRange").disabled) return;
+  clearMonthClassLock();
   applyClassRange();
   resetForm();
   await loadSaved();
@@ -226,23 +229,85 @@ document.getElementById("classRange").addEventListener("change", async () => {
 
 function setClassRangeLocked(locked){
   const select=document.getElementById("classRange");
-  const btn=document.getElementById("saveBtn");
-  const info=document.getElementById("classLockInfo");
+  if(select) select.disabled = locked;
+}
 
-  select.disabled = locked;
+function setMonthLocked(locked){
+  const month=document.getElementById("month");
+  if(month) month.disabled = locked;
+}
+
+function setMonthClassLocked(locked){
+  setClassRangeLocked(locked);
+  setMonthLocked(locked);
+
+  const saveBtn=document.getElementById("saveBtn");
+  const editBtn=document.getElementById("editMonthClassBtn");
+  const info=document.getElementById("selectionLockInfo");
 
   if(locked){
-    info.textContent = "🔒 Class ಆಯ್ಕೆ Save ಆಗಿದೆ. ಬದಲಾಯಿಸಲು Edit ಒತ್ತಿ.";
+    if(saveBtn) saveBtn.style.display="none";
+    if(editBtn) editBtn.style.display="inline-block";
+    if(info) info.textContent="🔒 Month ಮತ್ತು Class Lock ಆಗಿವೆ. ಬದಲಾಯಿಸಲು Edit ಒತ್ತಿ.";
   }else{
-    info.textContent = "Class ಆಯ್ಕೆ ಮಾಡಬಹುದು.";
+    if(saveBtn) saveBtn.style.display="inline-block";
+    if(editBtn) editBtn.style.display="none";
+    if(info) info.textContent="Month ಮತ್ತು Class ಆಯ್ಕೆ ಮಾಡಿ Save ಒತ್ತಿ.";
   }
 }
 
-function unlockClassRange(){
-  setClassRangeLocked(false);
-  document.getElementById("saveBtn").textContent="💾 Save";
-  showMessage("Class selection unlocked. ಈಗ ಬೇಕಾದ Class ಆಯ್ಕೆ ಮಾಡಿ.");
+function unlockMonthClass(){
+  setMonthClassLocked(false);
+  showMessage("Month ಮತ್ತು Class Edit ಮಾಡಲು Unlock ಮಾಡಲಾಗಿದೆ.");
 }
+
+function monthClassLockKey(){
+  const yearId=document.getElementById("academicYear").value || "no-year";
+  return `students_number_month_class_lock_${yearId}`;
+}
+
+function persistMonthClassLock(){
+  const month=document.getElementById("month").value;
+  const classRange=document.getElementById("classRange").value;
+
+  if(!month || !classRange) return;
+
+  localStorage.setItem(monthClassLockKey(), JSON.stringify({
+    month,
+    classRange,
+    locked:true
+  }));
+}
+
+function clearMonthClassLock(){
+  localStorage.removeItem(monthClassLockKey());
+}
+
+function restoreMonthClassLock(){
+  const raw=localStorage.getItem(monthClassLockKey());
+
+  if(!raw){
+    setMonthClassLocked(false);
+    return;
+  }
+
+  try{
+    const saved=JSON.parse(raw);
+
+    if(saved && saved.locked && saved.month && saved.classRange){
+      document.getElementById("month").value=saved.month;
+      document.getElementById("classRange").value=saved.classRange;
+      applyClassRange();
+      setMonthClassLocked(true);
+      return;
+    }
+  }catch(e){
+    console.warn("Month/Class lock restore failed",e);
+  }
+
+  setMonthClassLocked(false);
+}
+
 
 async function checkClassRangeLock(){
   const yearId=document.getElementById("academicYear").value;
@@ -407,36 +472,37 @@ function showMessage(text,type="success"){
 }
 
 async function loadYears(){
-  const select=document.getElementById("academicYear");
-  select.innerHTML='<option value="">ಶೈಕ್ಷಣಿಕ ವರ್ಷ ಆಯ್ಕೆ ಮಾಡಿ</option>';
+  const hidden=document.getElementById("academicYear");
+  const display=document.getElementById("academicYearDisplay");
 
   const {data,error}=await db
     .from("academic_years")
     .select("id,year_name,is_active")
-    .order("year_name",{ascending:false});
+    .eq("is_active",true)
+    .order("created_at",{ascending:false})
+    .limit(1)
+    .maybeSingle();
 
   if(error){
-    showMessage("Academic Year load failed: "+error.message,"error");
+    showMessage("Active Academic Year load failed: "+error.message,"error");
+    if(display) display.value="";
+    if(hidden) hidden.value="";
     return;
   }
 
-  years=data||[];
-
-  // Students Number page should use the Academic Year that was
-  // explicitly marked Active in Settings.
-  const active=years.find(y=>y.is_active);
-
-  if(active){
-    const opt=document.createElement("option");
-    opt.value=active.id;
-    opt.textContent=active.year_name + " — Active";
-    select.appendChild(opt);
-    select.value=active.id;
-    await loadSaved();
-  }else{
-    select.innerHTML='<option value="">ಯಾವುದೇ Active Academic Year ಇಲ್ಲ</option>';
-    showMessage("ಮೊದಲು Settingsನಲ್ಲಿ ಬೇಕಾದ Academic Year ಅನ್ನು Active ಮಾಡಿ.","error");
+  if(!data){
+    if(display) display.value="";
+    if(hidden) hidden.value="";
+    showMessage("ಮೊದಲು Settingsನಲ್ಲಿ Academic Year ಅನ್ನು Active ಮಾಡಿ.","error");
+    return;
   }
+
+  if(hidden) hidden.value=data.id;
+  if(display) display.value=data.year_name;
+
+  await loadSaved();
+
+  restoreMonthClassLock();
 }
 
 async function saveNumbers(){
@@ -494,8 +560,8 @@ async function saveNumbers(){
       " Students Number successfully saved."
     );
 
-    setClassRangeLocked(true);
-    document.getElementById("editClassBtn").style.display="inline-block";
+    persistMonthClassLock();
+    setMonthClassLocked(true);
 
     await loadSaved();
     await loadSelectedMonthIntoForm();
@@ -624,6 +690,8 @@ async function loadSelectedMonthIntoForm(){
 }
 
 async function editMonth(month){
+  clearMonthClassLock();
+  setMonthClassLocked(false);
   document.getElementById("month").value=month;
   await loadSelectedMonthIntoForm();
   window.scrollTo({top:0,behavior:"smooth"});
