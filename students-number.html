@@ -65,6 +65,12 @@ button{border:0;border-radius:8px;padding:11px 18px;font-size:15px;font-weight:6
       <option value="8-10">8–10</option>
       <option value="1-10">1–10</option>
     </select>
+    <div style="margin-top:8px">
+      <button type="button" class="edit" id="editClassBtn"
+              onclick="unlockClassRange()" style="display:none">
+        ✏️ Edit Class
+      </button>
+    </div>
   </div>
 
   <div>
@@ -87,6 +93,7 @@ button{border:0;border-radius:8px;padding:11px 18px;font-size:15px;font-weight:6
   </div>
 </div>
 
+<div id="classLockInfo" class="small" style="margin-top:12px"></div>
 <div id="message" class="status"></div>
 </section>
 
@@ -194,17 +201,21 @@ let editingRows = {};
 document.addEventListener("DOMContentLoaded", async () => {
   attachCalculationListeners();
   applyClassRange();
+  setClassRangeLocked(false);
   await loadYears();
 });
 
 document.getElementById("academicYear").addEventListener("change", async () => {
   resetForm();
+  setClassRangeLocked(false);
+  document.getElementById("editClassBtn").style.display="none";
   await loadSaved();
 });
 
 document.getElementById("month").addEventListener("change", async () => {
   await loadSaved();
   await loadSelectedMonthIntoForm();
+  await updateClassLockForSelection();
 });
 
 document.getElementById("classRange").addEventListener("change", async () => {
@@ -212,6 +223,99 @@ document.getElementById("classRange").addEventListener("change", async () => {
   resetForm();
   await loadSaved();
 });
+
+function setClassRangeLocked(locked){
+  const select=document.getElementById("classRange");
+  const btn=document.getElementById("saveBtn");
+  const info=document.getElementById("classLockInfo");
+
+  select.disabled = locked;
+
+  if(locked){
+    info.textContent = "🔒 Class ಆಯ್ಕೆ Save ಆಗಿದೆ. ಬದಲಾಯಿಸಲು Edit ಒತ್ತಿ.";
+  }else{
+    info.textContent = "Class ಆಯ್ಕೆ ಮಾಡಬಹುದು.";
+  }
+}
+
+function unlockClassRange(){
+  setClassRangeLocked(false);
+  document.getElementById("saveBtn").textContent="💾 Save";
+  showMessage("Class selection unlocked. ಈಗ ಬೇಕಾದ Class ಆಯ್ಕೆ ಮಾಡಿ.");
+}
+
+async function checkClassRangeLock(){
+  const yearId=document.getElementById("academicYear").value;
+  if(!yearId){
+    setClassRangeLocked(false);
+    return;
+  }
+
+  const {data,error}=await db
+    .from("student_numbers")
+    .select("id")
+    .eq("academic_year_id",yearId)
+    .limit(1);
+
+  if(error){
+    console.error(error);
+    setClassRangeLocked(false);
+    return;
+  }
+
+  // A saved class range is inferred from which class groups exist for a month.
+  // The actual lock is handled per selected month after data is loaded.
+  setClassRangeLocked(false);
+}
+
+async function updateClassLockForSelection(){
+  const yearId=document.getElementById("academicYear").value;
+  const month=Number(document.getElementById("month").value);
+
+  if(!yearId || !month){
+    setClassRangeLocked(false);
+    return;
+  }
+
+  const {data,error}=await db
+    .from("student_numbers")
+    .select("class_number")
+    .eq("academic_year_id",yearId)
+    .eq("month_number",month)
+    .eq("division_name","ALL");
+
+  if(error){
+    console.error(error);
+    setClassRangeLocked(false);
+    return;
+  }
+
+  if(!data || !data.length){
+    setClassRangeLocked(false);
+    return;
+  }
+
+  const nums=new Set(data.map(r=>Number(r.class_number)));
+  let savedRange="";
+
+  if(nums.has(1) && nums.has(6) && nums.has(8) && nums.has(9) && nums.has(10)){
+    savedRange="1-10";
+  }else if(nums.has(8) && nums.has(9) && nums.has(10)){
+    savedRange="8-10";
+  }else if(nums.has(1) && nums.has(6)){
+    savedRange="1-7";
+  }
+
+  if(savedRange){
+    document.getElementById("classRange").value=savedRange;
+    setClassRangeLocked(true);
+    applyClassRange();
+    document.getElementById("editClassBtn").style.display="inline-block";
+  }else{
+    setClassRangeLocked(false);
+    document.getElementById("editClassBtn").style.display="none";
+  }
+}
 
 function selectedGroups(){
   const range = document.getElementById("classRange").value;
@@ -336,76 +440,75 @@ async function loadYears(){
 }
 
 async function saveNumbers(){
-  const yearId=document.getElementById("academicYear").value;
-  const monthNumber=Number(document.getElementById("month").value);
-  const classRange=document.getElementById("classRange").value;
-  const selected=selectedGroups();
+  const yearId = document.getElementById("academicYear").value;
+  const monthNumber = Number(document.getElementById("month").value);
+  const classRange = document.getElementById("classRange").value;
+  const selected = selectedGroups();
 
   if(!yearId){
-    showMessage("Academic Year ಆಯ್ಕೆ ಮಾಡಿ.","error");
-    return;
-  }
-  if(!monthNumber){
-    showMessage("Month ಆಯ್ಕೆ ಮಾಡಿ.","error");
+    showMessage("Academic Year ಆಯ್ಕೆ ಆಗಿಲ್ಲ.","error");
     return;
   }
   if(!classRange || !selected.length){
-    showMessage("Class ಆಯ್ಕೆ ಮಾಡಿ.","error");
+    showMessage("Class / ತರಗತಿ ಆಯ್ಕೆ ಮಾಡಿ.","error");
+    return;
+  }
+  if(!monthNumber){
+    showMessage("Month / ತಿಂಗಳು ಆಯ್ಕೆ ಮಾಡಿ.","error");
     return;
   }
 
-  const data=getFormData();
-  const saveBtn=document.getElementById("saveBtn");
-  saveBtn.disabled=true;
+  const data = getFormData();
+  const rows = selected.map(group => ({
+    academic_year_id: yearId,
+    month_number: monthNumber,
+    class_number: groupClassNumbers[group],
+    division_name: "ALL",
+    total_students: Number(data[group].boys) + Number(data[group].girls),
+    boys: Number(data[group].boys),
+    girls: Number(data[group].girls),
+    updated_at: new Date().toISOString()
+  }));
+
+  const saveBtn = document.getElementById("saveBtn");
+  saveBtn.disabled = true;
+  saveBtn.textContent = "Saving...";
 
   try{
-    for(const group of groups){
-      const row=data[group];
+    // Upsert uses the existing unique constraint:
+    // academic_year_id + month_number + class_number + division_name
+    const { error } = await db
+      .from("student_numbers")
+      .upsert(rows, {
+        onConflict: "academic_year_id,month_number,class_number,division_name",
+        ignoreDuplicates: false
+      });
 
-      const {data:existing,error:findError}=await db
-        .from("student_numbers")
-        .select("id")
-        .eq("academic_year_id",yearId)
-        .eq("month_number",monthNumber)
-        .eq("class_number",groupClassNumbers[group])
-        .eq("division_name","ALL")
-        .maybeSingle();
-
-      if(findError) throw findError;
-
-      const payload={
-        academic_year_id:yearId,
-        month_number:monthNumber,
-        class_number:groupClassNumbers[group],
-        division_name:"ALL",
-        total_students:row.boys+row.girls,
-        boys:row.boys,
-        girls:row.girls,
-        updated_at:new Date().toISOString()
-      };
-
-      let result;
-
-      if(existing){
-        result=await db.from("student_numbers")
-          .update(payload)
-          .eq("id",existing.id);
-      }else{
-        result=await db.from("student_numbers")
-          .insert(payload);
-      }
-
-      if(result.error) throw result.error;
+    if(error){
+      console.error("student_numbers save error:", error);
+      throw error;
     }
 
-    showMessage("Students Number successfully saved.");
+    showMessage(
+      monthNames[monthNumber] + " — " + classRange +
+      " Students Number successfully saved."
+    );
+
+    setClassRangeLocked(true);
+    document.getElementById("editClassBtn").style.display="inline-block";
+
     await loadSaved();
+    await loadSelectedMonthIntoForm();
 
   }catch(error){
     console.error(error);
-    showMessage("Save failed: "+error.message,"error");
+    showMessage(
+      "Save failed: " + (error.message || "Unknown error"),
+      "error"
+    );
   }finally{
-    saveBtn.disabled=false;
+    saveBtn.disabled = false;
+    saveBtn.textContent = "💾 Save";
   }
 }
 
@@ -415,7 +518,7 @@ async function loadSaved(){
   const tbody=document.getElementById("savedBody");
 
   if(!yearId || !classRange){
-    tbody.innerHTML='<tr><td colspan="8" class="empty">Academic Year ಆಯ್ಕೆ ಮಾಡಿ.</td></tr>';
+    tbody.innerHTML='<tr><td colspan="8" class="empty">Academic Year ಮತ್ತು Class ಆಯ್ಕೆ ಮಾಡಿ.</td></tr>';
     return;
   }
 
