@@ -96,7 +96,7 @@ tfoot td{font-weight:700;background:#e8eee9}
       </div>
       <button class="primary" id="loadBtn">Load</button>
     </div>
-    <div style="margin-top:12px;display:flex;gap:8px;align-items:center"><button class="primary" id="saveAllBtn">💾 Save</button><span class="small">ಸಂಖ್ಯೆ ಹಾಕಿರುವ columns ಮಾತ್ರ Lock ಆಗುತ್ತವೆ.</span></div><div id="msg" class="msg"></div>
+    <div style="margin-top:12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap"><button class="primary" id="saveAllBtn">💾 Save</button><button class="secondary" id="editMonthClassBtn" style="display:none">✏️ Edit</button><span id="monthClassLockMsg" class="small">ತಿಂಗಳು ಮತ್ತು ತರಗತಿ ಆಯ್ಕೆ ಮಾಡಿ Save ಒತ್ತಿದರೆ ಆಯ್ಕೆ Lock ಆಗುತ್ತದೆ.</span></div><div id="msg" class="msg"></div>
     <div class="small" style="margin-top:8px">
       ದಾಖಲಾತಿ ಸಂಖ್ಯೆ <b>Students Number</b> ಪುಟದಿಂದ ಬರುತ್ತದೆ.
       ಹಾಜರಾತಿ ಎಲ್ಲಾ ಆಯ್ಕೆ ಮಾಡಿದ ತರಗತಿಗಳಿಗೆ <b>ಒಂದೇ ಸಂಖ್ಯೆ</b>.
@@ -152,6 +152,7 @@ const groups={
 const $=id=>document.getElementById(id);
 let currentYear=null,currentRows=null,settingsAcademicYear="";
 let editDates=new Set();
+let monthClassLocked=false;
 
 function show(el,text,type="ok"){el.textContent=text;el.className="msg "+type}
 function pad(n){return String(n).padStart(2,"0")}
@@ -389,6 +390,32 @@ function recalc(){
   }
 }
 
+function monthClassLockKey(){
+  return `daily_food_month_class_lock_${currentYear?.id||settingsAcademicYear||"none"}`;
+}
+function applyMonthClassLock(){
+  const month=$("month"), group=$("classGroup"), edit=$("editMonthClassBtn");
+  monthClassLocked=localStorage.getItem(monthClassLockKey())==="1";
+  month.disabled=monthClassLocked;
+  group.disabled=monthClassLocked;
+  edit.style.display=monthClassLocked?"inline-block":"none";
+  $("monthClassLockMsg").textContent=monthClassLocked
+    ?"🔒 ತಿಂಗಳು ಮತ್ತು ತರಗತಿ Lock ಆಗಿದೆ. ಬದಲಾಯಿಸಲು Edit ಒತ್ತಿ."
+    :"ತಿಂಗಳು ಮತ್ತು ತರಗತಿ ಆಯ್ಕೆ ಮಾಡಿ Save ಒತ್ತಿದರೆ ಆಯ್ಕೆ Lock ಆಗುತ್ತದೆ.";
+}
+function lockMonthClass(){
+  if(!currentYear)return show($("msg"),"ಮೊದಲು Active Academic Year load ಆಗಬೇಕು.","err");
+  if(!$("month").value || !$("classGroup").value)return show($("msg"),"ತಿಂಗಳು ಮತ್ತು ತರಗತಿ ಆಯ್ಕೆ ಮಾಡಿ.","err");
+  localStorage.setItem(monthClassLockKey(),"1");
+  applyMonthClassLock();
+  show($("msg"),`✅ ${months[Number($("month").value)-1]} + ${$("classGroup").value} ಆಯ್ಕೆ Save ಆಗಿ Lock ಆಯಿತು. ಬದಲಾಯಿಸಲು ಮೇಲಿನ Edit ಒತ್ತಿ.`,"ok");
+}
+function editMonthClass(){
+  localStorage.removeItem(monthClassLockKey());
+  applyMonthClassLock();
+  show($("msg"),"✏️ ತಿಂಗಳು ಮತ್ತು ತರಗತಿ Edit mode. ಬದಲಾವಣೆ ಮಾಡಿ ನಂತರ ಮೇಲಿನ Save ಒತ್ತಿ.","info");
+}
+
 async function loadSheet(){
   try{
     if(!currentYear) throw new Error("School Settingsನಲ್ಲಿ Active Academic Year ಹೊಂದಿಸಿಲ್ಲ.");
@@ -396,6 +423,7 @@ async function loadSheet(){
     const [counts,holidays,food]=await Promise.all([getStudentCounts(yearId,group),getHolidayMap(yearId,month,year),getFood(yearId,month,year)]);
     currentRows={yearId,year,month,group,counts,holidays,food};
     editDates.clear(); renderSheet(year,month,counts,holidays,food,group);
+    applyMonthClassLock();
     show($("msg"),"ಮಾಹಿತಿ Loaded. Save ಮಾಡಿದ ಸಂಖ್ಯೆಗಳು Lock ಆಗುತ್ತವೆ. ತಿದ್ದುಪಡಿ ಮಾಡಲು ದಿನಾಂಕದ ಪಕ್ಕದ Edit ಒತ್ತಬೇಕು.","ok");
   }catch(e){show($("msg"),"Load failed: "+e.message,"err")}
 }
@@ -436,13 +464,18 @@ async function saveAll(){
       if(att>0 || tr.querySelectorAll(".egg,.banana").length) changedDates++;
     }
 
-    // Delete only the four controlled item types for this month, then insert current values.
+    // Delete only the selected class group's records for this month.
+    // Other class-group data is preserved. Attendance is common to all classes.
     const start=`${currentRows.year}-${pad(currentRows.month)}-01`;
     const end=`${currentRows.year}-${pad(currentRows.month)}-${pad(new Date(currentRows.year,currentRows.month,0).getDate())}`;
+    const itemNames=["ಹಾಜರಾತಿ||ALL"];
+    classes.forEach(c=>{
+      itemNames.push("ಮೊಟ್ಟೆ||"+c,"ಬಾಳೆಹಣ್ಣು||"+c,"ಬಿಸಿಯೂಟ||"+c);
+    });
     const {error:delErr}=await db.from("daily_food_distribution")
       .delete().eq("academic_year_id",yearId)
       .gte("distribution_date",start).lte("distribution_date",end)
-      .or("item_name.eq.ಹಾಜರಾತಿ||ALL,item_name.like.ಮೊಟ್ಟೆ||%,item_name.like.ಬಾಳೆಹಣ್ಣು||%,item_name.like.ಬಿಸಿಊಟ||%");
+      .in("item_name",itemNames);
     if(delErr)throw delErr;
 
     if(records.length){
@@ -465,11 +498,11 @@ function enableDayEdit(date){
   tr.querySelectorAll("input.num").forEach(x=>x.disabled=false);
   const btn=tr.querySelector(".row-action");
   if(btn)btn.innerHTML=`<span class="small">Editing…</span>`;
-  show($("saveMsg"),"✏️ "+date+" ದಿನ Edit mode. ಬದಲಾವಣೆ ಮಾಡಿ ನಂತರ ಮೇಲಿನ ಒಂದೇ Save ಒತ್ತಿರಿ.","info");
+  show($("saveMsg"),"✏️ "+date+" ದಿನ Edit mode. ಬದಲಾವಣೆ ಮಾಡಿ ನಂತರ ಕೆಳಗಿನ Save ಒತ್ತಿರಿ.","info");
 }
 
 async function loadHolidayList(){
-  const yearId=$("year").value;if(!yearId){$("holidayList").innerHTML="";return}
+  const yearId=currentYear?.id;if(!yearId){$("holidayList").innerHTML="";return}
   try{
     const {data,error}=await db.from("school_holidays").select("id,holiday_date,holiday_reason").eq("academic_year_id",yearId).order("holiday_date",{ascending:true});
     if(error)throw error;
@@ -482,7 +515,7 @@ async function loadHolidayList(){
 }
 
 async function saveHoliday(){
-  const yearId=$("year").value,date=$("holidayDate").value,reason=$("holidayReason").value.trim();
+  const yearId=currentYear?.id,date=$("holidayDate").value,reason=$("holidayReason").value.trim();
   if(!yearId)return show($("holidayMsg"),"ಮೊದಲು Academic Year ಆಯ್ಕೆ ಮಾಡಿ.","err");
   if(!date)return show($("holidayMsg"),"ದಿನಾಂಕ ಆಯ್ಕೆ ಮಾಡಿ.","err");
   if(!reason)return show($("holidayMsg"),"ರಜೆಯ ಹೆಸರು / ಕಾರಣ ನಮೂದಿಸಿ.","err");
@@ -512,13 +545,14 @@ async function deleteHoliday(id){
 
 document.addEventListener("input",e=>{if(e.target.matches(".num"))recalc()});
 $("loadBtn").onclick=loadSheet;
-$("saveAllBtn").onclick=saveAll;
+$("saveAllBtn").onclick=lockMonthClass;
+$("editMonthClassBtn").onclick=editMonthClass;
 $("printBtn").onclick=()=>window.print();
 $("excelBtn").onclick=exportExcel;
 $("saveAllBottom").onclick=saveAll;
 $("holidaySaveBtn").onclick=saveHoliday;
-$("month").onchange=loadSheet;
-$("classGroup").onchange=loadSheet;
+$("month").onchange=()=>{ if(!monthClassLocked) loadSheet(); };
+$("classGroup").onchange=()=>{ if(!monthClassLocked) loadSheet(); };
 // Academic Year is controlled only by School Settings Active Year.
 
 $("sheetHost").addEventListener("click",e=>{
