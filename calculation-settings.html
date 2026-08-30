@@ -376,17 +376,16 @@ async function saveItem(){
   show("Item ಮತ್ತು Student 01 ಪ್ರಮಾಣ ನಮೂದಿಸಿ.","err");return;
  }
 
- const payload={
-  academic_year_id:activeYear.id,
-  class_group:selectedGroup,
-  month_number:Number(selectedMonth),
-  item_name:name,
-  quantity_per_student:Number(qty),
-  unit:unit,
-  amount_per_student:0,
-  is_enabled:true,
-  updated_at:new Date().toISOString()
- };
+ const payload = {
+  academic_year_id: activeYear.id,
+  class_group: selectedGroup,
+  month_number: Number(selectedMonth),
+  item_name: name,
+  quantity_per_student: Number(qty),
+  unit: unit,
+  is_enabled: true,
+  updated_at: new Date().toISOString()
+};
 
  let result;
  if(editingItemId){
