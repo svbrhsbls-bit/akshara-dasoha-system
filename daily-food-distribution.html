@@ -82,8 +82,7 @@ tfoot td{font-weight:700;background:#e8eee9}
 <div class="wrap">
   <div class="card no-print">
     <div class="controls">
-      <div><label>Academic Year / ಶೈಕ್ಷಣಿಕ ವರ್ಷ</label><select id="year"></select>
-<div id="settingsYearNote" class="small" style="margin-top:5px"></div></div>
+      <div><label>Active Academic Year / ಸಕ್ರಿಯ ಶೈಕ್ಷಣಿಕ ವರ್ಷ</label><div id="activeYearDisplay" style="padding:10px;border:1px solid #bfc9c2;border-radius:7px;background:#f7faf8;font-weight:700">Loading...</div></div>
       <div><label>Month / ತಿಂಗಳು</label><select id="month"></select></div>
       <div><label>Class / ತರಗತಿ</label>
         <select id="classGroup">
@@ -117,9 +116,10 @@ tfoot td{font-weight:700;background:#e8eee9}
   <div class="card">
     <div style="text-align:center;font-weight:700;font-size:20px" id="reportDepartment">ಅಕ್ಷರ ದಾಸೋಹ ಕಾರ್ಯಕ್ರಮ</div>
     <div style="text-align:center;font-weight:700;font-size:18px;margin:3px 0" id="reportSchool">ಶಾಲೆಯ ಹೆಸರು</div>
-    <div style="text-align:center;font-weight:700;margin:3px 0 8px" id="reportTitle">
+    <div style="text-align:center;font-weight:700;margin:3px 0 4px" id="reportTitle">
       ಪ್ರತಿನಿತ್ಯ ಶಾಲೆಯಲ್ಲಿ ಬಿಸಿ ಊಟ, ಮೊಟ್ಟೆ ಮತ್ತು ಬಾಳೆಹಣ್ಣು ಸೇವಿಸಿದ ಮಕ್ಕಳ ಮಾಹಿತಿ
     </div>
+    <div id="reportAcademicYear" style="text-align:center;font-weight:700;margin-bottom:8px"></div>
     <div id="attendanceCheck" class="no-print" style="text-align:center;font-weight:700;margin:4px 0"></div>
     <div id="sheetHost"></div>
     <div class="signature">
@@ -169,27 +169,31 @@ async function loadSchoolSettings(){
     $("schoolTitle").textContent=school;
     $("reportDepartment").textContent=department;
     $("reportSchool").textContent=school;
+    if($("reportAcademicYear"))$("reportAcademicYear").textContent="ಶೈಕ್ಷಣಿಕ ವರ್ಷ: "+(settingsAcademicYear||"");
     $("headTeacherPrint").textContent=head?("ಮುಖ್ಯ ಶಿಕ್ಷಕರು: "+head):"";
   }catch(e){console.warn("school_settings load failed:",e.message)}
 }
 
-async function loadYears(){
-  const {data,error}=await db.from("academic_years").select("id,year_name,is_active").order("year_name",{ascending:false});
-  if(error){show($("msg"),"Academic Year load failed: "+error.message,"err");return}
-  $("year").innerHTML=(data||[]).map(y=>
-    `<option value="${y.id}" data-year="${esc(y.year_name)}">${esc(y.year_name)}${y.is_active?" — Active":""}</option>`
-  ).join("");
-  const settingsMatch=(data||[]).find(y=>String(y.year_name||"").trim()===settingsAcademicYear);
-  const active=(data||[]).find(y=>y.is_active);
-  const chosen=settingsMatch||active||data?.[0];
-  if(chosen){
-    $("year").value=chosen.id;
-    currentYear=chosen;
-    const note=$("settingsYearNote");
-    if(note) note.textContent=settingsAcademicYear
-      ? `School Settingsನಲ್ಲಿ save ಮಾಡಿದ Academic Year: ${settingsAcademicYear}`
-      : "School Settingsನಲ್ಲಿ Academic Year save ಮಾಡಿಲ್ಲ.";
+async function loadActiveAcademicYear(){
+  const {data,error}=await db.from("academic_years")
+    .select("id,year_name,is_active")
+    .eq("is_active",true)
+    .limit(1)
+    .maybeSingle();
+  if(error){
+    show($("msg"),"Active Academic Year load failed: "+error.message,"err");
+    $("activeYearDisplay").textContent="Active Year ಸಿಗಲಿಲ್ಲ";
+    return false;
   }
+  if(!data){
+    show($("msg"),"School Settingsನಲ್ಲಿ Active Academic Year set ಮಾಡಿಲ್ಲ.","err");
+    $("activeYearDisplay").textContent="Active Year set ಮಾಡಿಲ್ಲ";
+    return false;
+  }
+  currentYear={id:data.id,year_name:String(data.year_name||"").trim()};
+  settingsAcademicYear=currentYear.year_name;
+  $("activeYearDisplay").textContent=currentYear.year_name;
+  return true;
 }
 
 function setMonthDefault(){$("month").value=new Date().getMonth()+1}
@@ -379,8 +383,10 @@ function recalc(){
 
 async function loadSheet(){
   try{
-    const opt=$("year").selectedOptions[0]; if(!opt)throw new Error("Academic Year ಆಯ್ಕೆ ಆಗಿಲ್ಲ.");
-    currentYear={id:opt.value,year_name:opt.dataset.year||opt.textContent.replace(" — Active","")};
+    if(!currentYear){
+      const ok=await loadActiveAcademicYear();
+      if(!ok)throw new Error("School Settingsನಲ್ಲಿ Active Academic Year ಇಲ್ಲ.");
+    }
     const yearId=currentYear.id,year=getYearNumber(currentYear.year_name),month=Number($("month").value),group=$("classGroup").value;
     const [counts,holidays,food]=await Promise.all([getStudentCounts(yearId,group),getHolidayMap(yearId,month,year),getFood(yearId,month,year)]);
     currentRows={yearId,year,month,group,counts,holidays,food};
@@ -458,7 +464,7 @@ function enableDayEdit(date){
 }
 
 async function loadHolidayList(){
-  const yearId=$("year").value;if(!yearId){$("holidayList").innerHTML="";return}
+  const yearId=currentYear?.id;if(!yearId){$("holidayList").innerHTML="";return}
   try{
     const {data,error}=await db.from("school_holidays").select("id,holiday_date,holiday_reason").eq("academic_year_id",yearId).order("holiday_date",{ascending:true});
     if(error)throw error;
@@ -471,8 +477,8 @@ async function loadHolidayList(){
 }
 
 async function saveHoliday(){
-  const yearId=$("year").value,date=$("holidayDate").value,reason=$("holidayReason").value.trim();
-  if(!yearId)return show($("holidayMsg"),"ಮೊದಲು Academic Year ಆಯ್ಕೆ ಮಾಡಿ.","err");
+  const yearId=currentYear?.id,date=$("holidayDate").value,reason=$("holidayReason").value.trim();
+  if(!yearId)return show($("holidayMsg"),"School Settingsನಲ್ಲಿ Active Academic Year ಇಲ್ಲ.","err");
   if(!date)return show($("holidayMsg"),"ದಿನಾಂಕ ಆಯ್ಕೆ ಮಾಡಿ.","err");
   if(!reason)return show($("holidayMsg"),"ರಜೆಯ ಹೆಸರು / ಕಾರಣ ನಮೂದಿಸಿ.","err");
   try{
@@ -508,7 +514,6 @@ $("saveAllBottom").onclick=saveAll;
 $("holidaySaveBtn").onclick=saveHoliday;
 $("month").onchange=loadSheet;
 $("classGroup").onchange=loadSheet;
-$("year").onchange=async()=>{await loadSheet();await loadHolidayList()};
 
 $("sheetHost").addEventListener("click",e=>{
   const edit=e.target.closest(".day-edit");
@@ -628,8 +633,10 @@ function exportExcel(){
   for(let i=1;i<=12;i++)$("month").insertAdjacentHTML("beforeend",`<option value="${i}">${months[i-1]}</option>`);
   setMonthDefault();
   await loadSchoolSettings();
-  await loadYears();
-  await loadSheet();
+  if(await loadActiveAcademicYear()){
+    await loadSheet();
+    await loadHolidayList();
+  }
   await loadHolidayList();
 })();
 </script>
