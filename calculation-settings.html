@@ -103,7 +103,7 @@ Academic Year ಅನ್ನು ಇಲ್ಲಿ ಆಯ್ಕೆ ಮಾಡುವು
 </div>
 
 <div>
-<label>Student 01 ಪ್ರಮಾಣ</label>
+<label>ಅಳತೆ / Amount (ಒಬ್ಬ ವಿದ್ಯಾರ್ಥಿಗೆ)</label>
 <input id="itemQty" type="number" min="0" step="0.001" placeholder="ಉದಾ: 0.150">
 </div>
 
@@ -194,6 +194,61 @@ Academic Year ಅನ್ನು ಇಲ್ಲಿ ಆಯ್ಕೆ ಮಾಡುವು
 </div>
 </div>
 
+
+<!-- NUTRITIONAL FOOD -->
+<div class="card">
+<h2 style="margin-top:0">🥚 ಪೌಷ್ಠಿಕ ಆಹಾರ</h2>
+
+<div class="grid">
+<div>
+<label>ಪೌಷ್ಠಿಕ ಆಹಾರ / Item</label>
+<input id="nutritionName" placeholder="ಉದಾ: ಮೊಟ್ಟೆ / ಬಾಳೆಹಣ್ಣು">
+</div>
+
+<div>
+<label>ಅಳತೆ / Amount (ಒಬ್ಬ ವಿದ್ಯಾರ್ಥಿಗೆ)</label>
+<input id="nutritionQty" type="number" min="0" step="0.001" placeholder="ಉದಾ: 1">
+</div>
+
+<div>
+<label>ಅಳತೆ</label>
+<select id="nutritionUnit">
+<option value="Nos">Nos / ಸಂಖ್ಯೆ</option>
+<option value="Gram">Gram</option>
+<option value="KG">KG</option>
+</select>
+</div>
+
+<div>
+<button class="primary" id="nutritionSaveBtn">💾 Save</button>
+<button class="secondary" id="nutritionCancelBtn" style="display:none">Cancel</button>
+</div>
+</div>
+
+<div class="small" style="margin-top:8px">
+ಉದಾ: ಒಬ್ಬ ವಿದ್ಯಾರ್ಥಿಗೆ Amount = 1 ಮೊಟ್ಟೆ. Daily Food Distributionನಲ್ಲಿ 20 students ಇದ್ದರೆ
+20 × 1 = <b>20 Nos</b>.
+</div>
+
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>Sl.No</th>
+<th>ಪೌಷ್ಠಿಕ ಆಹಾರ</th>
+<th>ಅಳತೆ / Amount</th>
+<th>ಅಳತೆ</th>
+<th>20 Students ಉದಾಹರಣೆ</th>
+<th>Actions</th>
+</tr>
+</thead>
+<tbody id="nutritionBody">
+<tr><td colspan="6">Class ಆಯ್ಕೆ ಮಾಡಿ.</td></tr>
+</tbody>
+</table>
+</div>
+</div>
+
 <div class="card">
 <h2 style="margin-top:0">Daily Food Distribution → UC</h2>
 <div class="small" style="font-size:14px;line-height:1.8">
@@ -226,6 +281,7 @@ let activeYear=null;
 let selectedGroup="";
 let editingItemId=null;
 let editingIngredientId=null;
+let editingNutritionId=null;
 
 function esc(v){
  return String(v??"").replace(/[&<>"']/g,c=>({
@@ -293,6 +349,7 @@ function restoreSelection(){
    lockSelection();
    loadItems();
    loadIngredients();
+   loadNutrition();
   }
  }catch(e){}
 }
@@ -375,6 +432,7 @@ async function applySelection(){
 
  await loadItems();
  await loadIngredients();
+ await loadNutrition();
 
  show("Class Group Load ಆಯಿತು. Selection Lock ಆಗಿದೆ.","ok");
 }
@@ -461,7 +519,7 @@ async function saveItem(){
  }
 
  if(qty===""||Number(qty)<0){
-  show("Student 01 ಪ್ರಮಾಣ ನಮೂದಿಸಿ.","err");
+  show("ಅಳತೆ / Amount ನಮೂದಿಸಿ.","err");
   return;
  }
 
@@ -764,6 +822,209 @@ async function deleteIngredient(id){
  show("ಅಡಿಗೆ ಪದಾರ್ಥ Delete ಆಯಿತು.","ok");
 }
 
+
+/* =========================
+   NUTRITIONAL FOOD
+   ========================= */
+
+async function loadNutrition(){
+
+ if(!activeYear||!selectedGroup){
+  $("nutritionBody").innerHTML=
+   '<tr><td colspan="6">Class ಆಯ್ಕೆ ಮಾಡಿ.</td></tr>';
+  return;
+ }
+
+ const {data,error}=await db
+  .from("nutritional_foods")
+  .select("*")
+  .eq("academic_year_id",activeYear.id)
+  .eq("class_group",selectedGroup)
+  .order("created_at",{ascending:true});
+
+ if(error){
+  show("ಪೌಷ್ಠಿಕ ಆಹಾರ load failed: "+error.message,"err");
+  return;
+ }
+
+ $("nutritionBody").innerHTML=(data||[]).length
+ ? (data||[]).map((x,i)=>{
+
+   const qty=Number(x.quantity_per_student||0);
+   const unit=x.unit||"Nos";
+   const total=qty*20;
+
+   let totalText;
+   if(unit==="Gram") totalText=total.toFixed(3)+" Gram";
+   else if(unit==="KG") totalText=total.toFixed(3)+" KG";
+   else totalText=total.toFixed(3)+" Nos";
+
+   return `<tr>
+    <td>${i+1}</td>
+    <td>${esc(x.food_name)}</td>
+    <td>${qty.toFixed(3)}</td>
+    <td>${esc(unit)}</td>
+    <td class="calc">
+     20 × ${qty.toFixed(3)} = ${totalText}
+    </td>
+    <td class="actions">
+     <button class="edit"
+      onclick='editNutrition(${JSON.stringify(x)})'>
+      ✏️ Edit
+     </button>
+
+     <button class="danger"
+      onclick="deleteNutrition('${x.id}')">
+      🗑️ Delete
+     </button>
+    </td>
+   </tr>`;
+  }).join("")
+ : '<tr><td colspan="6">ಈ Classಗೆ ಪೌಷ್ಠಿಕ ಆಹಾರ ಇಲ್ಲ.</td></tr>';
+}
+
+async function saveNutrition(){
+
+ if(!activeYear||!selectedGroup){
+  show("ಮೊದಲು Class Group Load ಮಾಡಿ.","err");
+  return;
+ }
+
+ const name=$("nutritionName").value.trim();
+ const qty=$("nutritionQty").value;
+ const unit=$("nutritionUnit").value;
+
+ if(!name){
+  show("ಪೌಷ್ಠಿಕ ಆಹಾರದ Item ನಮೂದಿಸಿ.","err");
+  return;
+ }
+
+ if(qty===""||Number(qty)<0){
+  show("ಅಳತೆ / Amount ನಮೂದಿಸಿ.","err");
+  return;
+ }
+
+ const payload={
+  academic_year_id:activeYear.id,
+  class_group:selectedGroup,
+  food_name:name,
+  quantity_per_student:Number(qty),
+  unit:unit,
+  is_enabled:true,
+  updated_at:new Date().toISOString()
+ };
+
+ let result;
+
+ if(editingNutritionId){
+
+  result=await db
+   .from("nutritional_foods")
+   .update(payload)
+   .eq("id",editingNutritionId)
+   .eq("academic_year_id",activeYear.id)
+   .select()
+   .single();
+
+ }else{
+
+  const {data:existing,error:findError}=await db
+   .from("nutritional_foods")
+   .select("id")
+   .eq("academic_year_id",activeYear.id)
+   .eq("class_group",selectedGroup)
+   .eq("food_name",name)
+   .maybeSingle();
+
+  if(findError){
+   show("ಪೌಷ್ಠಿಕ ಆಹಾರ check failed: "+findError.message,"err");
+   return;
+  }
+
+  if(existing){
+
+   result=await db
+    .from("nutritional_foods")
+    .update(payload)
+    .eq("id",existing.id)
+    .select()
+    .single();
+
+  }else{
+
+   result=await db
+    .from("nutritional_foods")
+    .insert(payload)
+    .select()
+    .single();
+  }
+ }
+
+ if(result.error){
+  show("ಪೌಷ್ಠಿಕ ಆಹಾರ Save failed: "+result.error.message,"err");
+  return;
+ }
+
+ const wasEditing=!!editingNutritionId;
+
+ resetNutrition();
+ await loadNutrition();
+
+ show(
+  wasEditing
+   ? "ಪೌಷ್ಠಿಕ ಆಹಾರ Update ಆಯಿತು."
+   : "ಪೌಷ್ಠಿಕ ಆಹಾರ Save ಆಯಿತು.",
+  "ok"
+ );
+}
+
+function editNutrition(x){
+
+ editingNutritionId=x.id;
+
+ $("nutritionName").value=x.food_name||"";
+ $("nutritionQty").value=x.quantity_per_student??"";
+ $("nutritionUnit").value=x.unit==="Gram"
+  ? "Gram"
+  : x.unit==="KG"
+   ? "KG"
+   : "Nos";
+
+ $("nutritionSaveBtn").textContent="💾 Update";
+ $("nutritionCancelBtn").style.display="inline-block";
+}
+
+async function deleteNutrition(id){
+
+ if(!confirm("ಈ ಪೌಷ್ಠಿಕ ಆಹಾರ ಅಳಿಸಬೇಕೇ?"))return;
+
+ const {error}=await db
+  .from("nutritional_foods")
+  .delete()
+  .eq("id",id)
+  .eq("academic_year_id",activeYear.id);
+
+ if(error){
+  show("ಪೌಷ್ಠಿಕ ಆಹಾರ Delete failed: "+error.message,"err");
+  return;
+ }
+
+ await loadNutrition();
+ show("ಪೌಷ್ಠಿಕ ಆಹಾರ Delete ಆಯಿತು.","ok");
+}
+
+function resetNutrition(){
+
+ editingNutritionId=null;
+
+ $("nutritionName").value="";
+ $("nutritionQty").value="";
+ $("nutritionUnit").value="Nos";
+
+ $("nutritionSaveBtn").textContent="💾 Save";
+ $("nutritionCancelBtn").style.display="none";
+}
+
 function resetIngredient(){
 
  editingIngredientId=null;
@@ -783,6 +1044,9 @@ $("itemCancelBtn").onclick=resetItem;
 
 $("ingredientSaveBtn").onclick=saveIngredient;
 $("ingredientCancelBtn").onclick=resetIngredient;
+
+$("nutritionSaveBtn").onclick=saveNutrition;
+$("nutritionCancelBtn").onclick=resetNutrition;
 
 (async function init(){
 
