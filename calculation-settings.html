@@ -481,7 +481,7 @@ async function loadItems(){
    return `<tr>
     <td>${i+1}</td>
     <td>${esc(x.item_name)}</td>
-    <td>${qty.toFixed(3)}</td>
+    <td>${formatNutritionAmount(qty)}</td>
     <td>${esc(unit)}</td>
     <td class="calc">
      20 × ${qty.toFixed(3)} = ${example}
@@ -827,6 +827,12 @@ async function deleteIngredient(id){
    NUTRITIONAL FOOD
    ========================= */
 
+function formatNutritionAmount(value){
+ const n = Number(value);
+ if (!Number.isFinite(n)) return "0";
+ return String(Number(n.toFixed(3)));
+}
+
 async function loadNutrition(){
 
  if(!activeYear||!selectedGroup){
@@ -862,10 +868,10 @@ async function loadNutrition(){
    return `<tr>
     <td>${i+1}</td>
     <td>${esc(x.food_name)}</td>
-    <td>${qty.toFixed(3)}</td>
+    <td>${formatNutritionAmount(qty)}</td>
     <td>${esc(unit)}</td>
     <td class="calc">
-     20 × ${qty.toFixed(3)} = ${totalText}
+     20 × ${formatNutritionAmount(qty)} = ${formatNutritionAmount(total)} ${unit}
     </td>
     <td class="actions">
      <button class="edit"
