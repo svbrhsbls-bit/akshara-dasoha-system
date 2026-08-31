@@ -628,19 +628,22 @@ $("reportType").onchange = () => {
  
 (async function(){
   try{
+
     fillMonths();
 
     await loadSchool();
+
     await loadActiveYear();
 
-    // Academic Year load ಆದ ನಂತರ ಮಾತ್ರ
-    // saved Class Group ಅನ್ನು restore ಮಾಡಿ
+    // ★ Refresh ಆದ ನಂತರ saved Class Group restore
     applyClassGroupLock();
 
     await loadAll();
 
   }catch(e){
+
     console.error(e);
+
     show(
       $("msg"),
       "Initial load failed: " + e.message,
