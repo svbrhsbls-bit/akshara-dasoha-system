@@ -481,10 +481,19 @@ function renderReport(){
   h+=`<tr class="opening-row"><td>—</td><td><b>ಪ್ರಾರಂಭಿಕ ಶಿಲ್ಕು</b></td>${bs.map(()=>`<td>—</td>`).join("")}<td class="total">—</td>`;
   led.forEach(z=>{h+=`<td>—</td><td>—</td><td class="total"><b>${fmt(z.l.opening,z.x.unit)}</b></td>`}); h+=`</tr>`;
   for(let d=1;d<=days;d++){
-    const date=iso(current.year,current.month,d),holiday=current.holidays.get(date);
-    if(holiday){h+=`<tr class="holiday"><td>${d}</td><td colspan="${cols-1}"><b>${date}</b><br>${esc(holiday.holiday_reason||"ರಜೆ")}</td></tr>`;continue;}
+const date=iso(current.year,current.month,d);
+const displayDate=`${pad(d)}-${pad(current.month)}-${current.year}`;
+const holiday=current.holidays.get(date);
+   if(holiday){
+  h+=`<tr class="holiday">
+    <td>${d}</td>
+    <td><b>${displayDate}</b></td>
+    <td colspan="${cols-2}"><b>${esc(holiday.holiday_reason||"ರಜೆ")}</b></td>
+  </tr>`;
+  continue;
+}
     const counts=bs.map(b=>bucketCount(date,b)),total=counts.reduce((a,b)=>a+b,0);
-    h+=`<tr><td>${d}</td><td>${date}</td>${counts.map(v=>`<td>${v}</td>`).join("")}<td class="total">${total}</td>`;
+    h+=`<tr><td>${d}</td><td>${displayDate}</td>${counts.map(v=>`<td>${v}</td>`).join("")}<td class="total">${total}</td>`;
     led.forEach(z=>{const r=z.l.rows[d-1],rec=receipts.get(`${z.x.type}|${z.x.name}|${date}`);h+=`<td><input class="stock-input no-print" type="number" min="0" step="0.001" data-receipt-type="${z.x.type}" data-receipt-name="${esc(z.x.name)}" data-receipt-date="${date}" value="${rec?num(rec.quantity):""}"><span class="screen-only" style="display:none">${rec?fmt(rec.quantity,z.x.unit):""}</span></td><td>${fmt(r.expense,z.x.unit)}</td><td class="total">${fmt(r.closing,z.x.unit)}</td>`});
     h+=`</tr>`;
   }
