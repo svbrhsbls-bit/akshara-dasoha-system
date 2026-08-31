@@ -593,26 +593,413 @@ async function saveReceipts(){
 }
 async function saveWheat(){try{const date=$("wheatDate").value;if(!date)return show($("msg"),"ಗೋಧಿ ದಿನಾಂಕ ಆಯ್ಕೆ ಮಾಡಿ.","err");const q=await db.from("food_wheat_days").upsert({academic_year_id:activeYear.id,wheat_date:date,wheat_students:num($("wheatStudents").value),updated_at:new Date().toISOString()},{onConflict:"academic_year_id,wheat_date"});if(q.error)throw q.error;editingWheatId=null;$("wheatDate").value="";$("wheatStudents").value="";$("wheatCancelBtn").style.display="none";await loadWheat();renderWheatList();renderReport();show($("msg"),"ಗೋಧಿ ದಿನ Save ಆಯಿತು.","ok")}catch(e){show($("msg"),"Wheat Save failed: "+e.message,"err")}}
 function exportExcel(){
-  if(!current)return show($("saveMsg"),"ಮೊದಲು Load ಮಾಡಿ.","err");
-  const type=$("reportType").value,bs=groups[current.group],names=namesFor(type);
-  const label=type==="item"?"Items (ಆಹಾರ ಪದಾರ್ಥಗಳು)":(type==="ingredient"?"ಅಡುಗೆ ಪದಾರ್ಥಗಳು":"ಪೌಷ್ಠಿಕ ಆಹಾರ");
-  const dept=school?.department_name||"ಅಕ್ಷರ ದಾಸೋಹ ಕಾರ್ಯಕ್ರಮ",sch=school?.school_name||"ಶಾಲೆಯ ಹೆಸರು";
-  const totalCols=2+bs.length+1+names.length*3;
-  const escX=v=>String(v??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
-  let h=`<table><tr><th colspan="${totalCols}">${escX(dept)}</th></tr><tr><th colspan="${totalCols}">${escX(sch)}</th></tr><tr><th colspan="${totalCols}">ತಿಂಗಳು:- ${months[current.month-1]}-${current.year}</th></tr><tr><th colspan="${totalCols}">${label} — ${escX(groupLabel(current.group))}</th></tr>`;
-  h+=`<tr><th>ಕ್ರ.ಸಂ</th><th>ದಿನಾಂಕ</th>${bs.map(b=>`<th>${escX(b.label)}<br>ವಿದ್ಯಾರ್ಥಿಗಳು</th>`).join("")}<th>ಒಟ್ಟು ವಿದ್ಯಾರ್ಥಿಗಳು</th>${names.map(x=>`<th>ದಾಸ್ತಾನು</th><th>ಖರ್ಚು</th><th>ಉಳಿಕೆ</th>`).join("")}</tr>`;
-  const led=names.map(x=>({x,l:ledger(x.type,x.name)}));
-  h+=`<tr><th>—</th><th>ಪ್ರಾರಂಭಿಕ ಶಿಲ್ಕು</th>${bs.map(()=>`<th>—</th>`).join("")}<th>—</th>`; led.forEach(z=>{h+=`<th>—</th><th>—</th><th>${fmt(z.l.opening,z.x.unit)}</th>`}); h+=`</tr>`;
-  const days=new Date(current.year,current.month,0).getDate();
-  for(let d=1;d<=days;d++){
-    const date=iso(current.year,current.month,d),holiday=current.holidays.get(date);
-    if(holiday){h+=`<tr class="holiday"><td>${d}</td><td colspan="${totalCols-1}"><b>${escX(date)}</b><br>${escX(holiday.holiday_reason||"ರಜೆ")}</td></tr>`;continue;}
-    const counts=bs.map(b=>bucketCount(date,b)); h+=`<tr><td>${d}</td><td>${escX(date)}</td>${counts.map(v=>`<td>${v}</td>`).join("")}<td>${counts.reduce((a,b)=>a+b,0)}</td>`;
-    led.forEach(z=>{const r=z.l.rows[d-1],rec=receipts.get(`${z.x.type}|${z.x.name}|${date}`);h+=`<td>${rec?fmt(rec.quantity,z.x.unit):""}</td><td>${fmt(r.expense,z.x.unit)}</td><td>${fmt(r.closing,z.x.unit)}</td>`}); h+=`</tr>`;
+  if(!current){
+    return show(
+      $("#saveMsg"),
+      "ಮೊದಲು Load ಮಾಡಿ.",
+      "err"
+    );
   }
-  h+=`<tr><th colspan="${2+bs.length+1}">TOTAL</th>`; led.forEach(z=>{const stock=z.l.rows.reduce((sum,r)=>sum+r.stock,0),exp=z.l.rows.reduce((sum,r)=>sum+r.expense,0);h+=`<th>${fmt(stock,z.x.unit)}</th><th>${fmt(exp,z.x.unit)}</th><th>${fmt(z.l.closing,z.x.unit)}</th>`}); h+=`</tr></table>`;
-  const html=`<!DOCTYPE html><html lang="kn"><head><meta charset="UTF-8"><style>@page{size:A4 landscape;margin:5mm}body{font-family:"Noto Sans Kannada","Nirmala UI",Arial,sans-serif;margin:0}table{border-collapse:collapse;width:100%;font-size:10pt}th,td{border:1px solid #000;padding:5px;text-align:center;vertical-align:middle}th{font-weight:700;background:#e4ebe5}.holiday td{background:#fff3df;font-weight:700}</style></head><body>${h}</body></html>`;
-  const blob=new Blob(["\ufeff",html],{type:"application/vnd.ms-excel;charset=utf-8"}); const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download=`Daily-${type==="item"?"Items":(type==="ingredient"?"Kitchen-Ingredients":"Nutritional-Food")}-${current.year}-${pad(current.month)}.xls`; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+
+  const type = $("#reportType").value;
+  const bs = groups[current.group] || [];
+  const names = namesOf(type);
+
+  const label =
+    type === "item"
+      ? "Items (ಆಹಾರ ಪದಾರ್ಥಗಳು)"
+      : "ಪೌಷ್ಟಿಕ ಆಹಾರ";
+
+  const dept =
+    school?.department_name ||
+    "ಅಕ್ಷರ ದಾಸೋಹ ಕಾರ್ಯಕ್ರಮ";
+
+  const sch =
+    school?.school_name ||
+    "ಶಾಲೆಯ ಹೆಸರು";
+
+  const totalCols = 2 + bs.length + names.length * 3;
+
+  const escX = String(v ?? "")
+    .replace(/&/g,"&amp;")
+    .replace(/</g,"&lt;")
+    .replace(/>/g,"&gt;")
+    .replace(/"/g,"&quot;");
+
+  /* =========================
+     EXCEL CSS / BORDER
+     ========================= */
+  let h = `
+  <html>
+  <head>
+    <meta charset="UTF-8">
+
+    <style>
+      @page{
+        size:A4 landscape;
+        margin:5mm;
+      }
+
+      body{
+        font-family:"Noto Sans Kannada","Nirmala UI",Arial,sans-serif;
+        font-size:12px;
+        margin:0;
+        padding:0;
+      }
+
+      table{
+        border-collapse:collapse;
+        width:100%;
+        table-layout:fixed;
+      }
+
+      th,
+      td{
+        border:1px solid #000;
+        padding:4px;
+        text-align:center;
+        vertical-align:middle;
+      }
+
+      th{
+        font-weight:bold;
+        background:#dfe8e1;
+      }
+
+      .school-title{
+        font-size:18px;
+        font-weight:bold;
+        border:1px solid #000;
+      }
+
+      .school-subtitle{
+        font-size:15px;
+        font-weight:bold;
+        border:1px solid #000;
+      }
+
+      .month-title{
+        font-size:14px;
+        font-weight:bold;
+        border:1px solid #000;
+      }
+
+      .holiday td{
+        border:1px solid #000;
+        background:#fff0d5;
+        font-weight:bold;
+      }
+
+      .total-row td{
+        border:1px solid #000;
+        font-weight:bold;
+        background:#e8eeee;
+      }
+
+      .date-cell{
+        white-space:nowrap;
+      }
+
+      input{
+        border:none;
+        width:90%;
+        text-align:center;
+      }
+    </style>
+  </head>
+
+  <body>
+
+    <!-- SCHOOL NAME -->
+    <table>
+      <tr>
+        <th colspan="${totalCols}" class="school-title">
+          ${escX(dept)}
+        </th>
+      </tr>
+
+      <tr>
+        <th colspan="${totalCols}" class="school-subtitle">
+          ${escX(sch)}
+        </th>
+      </tr>
+
+      <tr>
+        <th colspan="${totalCols}" class="month-title">
+          ತಿಂಗಳು : ${months[current.month-1]} - ${current.year}
+        </th>
+      </tr>
+
+      <!-- MAIN HEADER -->
+      <tr>
+        <th rowspan="2">ಕ್ರ.ಸಂ</th>
+        <th rowspan="2">ದಿನಾಂಕ</th>
+
+        ${bs.map(b => `
+          <th rowspan="2">
+            ${escX(b.label || b.name || "")}
+          </th>
+        `).join("")}
+
+        ${names.map(x => `
+          <th colspan="3">
+            ${escX(x.name)}
+          </th>
+        `).join("")}
+      </tr>
+
+      <tr>
+        ${names.map(() => `
+          <th>ದಾಸ್ತಾನು</th>
+          <th>ಬಳಕೆ</th>
+          <th>ಉಳಿಕೆ</th>
+        `).join("")}
+      </tr>
+  `;
+
+  /* =========================
+     OPENING BALANCE
+     ========================= */
+
+  const led =
+    names.map(x => ({
+      x,
+      l: ledger(x.type, x.name)
+    }));
+
+  h += `
+    <tr>
+      <td>—</td>
+      <td>ಪ್ರಾರಂಭಿಕ ಶಿಲ್ಕು</td>
+
+      ${bs.map(() => `<td>—</td>`).join("")}
+
+      ${led.map(z => `
+        <td>—</td>
+        <td>—</td>
+        <td><b>${fmt(z.l.opening, z.x.unit)}</b></td>
+      `).join("")}
+    </tr>
+  `;
+
+  /* =========================
+     DAYS
+     ========================= */
+
+  const days =
+    new Date(
+      current.year,
+      current.month,
+      0
+    ).getDate();
+
+  for(let d=1; d<=days; d++){
+
+    const date =
+      iso(
+        current.year,
+        current.month,
+        d
+      );
+
+    const holiday =
+      current.holidays.get(date);
+
+    /*
+      IMPORTANT:
+      Holiday row ನಲ್ಲಿ DATE ಮತ್ತೆ
+      ಬೇರೆ columnನಲ್ಲಿ ಬರಬಾರದು.
+
+      Date columnದಲ್ಲೇ date ಇರುತ್ತದೆ.
+      Holiday reason / SUNDAY ಬೇರೆ columnsನಲ್ಲಿ.
+    */
+
+    if(holiday){
+
+      h += `
+        <tr class="holiday">
+
+          <td>${d}</td>
+
+          <td class="date-cell">
+            <b>${escX(date)}</b>
+          </td>
+
+          <td colspan="${totalCols-2}">
+            <b>${escX(holiday.holiday_reason || "ರಜೆ")}</b>
+          </td>
+
+        </tr>
+      `;
+
+      continue;
+    }
+
+    const counts =
+      bs.map(b =>
+        bucketCount(date,b)
+      );
+
+    const total =
+      counts.reduce(
+        (a,b)=>a+b,
+        0
+      );
+
+    h += `
+      <tr>
+
+        <td>${d}</td>
+
+        <td class="date-cell">
+          ${escX(date)}
+        </td>
+
+        ${counts.map(v => `
+          <td>${v}</td>
+        `).join("")}
+
+    `;
+
+    /* =========================
+       ITEMS
+       ========================= */
+
+    led.forEach(z => {
+
+      const r =
+        z.l.rows[d-1];
+
+      const rec =
+        receipts.get(
+          `${z.x.type}|${z.x.name}|${date}`
+        );
+
+      const qty =
+        rec ? rec.quantity : 0;
+
+      const expense =
+        rec ? rec.expense : 0;
+
+      const closing =
+        z.l.opening -
+        z.l.rows
+          .slice(0,d)
+          .reduce(
+            (sum,row)=>sum + row.stock,
+            0
+          );
+
+      h += `
+        <td>
+          ${fmt(qty,z.x.unit)}
+        </td>
+
+        <td>
+          ${fmt(expense,z.x.unit)}
+        </td>
+
+        <td>
+          <b>
+            ${fmt(
+              closing,
+              z.x.unit
+            )}
+          </b>
+        </td>
+      `;
+    });
+
+    h += `
+      </tr>
+    `;
+  }
+
+  /* =========================
+     TOTAL
+     ========================= */
+
+  h += `
+    <tr class="total-row">
+
+      <th colspan="${2 + bs.length}">
+        TOTAL
+      </th>
+  `;
+
+  led.forEach(z => {
+
+    const stock =
+      z.l.rows.reduce(
+        (sum,r)=>sum + r.stock,
+        0
+      );
+
+    const expense =
+      z.l.rows.reduce(
+        (sum,r)=>sum + r.expense,
+        0
+      );
+
+    h += `
+      <td>
+        ${fmt(stock,z.x.unit)}
+      </td>
+
+      <td>
+        ${fmt(expense,z.x.unit)}
+      </td>
+
+      <td>
+        ${fmt(
+          z.l.rows.length
+            ? z.l.rows[z.l.rows.length-1].balance
+            : z.l.opening,
+          z.x.unit
+        )}
+      </td>
+    `;
+  });
+
+  h += `
+    </tr>
+    </table>
+
+  </body>
+  </html>
+  `;
+
+  /* =========================
+     DOWNLOAD EXCEL
+     ========================= */
+
+  const blob =
+    new Blob(
+      ["\ufeff",h],
+      {
+        type:
+          "application/vnd.ms-excel;charset=utf-8;"
+      }
+    );
+
+  const a =
+    document.createElement("a");
+
+  a.href =
+    URL.createObjectURL(blob);
+
+  a.download =
+    `Daily_Items_${current.year}_${String(current.month).padStart(2,"0")}.xls`;
+
+  document.body.appendChild(a);
+
+  a.click();
+
+  document.body.removeChild(a);
+
+  setTimeout(() => {
+    URL.revokeObjectURL(a.href);
+  }, 1000);
 }
 $("loadBtn").onclick = loadAll;
 
