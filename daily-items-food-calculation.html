@@ -1001,6 +1001,10 @@ $("reportType").onchange = () => {
 
     fillMonths();
 
+   $("loadBtn").onclick = loadAll;
+$("excelBtn").onclick = exportExcel;
+$("printBtn").onclick = printPdf;
+
     await loadSchool();
 
     await loadActiveYear();
