@@ -90,32 +90,56 @@ function classGroupLockKey(){
 }
 
 function savedClassGroup(){
-  return localStorage.getItem(classGroupLockKey());
+  if(!activeYear) return null;
+
+  return localStorage.getItem(
+    classGroupLockKey()
+  );
 }
 
 function applyClassGroupLock(){
+
+  if(!activeYear) return;
+
   const select = $("classGroup");
   const editBtn = $("editClassGroupBtn");
+
   const saved = savedClassGroup();
 
   if(saved && [...select.options].some(o => o.value === saved)){
+
+    // Refresh ನಂತರ saved Class Group
     select.value = saved;
+
+    // Lock
     select.disabled = true;
+
+    // Edit button
     editBtn.style.display = "inline-block";
+
   }else{
+
     select.disabled = false;
+
     editBtn.style.display = "none";
   }
 }
 
 function lockClassGroup(){
+
   if(!activeYear) return;
 
   const value = $("classGroup").value;
+
   if(!value) return;
 
-  localStorage.setItem(classGroupLockKey(), value);
+  // ಆಯ್ಕೆ ಮಾಡಿದ Class Group ಅನ್ನು save ಮಾಡುವುದು
+  localStorage.setItem(
+    classGroupLockKey(),
+    value
+  );
 
+  // ತಕ್ಷಣ lock
   applyClassGroupLock();
 
   show(
@@ -126,8 +150,10 @@ function lockClassGroup(){
 }
 
 function editClassGroup(){
+
   const select = $("classGroup");
 
+  // Lock ತೆಗೆದುಹಾಕಿ
   select.disabled = false;
 
   $("editClassGroupBtn").style.display = "none";
@@ -583,16 +609,15 @@ $("loadBtn").onclick = loadAll;
 
 $("editClassGroupBtn").onclick = editClassGroup;
 
-applyClassGroupLock();
-
 $("month").onchange = loadAll;
 
-$("classGroup").onchange = () => {
-  if($("classGroup").disabled) return;
+$("classGroup").onchange = function(){
+  // Lock ಆಗಿದ್ದರೆ change ಆಗಬಾರದು
+  if(this.disabled) return;
 
   show(
     $("msg"),
-    `Class Group ${groupLabel($("classGroup").value)} ಆಯ್ಕೆ ಮಾಡಲಾಗಿದೆ. ಈಗ Load ಒತ್ತಿರಿ.`,
+    `Class Group ${groupLabel(this.value)} ಆಯ್ಕೆ ಮಾಡಲಾಗಿದೆ. Load ಒತ್ತಿರಿ.`,
     "info"
   );
 };
@@ -600,7 +625,29 @@ $("classGroup").onchange = () => {
 $("reportType").onchange = () => {
   if(current) renderReport();
 };
-(async function(){try{fillMonths();await loadSchool();await loadActiveYear();await loadAll()}catch(e){console.error(e);show($("msg"),"Initial load failed: "+e.message,"err")}})();
+ 
+(async function(){
+  try{
+    fillMonths();
+
+    await loadSchool();
+    await loadActiveYear();
+
+    // Academic Year load ಆದ ನಂತರ ಮಾತ್ರ
+    // saved Class Group ಅನ್ನು restore ಮಾಡಿ
+    applyClassGroupLock();
+
+    await loadAll();
+
+  }catch(e){
+    console.error(e);
+    show(
+      $("msg"),
+      "Initial load failed: " + e.message,
+      "err"
+    );
+  }
+})();
 
 </script>
 </body>
