@@ -292,57 +292,79 @@ async function loadSettings(){
 }
 function addDailyCount(map,date,key,count){if(!map[date])map[date]={};map[date][key]=(map[date][key]||0)+num(count)}
 async function loadDaily(){
- const m=num($("month").value),y=reportYear(m),start=iso(y,m,1),end=iso(y,m,new Date(y,m,0).getDate());
- const [d,h]=await Promise.all([
-  db.from("daily_food_distribution").select("distribution_date,item_name,students_count,total_quantity").eq("academic_year_id",activeYear.id).gte("distribution_date",start).lte("distribution_date",end),
-  db.from("school_holidays").select("id,holiday_date,holiday_reason").eq("academic_year_id",activeYear.id).gte("holiday_date",start).lte("holiday_date",end)
- ]);
- if(d.error)throw new Error("Daily Food Distribution load failed: "+d.error.message);
- if(h.error)throw new Error("Holiday load failed: "+h.error.message);
+  const m=num($("month").value),y=reportYear(m),start=iso(y,m,1),end=iso(y,m,new Date(y,m,0).getDate());
+  const [d,h]=await Promise.all([
+   db.from("daily_food_distribution").select("distribution_date,item_name,students_count,total_quantity").eq("academic_year_id",activeYear.id).gte("distribution_date",start).lte("distribution_date",end),
+   db.from("school_holidays").select("id,holiday_date,holiday_reason").eq("academic_year_id",activeYear.id).gte("holiday_date",start).lte("holiday_date",end)
+  ]);
+  if(d.error)throw new Error("Daily Food Distribution load failed: "+d.error.message);
+  if(h.error)throw new Error("Holiday load failed: "+h.error.message);
 
- /*
-   Daily Food Distribution stores the daily class-wise food/student count.
-   Older/newer files used slightly different spellings for ಬಿಸಿಊಟ/ಬಿಸಿಯೂಟ,
-   so accept all known forms. If a direct ಬಿಸಿಊಟ record is not present,
-   use ಮೊಟ್ಟೆ + ಬಾಳೆಹಣ್ಣು for that class as the day's student count.
- */
- const counts={};
- const meal=new Map();
- const fallback=new Map();
- const add=(map,date,key,value)=>{
-   const k=`${date}|${key}`;
-   map.set(k,(map.get(k)||0)+num(value));
- };
- (d.data||[]).forEach(r=>{
-   const date=String(r.distribution_date||"").slice(0,10);
-   const name=String(r.item_name||"").trim();
-   const value=num(r.students_count??r.total_quantity);
-   let m1=name.match(/^(?:ಬಿಸಿಊಟ|ಬಿಸಿಯೂಟ|ಬಿಸಿಯೂಟ|ವಿದ್ಯಾರ್ಥಿಗಳು|Students|students)\|\|(\d+)$/);
-   if(m1){meal.set(`${date}|${Number(m1[1])}`,value);return;}
-   let m2=name.match(/^(?:ಮೊಟ್ಟೆ|ಬಾಳೆಹಣ್ಣು)\|\|(\d+)$/);
-   if(m2)add(fallback,date,Number(m2[1]),value);
-   let m3=name.match(/^(?:ಬಿಸಿಊಟ|ಬಿಸಿಯೂಟ|ಬಿಸಿಯೂಟ|ವಿದ್ಯಾರ್ಥಿಗಳು|Students|students)\|\|(1-5|6-7|8-10)$/);
-   if(m3)add(fallback,date,m3[1],value);
- });
+  /*
+    ಪೌಷ್ಠಿಕ ಆಹಾರಕ್ಕೆ Students Number ಅನ್ನು Daily Food Distributionನ
+    ಬಿಸಿಊಟ record ನಿಂದ ತೆಗೆದುಕೊಳ್ಳಬಾರದು.
+    ಪ್ರತಿದಿನದ ಪ್ರತಿ ತರಗತಿಯ count = ಮೊಟ್ಟೆ + ಬಾಳೆಹಣ್ಣು.
+    ಆದ್ದರಿಂದ 8, 9, 10 ಒಟ್ಟು = (ಮೊಟ್ಟೆಗಳ ಒಟ್ಟು) + (ಬಾಳೆಹಣ್ಣುಗಳ ಒಟ್ಟು).
+    ಹಳೆಯ/ಇದ್ದ ಬಿಸಿಊಟ records ಇದ್ದರೂ ಅವನ್ನು ಇಲ್ಲಿ ಬಳಸುವುದಿಲ್ಲ.
+  */
+  const counts={};
+  const add=(date,key,value)=>{
+    if(!counts[date])counts[date]={};
+    counts[date][key]=(counts[date][key]||0)+num(value);
+  };
 
- meal.forEach((value,key)=>{
-   const [date,c]=key.split("|");
-   addDailyCount(counts,date,String(Number(c)),value);
- });
- fallback.forEach((value,key)=>{
-   const [date,c]=key.split("|");
-   /* Direct class record always wins over fallback egg/banana count. */
-   if(c.match(/^\d+$/) && meal.has(`${date}|${Number(c)}`))return;
-   addDailyCount(counts,date,String(c),value);
- });
+  (d.data||[]).forEach(r=>{
+    const date=String(r.distribution_date||"").slice(0,10);
+    const name=String(r.item_name||"").trim();
+    const value=num(r.students_count??r.total_quantity);
 
- const holidays=new Map((h.data||[]).map(r=>[String(r.holiday_date).slice(0,10),r]));
- current={year:y,month:m,start,end,counts,holidays,group:$("classGroup").value};
+    // Only egg + banana records are the source for nutrition student counts.
+    const classMatch=name.match(/^(?:ಮೊಟ್ಟೆ|ಬಾಳೆಹಣ್ಣು)\|\|(\d+)$/);
+    if(classMatch){
+      add(date,String(Number(classMatch[1])),value);
+      return;
+    }
+
+    // For grouped records from older formats, also accept egg/banana group keys.
+    const groupMatch=name.match(/^(?:ಮೊಟ್ಟೆ|ಬಾಳೆಹಣ್ಣು)\|\|(1-5|6-7|8-10)$/);
+    if(groupMatch){
+      add(date,groupMatch[1],value);
+    }
+  });
+
+  const holidays=new Map((h.data||[]).map(r=>[String(r.holiday_date).slice(0,10),r]));
+
+  // Nutrition student counts MUST come only from Egg + Banana entries.
+  // Keep the normal counts above untouched for Items / Ingredients.
+  const nutritionCounts={};
+  (d.data||[]).forEach(r=>{
+    const date=String(r.distribution_date||"").slice(0,10);
+    const name=String(r.item_name||"").trim();
+    const value=num(r.students_count??r.total_quantity);
+    const m=name.match(/^(ಮೊಟ್ಟೆ|ಬಾಳೆಹಣ್ಣು)\|\|(\d+)$/);
+    if(!m)return;
+    if(!nutritionCounts[date])nutritionCounts[date]={};
+    const key=`${m[1]}|${Number(m[2])}`;
+    nutritionCounts[date][key]=(nutritionCounts[date][key]||0)+value;
+  });
+
+  current={year:y,month:m,start,end,counts,holidays,group:$("classGroup").value,nutritionCounts};
 }
 
 async function loadReceipts(){
  receipts.clear();const q=await db.from("food_stock_receipts").select("id,item_type,item_name,receipt_date,quantity,unit").eq("academic_year_id",activeYear.id).gte("receipt_date",current.start).lte("receipt_date",current.end);
- if(q.error)throw new Error("Stock receipt load failed: "+q.error.message);(q.data||[]).forEach(r=>receipts.set(`${r.item_type}|${r.item_name}|${r.receipt_date}`,r));
+ if(q.error)throw new Error("Stock receipt load failed: "+q.error.message);
+ (q.data||[]).forEach(r=>{
+   // food_stock_receipts CHECK constraint allows only item / ingredient.
+   // Nutrition receipts are therefore stored as item rows with a private key,
+   // but exposed to the nutrition report as type=nutrition.
+   if(String(r.item_type)==="item" && String(r.item_name||"").startsWith("__NUTRITION_RECEIPT__|")){
+     const name=String(r.item_name).slice("__NUTRITION_RECEIPT__|".length);
+     receipts.set(`nutrition|${name}|${r.receipt_date}`,{...r,item_type:"nutrition",item_name:name});
+   }else{
+     receipts.set(`${r.item_type}|${r.item_name}|${r.receipt_date}`,r);
+   }
+ });
 }
 async function loadWheat(){
  wheatDays.clear();const q=await db.from("food_wheat_days").select("id,wheat_date,wheat_students").eq("academic_year_id",activeYear.id).gte("wheat_date",current.start).lte("wheat_date",current.end).order("wheat_date");
@@ -531,7 +553,8 @@ function nutritionLedger(name){
 async function saveCurrentMonthClosings(){
  if(!activeYear?.id || !current)return;
  const all=[...namesFor("item"),...namesFor("ingredient"),...namesFor("nutrition")];
- for(const x of all){
+ const now=new Date().toISOString();
+ const jobs=all.map(async x=>{
   let closing,dbType=x.type,dbName=x.name;
   if(x.type==="nutrition"){
     closing=nutritionLedger(x.name).closing;
@@ -547,27 +570,42 @@ async function saveCurrentMonthClosings(){
     month_number:current.month,
     closing_balance:closing,
     unit:x.unit,
-    updated_at:new Date().toISOString()
+    updated_at:now
   },{onConflict:"academic_year_id,item_type,item_name,month_number"});
   if(z.error)throw z.error;
- }
+ });
+ await Promise.all(jobs);
 }
+let editingOpeningBalances=new Set();
 function renderOpening(){
  const all=[...namesFor("item"),...namesFor("ingredient"),...namesFor("nutrition")];
  let h=`<div class="table-wrap"><table><thead><tr><th>ಪ್ರಕಾರ</th><th>Item / ಅಡುಗೆ ಪದಾರ್ಥ</th><th>Unit</th><th>Opening Balance</th><th>ಸ್ಥಿತಿ</th><th class="no-print">Action</th></tr></thead><tbody>`;
  if(!all.length)h+=`<tr><td colspan="6">Calculation Settingsನಲ್ಲಿ ಯಾವುದೇ Item / ಅಡುಗೆ ಪದಾರ್ಥ / ಪೌಷ್ಠಿಕ ಆಹಾರ ಇಲ್ಲ.</td></tr>`;
  all.forEach(x=>{
-  const prev=current.month===1?12:current.month-1,p=closingMap.get(`${prev}|${x.type}|${x.name}`),o=openingMap.get(`${x.type}|${x.name}`),val=p?num(p.closing_balance):num(o?.opening_balance);
-  const action=`<button class="edit no-print" type="button" onclick='editOpeningItem(${JSON.stringify({type:x.type,name:x.name,unit:x.unit}).replace(/'/g,"&#39;")})'>✏️ Edit</button> <button class="danger no-print" type="button" onclick='deleteOpeningItem(${JSON.stringify({type:x.type,name:x.name}).replace(/'/g,"&#39;")})'>🗑️ Delete</button>`;
+  const key=`${x.type}|${x.name}`;
+  const prev=current.month===1?12:current.month-1,p=closingMap.get(`${prev}|${x.type}|${x.name}`),o=openingMap.get(key),val=p?num(p.closing_balance):num(o?.opening_balance);
+  const canEdit=true;
+  const unlocked=editingOpeningBalances.has(key);
+  const itemArg=JSON.stringify({type:x.type,name:x.name,unit:x.unit}).replace(/'/g,"&#39;");
+  const balanceArg=JSON.stringify({type:x.type,name:x.name}).replace(/'/g,"&#39;");
+  const action=`${canEdit?`<button class="edit no-print" type="button" onclick='editOpeningBalance(${balanceArg})'>✏️ Edit Opening</button>`:""} <button class="edit no-print" type="button" onclick='editOpeningItem(${itemArg})'>⚙️ Edit Item</button> <button class="danger no-print" type="button" onclick='deleteOpeningItem(${balanceArg})'>🗑️ Delete</button>`;
   const label=x.type==="item"?"ಆಹಾರ ಪದಾರ್ಥ":x.type==="ingredient"?"ಅಡುಗೆ ಪದಾರ್ಥ":"ಪೌಷ್ಠಿಕ ಆಹಾರ";
   const openingDisplay = (x.type === "item" && String(x.unit || "").toLowerCase() === "gram")
     ? (Math.trunc((val + Number.EPSILON) * 1000) / 1000).toFixed(3)
     : val;
-  h+=`<tr><td>${label}</td><td>${esc(x.name)}</td><td>${esc(x.unit)}</td><td><input class="opening-input" data-open-type="${x.type}" data-open-name="${esc(x.name)}" type="number" min="0" step="0.001" value="${openingDisplay}" ${p?"disabled":""}></td><td>${p?'<span class="badge">ಹಿಂದಿನ Closing</span>':'<span class="badge">Initial Opening</span>'}</td><td class="no-print">${action}</td></tr>`;
+  const locked=!unlocked && (!!p || !!o);
+  const status=unlocked?'<span class="badge">Editing</span>':(p?'<span class="badge">ಹಿಂದಿನ Closing</span>':(o?'<span class="badge">Locked</span>':'<span class="badge">Initial Opening</span>'));
+  h+=`<tr><td>${label}</td><td>${esc(x.name)}</td><td>${esc(x.unit)}</td><td><input class="opening-input" data-open-type="${x.type}" data-open-name="${esc(x.name)}" type="number" min="0" step="0.001" value="${openingDisplay}" ${locked?"disabled":""}></td><td>${status}</td><td class="no-print">${action}</td></tr>`;
  });
  h+=`</tbody></table></div>`;$('openingHost').innerHTML=h;
 }
-
+function editOpeningBalance(item){
+ const key=`${item.type}|${item.name}`;
+ editingOpeningBalances.add(key);
+ renderOpening();
+ const input=[...document.querySelectorAll('[data-open-type]')].find(i=>i.dataset.openType===item.type && i.dataset.openName===item.name);
+ if(input){input.disabled=false;input.focus();input.select();}
+}
 let editingOpeningItem=null;
 function settingGroupsForNewItem(group){
  if(group==="1-7")return ["1-5","6-7"];
@@ -588,11 +626,16 @@ function clearNewItemForm(){
  $('cancelEditItemBtn').style.display="none";
 }
 function editOpeningItem(item){
+ const key=`${item.type}|${item.name}`;
+ editingOpeningBalances.add(key);
  editingOpeningItem=item;
  $('newItemType').value=item.type;
  $('newItemName').value=item.name;
  $('addNewItemBtn').textContent="💾 Update Item";
  $('cancelEditItemBtn').style.display="inline-block";
+ renderOpening();
+ const input=[...document.querySelectorAll('[data-open-type]')].find(i=>i.dataset.openType===item.type && i.dataset.openName===item.name);
+ if(input){input.disabled=false;input.focus();input.select();}
  $('newItemName').focus();
 }
 async function deleteOpeningItem(item){
@@ -624,11 +667,49 @@ async function saveNewOpeningItem(){
    else {table="nutritional_foods";nameCol="food_name";rateCol="quantity_per_student";defaultUnit=unitInput;}
    const groupsToChange=settingGroupsForNewItem(current.group);
    if(editingOpeningItem){
+     const oldType=editingOpeningItem.type;
+     const oldName=editingOpeningItem.name;
+     const oldKey=`${oldType}|${oldName}`;
+     const openInput=[...document.querySelectorAll('[data-open-type]')].find(i=>i.dataset.openType===oldType && i.dataset.openName===oldName);
+     const openingValue=openInput ? num(openInput.value) : num(openingMap.get(oldKey)?.opening_balance);
+
      for(const sg of groupsToChange){
        const q=await db.from(table).update({[nameCol]:name,unit:defaultUnit,is_enabled:true,updated_at:new Date().toISOString()})
-        .eq("academic_year_id",activeYear.id).eq("class_group",sg).eq(nameCol,editingOpeningItem.name);
+        .eq("academic_year_id",activeYear.id).eq("class_group",sg).eq(nameCol,oldName);
        if(q.error)throw q.error;
      }
+
+     // When Edit Item is used, also save the Opening Balance value currently
+     // shown in the opening-balance field. This keeps the edited value after reload.
+     const dbType=type==="nutrition"?"item":type;
+     const oldDbType=oldType==="nutrition"?"item":oldType;
+     const dbName=type==="nutrition"?`__NUTRITION_OPENING__|${name}`:name;
+     const oldDbName=oldType==="nutrition"?`__NUTRITION_OPENING__|${oldName}`:oldName;
+     const existing=await db.from("food_stock_opening_balances")
+       .select("id")
+       .eq("academic_year_id",activeYear.id)
+       .eq("item_type",oldDbType)
+       .eq("item_name",oldDbName)
+       .limit(1)
+       .maybeSingle();
+     if(existing.error)throw existing.error;
+
+     const openingPayload={
+       academic_year_id:activeYear.id,
+       item_type:dbType,
+       item_name:dbName,
+       opening_balance:openingValue,
+       unit:defaultUnit,
+       updated_at:new Date().toISOString()
+     };
+     let oq;
+     if(existing.data){
+       oq=await db.from("food_stock_opening_balances").update(openingPayload).eq("id",existing.data.id).select("id,item_type,item_name,opening_balance,unit").maybeSingle();
+     }else{
+       oq=await db.from("food_stock_opening_balances").insert(openingPayload).select("id,item_type,item_name,opening_balance,unit").single();
+     }
+     if(oq.error)throw oq.error;
+     if(!oq.data)throw new Error("Opening Balance save ಆಗಿಲ್ಲ.");
    }else{
      for(const sg of groupsToChange){
        const existing=await db.from(table).select("id").eq("academic_year_id",activeYear.id).eq("class_group",sg).eq(nameCol,name).limit(1).maybeSingle();
@@ -652,42 +733,193 @@ async function saveNewOpeningItem(){
 function renderWheatList(){const rows=[...wheatDays.values()];$("wheatList").innerHTML=rows.length?rows.map(r=>`<div style="padding:5px 0;border-bottom:1px solid #ddd"><b>${esc(r.wheat_date)}</b> — ${num(r.wheat_students)||"Daily 8th count"} <button class="edit" onclick='editWheat(${JSON.stringify(r)})'>Edit</button> <button class="danger" onclick="deleteWheat('${r.id}')">Delete</button></div>`).join(""):"<div class='small'>ಈ ತಿಂಗಳಿಗೆ ಗೋಧಿ ದಿನ entry ಇಲ್ಲ.</div>"}
 function editWheat(r){editingWheatId=r.id;$("wheatDate").value=r.wheat_date;$("wheatStudents").value=num(r.wheat_students)||"";$("wheatCancelBtn").style.display="inline-block"}
 async function deleteWheat(id){if(!confirm("ಗೋಧಿ ದಿನ entry ಅಳಿಸಬೇಕೇ?"))return;const q=await db.from("food_wheat_days").delete().eq("id",id);if(q.error)throw q.error;await loadWheat();renderWheatList();renderReport()}
-function renderNutritionReport(){
- const bs=groups[current.group]||[],names=namesFor("nutrition"),parts=nutritionColumnParts(names);
- const displayNames=[...parts.egg,...parts.other,...parts.banana];
- const cols=2+bs.length+1+displayNames.length*3+(parts.egg.length?1:0)+(parts.banana.length?1:0)+1;
- $("reportMonth").textContent=`ತಿಂಗಳು:- ${months[current.month-1]}-${current.year}`;
- let h=`<div class="table-wrap"><table class="nutrition-print"><thead><tr><th colspan="${cols}" class="group-head">ಪೌಷ್ಠಿಕ ಆಹಾರ — ${esc(groupLabel(current.group))}</th></tr><tr><th rowspan="2">ಕ್ರ.ಸಂ</th><th rowspan="2">ದಿನಾಂಕ</th>${bs.map(b=>`<th rowspan="2">${b.label}<br><small>ವಿದ್ಯಾರ್ಥಿಗಳು</small></th>`).join("")}<th rowspan="2">ಒಟ್ಟು<br>ವಿದ್ಯಾರ್ಥಿಗಳು</th>${displayNames.map(x=>`<th colspan="3" class="group-head">${esc(x.name)}<br><small>${esc(x.unit)}</small></th>`).join("")}${parts.egg.length?`<th rowspan="2" class="group-head">ಮೊಟ್ಟೆ<br>ಒಟ್ಟು</th>`:""}${parts.banana.length?`<th rowspan="2" class="group-head">ಬಾಳೆಹಣ್ಣು<br>ಒಟ್ಟು</th>`:""}<th rowspan="2" class="group-head">2 ಒಟ್ಟು<br>ಸೇರಿದ ಒಟ್ಟು</th></tr><tr>${displayNames.map(()=>`<th>ದಾಸ್ತಾನು</th><th>ಖರ್ಚು</th><th>ಉಳಿಕೆ</th>`).join("")}</tr></thead><tbody>`;
- const days=new Date(current.year,current.month,0).getDate(),totals=names.map(()=>0);
- const openingBalance=new Map();
- displayNames.forEach(x=>openingBalance.set(x.name,openingFor("nutrition",x.name)));
- const running=new Map(openingBalance);
- h+=`<tr class="opening-row"><td>—</td><td><b>ಪ್ರಾರಂಭಿಕ ಶಿಲ್ಕು</b></td>${bs.map(()=>`<td>—</td>`).join("")}<td class="total">—</td>`;
- displayNames.forEach(x=>{const v=openingBalance.get(x.name)||0;h+=`<td class="total">—</td><td class="total">—</td><td class="total"><b>${fmt(v,x.unit)}</b></td>`});
- if(parts.egg.length)h+=`<td class="total"><b>${fmt(parts.egg.reduce((s,x)=>s+(openingBalance.get(x.name)||0),0),parts.egg[0]?.unit||"KG")}</b></td>`;
- if(parts.banana.length)h+=`<td class="total"><b>${fmt(parts.banana.reduce((s,x)=>s+(openingBalance.get(x.name)||0),0),parts.banana[0]?.unit||"KG")}</b></td>`;
- h+=`<td class="total"><b>${fmt(parts.egg.reduce((s,x)=>s+(openingBalance.get(x.name)||0),0)+parts.banana.reduce((s,x)=>s+(openingBalance.get(x.name)||0),0),"KG")}</b></td></tr>`;
- for(let d=1;d<=days;d++){
-  const date=iso(current.year,current.month,d),holiday=current.holidays.get(date),counts=bs.map(b=>bucketCount(date,b)),total=counts.reduce((a,b)=>a+b,0);
-  if(holiday){h+=`<tr class="holiday"><td>${d}</td><td>${pad(d)}-${pad(current.month)}-${current.year}</td><td colspan="${cols-2}"><b>${esc(holiday.holiday_reason||"ರಜೆ")}</b></td></tr>`;continue;}
-  const rowTotals=new Map();
-  displayNames.forEach(x=>{let qty=0;bs.forEach(b=>qty+=bucketCount(date,b)*nutritionRate(x.name,b.key));rowTotals.set(x.name,qty);const idx=names.findIndex(n=>n.name===x.name);if(idx>=0)totals[idx]+=qty;});
-  const eggDay=parts.egg.reduce((sum,x)=>sum+num(rowTotals.get(x.name)),0),bananaDay=parts.banana.reduce((sum,x)=>sum+num(rowTotals.get(x.name)),0);
-  h+=`<tr><td>${d}</td><td>${pad(d)}-${pad(current.month)}-${current.year}</td>${counts.map(v=>`<td>${v}</td>`).join("")}<td class="total">${total}</td>`;
-  displayNames.forEach(x=>{const used=num(rowTotals.get(x.name)),rec=receipts.get(`nutrition|${x.name}|${date}`),stock=num(rec?.quantity),before=running.get(x.name)||0,after=before+stock-used;running.set(x.name,after);h+=`<td><input class="stock-input no-print" type="number" min="0" step="0.001" data-receipt-type="nutrition" data-receipt-name="${esc(x.name)}" data-receipt-date="${date}" value="${rec?num(rec.quantity):""}"><span class="screen-only" style="display:none">${rec?fmt(rec.quantity,x.unit):""}</span></td><td class="total">${fmt(used,x.unit)}</td><td class="total"><b>${fmt(after,x.unit)}</b></td>`});
-  if(parts.egg.length)h+=`<td class="total">${fmt(eggDay,parts.egg[0]?.unit||"KG")}</td>`;
-  if(parts.banana.length)h+=`<td class="total">${fmt(bananaDay,parts.banana[0]?.unit||"KG")}</td>`;
-  h+=`<td class="total">${fmt(eggDay+bananaDay,"KG")}</td></tr>`;
- }
- const ns=nutritionSummary(names,totals);
- h+=`</tbody><tfoot><tr><td colspan="${2+bs.length+1}">MONTH TOTAL</td>`;
- displayNames.forEach(x=>{const idx=names.findIndex(n=>n.name===x.name),l=nutritionLedger(x.name);h+=`<td class="total">${fmt(l.rows.reduce((s,r)=>s+r.stock,0),x.unit)}</td><td class="total">${fmt(totals[idx],x.unit)}</td><td class="total">${fmt(l.closing,x.unit)}</td>`});
- if(parts.egg.length)h+=`<td class="total">${fmt(ns.egg,parts.egg[0]?.unit||"KG")}</td>`;
- if(parts.banana.length)h+=`<td class="total">${fmt(ns.banana,parts.banana[0]?.unit||"KG")}</td>`;
- h+=`<td class="total">${fmt(ns.combined,"KG")}</td></tr></tfoot></table></div>`;
- $("tableHost").innerHTML=h;
+function nutritionStudentCountForDate(date,kind){
+ const m=current?.nutritionCounts?.[String(date).slice(0,10)]||{};
+ const classes=(current.group==="8-10")?["8","9","10"]:[];
+ return classes.reduce((sum,c)=>sum+num(m[`${kind}|${c}`]),0);
+}
+function nutritionExpenseForDate(name,date){
+ const kind=String(name||"").includes("ಮೊಟ್ಟೆ")?"ಮೊಟ್ಟೆ":String(name||"").includes("ಬಾಳೆಹಣ್ಣು")?"ಬಾಳೆಹಣ್ಣು":"";
+ if(!kind)return 0;
+ const m=current?.nutritionCounts?.[String(date).slice(0,10)]||{};
+ const classes=(current.group==="8-10")?["8","9","10"]:[];
+ return classes.reduce((sum,c)=>sum + num(m[`${kind}|${c}`])*nutritionRate(name,c),0);
+}
+function nutritionTotalCountForDate(date,kind){
+ return nutritionStudentCountForDate(date,kind);
 }
 
+function renderNutritionReport(){
+  const names=namesFor("nutrition"),parts=nutritionColumnParts(names);
+  // Keep each nutrition item visible. Egg total comes immediately after all
+  // egg items; banana total comes immediately after all banana items; the
+  // final total is egg + banana.
+  const eggItems=parts.egg;
+  const bananaItems=parts.banana;
+  const otherItems=parts.other;
+  const displayNames=[...eggItems,...otherItems,...bananaItems];
+
+  // 2 date/count columns + each individual nutrition item (3 columns each)
+  // + Egg Total (3) + Banana Total (3) + Final Total (3).
+  const cols=4+displayNames.length*3+9;
+  $("reportMonth").textContent=`ತಿಂಗಳು:- ${months[current.month-1]}-${current.year}`;
+
+  const groupCols=(label,items)=>items.map(x=>
+    `<th colspan="3" class="group-head">${esc(x.name)}<br><small>${esc(x.unit)}</small></th>`
+  ).join("");
+
+  let h=`<div class="table-wrap"><table class="nutrition-print">
+  <thead>
+   <tr><th colspan="${cols}" class="group-head">ಪೌಷ್ಠಿಕ ಆಹಾರ — ${esc(groupLabel(current.group))}</th></tr>
+   <tr>
+    <th rowspan="2">ಕ್ರ.ಸಂ</th>
+    <th rowspan="2">ದಿನಾಂಕ</th>
+    <th rowspan="2" class="group-head">ಮೊಟ್ಟೆ<br>ಒಟ್ಟು ಸಂಖ್ಯೆ</th>
+    <th rowspan="2" class="group-head">ಬಾಳೆಹಣ್ಣು<br>ಒಟ್ಟು ಸಂಖ್ಯೆ</th>
+    ${groupCols("egg",eggItems)}
+    ${groupCols("other",otherItems)}
+    ${groupCols("banana",bananaItems)}
+    <th colspan="3" class="group-head">ಮೊಟ್ಟೆ ಒಟ್ಟು</th>
+    <th colspan="3" class="group-head">ಬಾಳೆಹಣ್ಣು ಒಟ್ಟು</th>
+    <th colspan="3" class="group-head">ಒಟ್ಟು</th>
+   </tr>
+   <tr>
+    ${displayNames.map(()=>`<th>ದಾಸ್ತಾನು</th><th>ಖರ್ಚು</th><th>ಉಳಿಕೆ</th>`).join("")}
+    <th>ದಾಸ್ತಾನು</th><th>ಖರ್ಚು</th><th>ಉಳಿಕೆ</th>
+    <th>ದಾಸ್ತಾನು</th><th>ಖರ್ಚು</th><th>ಉಳಿಕೆ</th>
+    <th>ದಾಸ್ತಾನು</th><th>ಖರ್ಚು</th><th>ಉಳಿಕೆ</th>
+   </tr>
+  </thead><tbody>`;
+
+  const days=new Date(current.year,current.month,0).getDate();
+  const running=new Map();
+  displayNames.forEach(x=>running.set(x.name,openingFor("nutrition",x.name)));
+
+  const openingOf=(items)=>items.reduce((s,x)=>s+(running.get(x.name)||0),0);
+  const eggOpening=openingOf(eggItems);
+  const bananaOpening=openingOf(bananaItems);
+
+  // Opening row: aggregate opening is shown in the "ಉಳಿಕೆ" column.
+  h+=`<tr class="opening-row">
+    <td>—</td><td><b>ಪ್ರಾರಂಭಿಕ ಶಿಲ್ಕು</b></td><td>—</td><td>—</td>
+    ${displayNames.map(x=>`<td>—</td><td>—</td><td class="total"><b>${fmt(running.get(x.name)||0,x.unit)}</b></td>`).join("")}
+    <td>—</td><td>—</td><td class="total"><b>${fmt(eggOpening,eggItems[0]?.unit||"KG")}</b></td>
+    <td>—</td><td>—</td><td class="total"><b>${fmt(bananaOpening,bananaItems[0]?.unit||"KG")}</b></td>
+    <td>—</td><td>—</td><td class="total"><b>${fmt(eggOpening+bananaOpening,eggItems[0]?.unit||bananaItems[0]?.unit||"KG")}</b></td>
+  </tr>`;
+
+  // Month totals for every individual item.
+  const totals=new Map(displayNames.map(x=>[x.name,{stock:0,expense:0}]));
+
+  for(let d=1;d<=days;d++){
+    const date=iso(current.year,current.month,d);
+    const displayDate=`${pad(d)}-${pad(current.month)}-${current.year}`;
+    const holiday=current.holidays.get(date);
+
+    if(holiday){
+      h+=`<tr class="holiday">
+        <td>${d}</td><td>${displayDate}</td><td>—</td><td>—</td>
+        <td colspan="${displayNames.length*3+9}"><b>${esc(holiday.holiday_reason||"ರಜೆ")}</b></td>
+      </tr>`;
+      continue;
+    }
+
+    // These two numbers come from Daily Food Distribution:
+    // Egg total = Egg class 8 + 9 + 10; Banana total = Banana class 8 + 9 + 10.
+    const eggDay=nutritionTotalCountForDate(date,"ಮೊಟ್ಟೆ");
+    const bananaDay=nutritionTotalCountForDate(date,"ಬಾಳೆಹಣ್ಣು");
+
+    h+=`<tr>
+      <td>${d}</td><td>${displayDate}</td>
+      <td class="total">${Math.trunc(num(eggDay))}</td>
+      <td class="total">${Math.trunc(num(bananaDay))}</td>`;
+
+    let eggStock=0,eggExpense=0,bananaStock=0,bananaExpense=0;
+
+    // Individual item columns remain exactly as Calculation Settings ledgers.
+    displayNames.forEach(x=>{
+      const used=nutritionExpenseForDate(x.name,date);
+      const rec=receipts.get(`nutrition|${x.name}|${date}`);
+      const stock=num(rec?.quantity);
+      const before=running.get(x.name)||0;
+      const after=before+stock-used;
+      running.set(x.name,after);
+
+      const t=totals.get(x.name);
+      if(t){t.stock+=stock;t.expense+=used;}
+
+      if(eggItems.some(e=>e.name===x.name)){
+        eggStock+=stock; eggExpense+=used;
+      }
+      if(bananaItems.some(b=>b.name===x.name)){
+        bananaStock+=stock; bananaExpense+=used;
+      }
+
+      h+=`<td>
+        <input class="stock-input no-print" type="number" min="0" step="0.001"
+          data-receipt-type="nutrition" data-receipt-name="${esc(x.name)}"
+          data-receipt-date="${date}" value="${rec?num(rec.quantity):""}">
+        <span class="screen-only" style="display:none">${rec?fmt(rec.quantity,x.unit):""}</span>
+      </td>
+      <td class="total">${fmt(used,x.unit)}</td>
+      <td class="total"><b>${fmt(after,x.unit)}</b></td>`;
+    });
+
+    const eggClosing=eggItems.reduce((s,x)=>s+(running.get(x.name)||0),0);
+    const bananaClosing=bananaItems.reduce((s,x)=>s+(running.get(x.name)||0),0);
+
+    h+=`
+      <td class="total">${fmt(eggStock,eggItems[0]?.unit||"KG")}</td>
+      <td class="total">${fmt(eggExpense,eggItems[0]?.unit||"KG")}</td>
+      <td class="total"><b>${fmt(eggClosing,eggItems[0]?.unit||"KG")}</b></td>
+
+      <td class="total">${fmt(bananaStock,bananaItems[0]?.unit||"KG")}</td>
+      <td class="total">${fmt(bananaExpense,bananaItems[0]?.unit||"KG")}</td>
+      <td class="total"><b>${fmt(bananaClosing,bananaItems[0]?.unit||"KG")}</b></td>
+
+      <td class="total">${fmt(eggStock+bananaStock,eggItems[0]?.unit||bananaItems[0]?.unit||"KG")}</td>
+      <td class="total">${fmt(eggExpense+bananaExpense,eggItems[0]?.unit||bananaItems[0]?.unit||"KG")}</td>
+      <td class="total"><b>${fmt(eggClosing+bananaClosing,eggItems[0]?.unit||bananaItems[0]?.unit||"KG")}</b></td>
+    </tr>`;
+  }
+
+  // Month total row: aggregate the four Egg items, the two Banana items,
+  // and finally Egg + Banana.
+  const itemStock=(items)=>items.reduce((s,x)=>s+(totals.get(x.name)?.stock||0),0);
+  const itemExpense=(items)=>items.reduce((s,x)=>s+(totals.get(x.name)?.expense||0),0);
+  const itemClosing=(items)=>items.reduce((s,x)=>s+(running.get(x.name)||0),0);
+
+  const eggStockTotal=itemStock(eggItems),eggExpenseTotal=itemExpense(eggItems),eggClosingTotal=itemClosing(eggItems);
+  const bananaStockTotal=itemStock(bananaItems),bananaExpenseTotal=itemExpense(bananaItems),bananaClosingTotal=itemClosing(bananaItems);
+
+  h+=`</tbody><tfoot><tr>
+    <td colspan="2">MONTH TOTAL</td>
+    <td class="total">${fmt(0,"Nos")}</td>
+    <td class="total">${fmt(0,"Nos")}</td>`;
+
+  displayNames.forEach(x=>{
+    const t=totals.get(x.name)||{stock:0,expense:0};
+    h+=`<td class="total">${fmt(t.stock,x.unit)}</td>
+        <td class="total">${fmt(t.expense,x.unit)}</td>
+        <td class="total">${fmt(running.get(x.name)||0,x.unit)}</td>`;
+  });
+
+  h+=`
+    <td class="total">${fmt(eggStockTotal,eggItems[0]?.unit||"KG")}</td>
+    <td class="total">${fmt(eggExpenseTotal,eggItems[0]?.unit||"KG")}</td>
+    <td class="total">${fmt(eggClosingTotal,eggItems[0]?.unit||"KG")}</td>
+
+    <td class="total">${fmt(bananaStockTotal,bananaItems[0]?.unit||"KG")}</td>
+    <td class="total">${fmt(bananaExpenseTotal,bananaItems[0]?.unit||"KG")}</td>
+    <td class="total">${fmt(bananaClosingTotal,bananaItems[0]?.unit||"KG")}</td>
+
+    <td class="total">${fmt(eggStockTotal+bananaStockTotal,eggItems[0]?.unit||bananaItems[0]?.unit||"KG")}</td>
+    <td class="total">${fmt(eggExpenseTotal+bananaExpenseTotal,eggItems[0]?.unit||bananaItems[0]?.unit||"KG")}</td>
+    <td class="total">${fmt(eggClosingTotal+bananaClosingTotal,eggItems[0]?.unit||bananaItems[0]?.unit||"KG")}</td>
+  </tr></tfoot></table></div>`;
+
+  $("tableHost").innerHTML=h;
+}
 function renderReport(){
  const type=$("reportType").value;if(type==="nutrition")return renderNutritionReport();
  const bs=groups[current.group],names=namesFor(type),label=type==="item"?"Items (ಆಹಾರ ಪದಾರ್ಥಗಳು)":"ಅಡುಗೆ ಪದಾರ್ಥಗಳು",cols=2+bs.length+1+names.length*3;$("reportMonth").textContent=`ತಿಂಗಳು:- ${months[current.month-1]}-${current.year}`;
@@ -702,16 +934,18 @@ async function loadAll(){
   current={group:$("classGroup").value,month:num($("month").value),year:reportYear(num($("month").value))};
   await loadSettings();
   await loadDaily();
-  await loadReceipts();
-  await loadWheat();
-  await loadOpening();
-  await saveCurrentMonthClosings();
-  await loadOpening();
+  // These three reads depend only on current month/academic year, so load them together.
+  await Promise.all([loadReceipts(),loadWheat(),loadOpening()]);
+
+  // Render immediately. Monthly closing persistence is derived data and does not
+  // need to block the screen; save it in the background so the page feels fast.
   renderOpening();
   renderReport();
   renderWheatList();
   lockClassGroup();
   show($("msg"),"ಮಾಹಿತಿ Loaded: Daily Food Distribution + Calculation Settings + School Settings. Class-wise student count Daily Food Distributionನಿಂದ ತೆಗೆದುಕೊಳ್ಳಲಾಗಿದೆ.","ok");
+
+  saveCurrentMonthClosings().catch(e=>console.error("Monthly closing background save failed:",e));
  }catch(e){
   console.error(e);
   show($("msg"),"Load failed: "+e.message,"err");
@@ -728,7 +962,7 @@ async function saveOpenings(){
       const type=String(i.dataset.openType||"").trim();
       const name=String(i.dataset.openName||"").trim();
       if(!name)continue;
-      if(closingMap.has(`${previousMonth}|${type}|${name}`))continue;
+      if(closingMap.has(`${previousMonth}|${type}|${name}`) && !editingOpeningBalances.has(`${type}|${name}`))continue;
 
       // food_stock_opening_balances currently permits item / ingredient only.
       // Store nutrition opening using a unique internal item key, then map it
@@ -774,10 +1008,11 @@ async function saveOpenings(){
       if(!q.data)throw new Error(`“${name}” Opening Balance Databaseಗೆ Save ಆಗಿಲ್ಲ. Supabase RLS policy ಪರಿಶೀಲಿಸಿ.`);
     }
 
+    editingOpeningBalances.clear();
     await loadOpening();
     renderOpening();
     renderReport();
-    show($("openingMsg"),"Opening Balance Save ಆಯಿತು. Refresh ಮಾಡಿದರೂ balance ಉಳಿಯುತ್ತದೆ.","ok");
+    show($("openingMsg"),"Opening Balance Save ಆಯಿತು. ಈಗ lock ಆಗಿದೆ. Edit Opening ಒತ್ತಿದರೆ ಮತ್ತೆ edit ಮಾಡಬಹುದು.","ok");
   }catch(e){
     console.error("Opening Save failed:",e);
     show($("openingMsg"),"Opening Save failed: "+(e?.message||e),"err");
@@ -817,10 +1052,16 @@ async function saveReceipts(){
           ?(namesFor("nutrition").find(x=>x.name===name)?.unit||"KG")
           :(namesFor("item").find(x=>x.name===name)?.unit||"KG");
 
+      // food_stock_receipts.item_type CHECK constraint accepts only item / ingredient.
+      // Keep the nutrition UI type as "nutrition", but persist it safely as an item
+      // row with a private nutrition receipt key. Nothing else uses this key.
+      const dbType=type==="nutrition"?"item":type;
+      const dbName=type==="nutrition"?`__NUTRITION_RECEIPT__|${name}`:name;
+
       rows.push({
         academic_year_id:activeYear.id,
-        item_type:type,
-        item_name:name,
+        item_type:dbType,
+        item_name:dbName,
         receipt_date:date,
         quantity,
         unit,
@@ -830,12 +1071,15 @@ async function saveReceipts(){
 
     // Remove an old receipt when the user clears that day's stock field.
     const currentType=$("reportType").value;
-    const del=(existingQ.data||[]).filter(r=>
-      r.item_type===currentType && (
-        !wanted.has(`${r.item_type}|${r.item_name}|${r.receipt_date}`) ||
+    const del=(existingQ.data||[]).filter(r=>{
+      const isNutritionStored=String(r.item_type)==="item" && String(r.item_name||"").startsWith("__NUTRITION_RECEIPT__|");
+      const logicalType=isNutritionStored?"nutrition":r.item_type;
+      const logicalName=isNutritionStored?String(r.item_name).slice("__NUTRITION_RECEIPT__|".length):r.item_name;
+      return logicalType===currentType && (
+        !wanted.has(`${logicalType}|${logicalName}|${r.receipt_date}`) ||
         !rows.some(x=>x.item_type===r.item_type && x.item_name===r.item_name && x.receipt_date===r.receipt_date)
-      )
-    );
+      );
+    });
     if(del.length){
       const z=await db.from("food_stock_receipts").delete().in("id",del.map(x=>x.id));
       if(z.error)throw z.error;
@@ -914,31 +1158,22 @@ function buildExportTableHtml(){
  if(!current)throw new Error("ಮೊದಲು Load ಮಾಡಿ.");
  const type=$("reportType").value,bs=groups[current.group]||[],names=namesFor(type),dept=school?.department_name||"ಅಕ್ಷರ ದಾಸೋಹ ಕಾರ್ಯಕ್ರಮ",sch=school?.school_name||"ಶಾಲೆಯ ಹೆಸರು",escX=v=>String(v??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
  if(type==="nutrition"){
-  const parts=nutritionColumnParts(names),displayNames=[...parts.egg,...parts.other,...parts.banana];
-  const totalCols=2+bs.length+1+displayNames.length*3+(parts.egg.length?1:0)+(parts.banana.length?1:0)+1;
-  let h=`<table class="export-table nutrition-print"><tr><th colspan="${totalCols}" class="title">${escX(dept)}</th></tr><tr><th colspan="${totalCols}" class="school">${escX(sch)}</th></tr><tr><th colspan="${totalCols}" class="month">ತಿಂಗಳು:- ${months[current.month-1]}-${current.year}</th></tr><tr><th colspan="${totalCols}" class="section-title">ಪೌಷ್ಠಿಕ ಆಹಾರ — ${escX(groupLabel(current.group))}</th></tr>`;
-  h+=`<tr><th rowspan="2">ಕ್ರ.ಸಂ</th><th rowspan="2">ದಿನಾಂಕ</th>${bs.map(b=>`<th rowspan="2">${escX(b.label)}<br>ವಿದ್ಯಾರ್ಥಿಗಳು</th>`).join("")}<th rowspan="2">ಒಟ್ಟು ವಿದ್ಯಾರ್ಥಿಗಳು</th>${displayNames.map(x=>`<th colspan="3">${escX(x.name)}<br>${escX(x.unit)}</th>`).join("")}${parts.egg.length?`<th rowspan="2">ಮೊಟ್ಟೆ<br>ಒಟ್ಟು</th>`:""}${parts.banana.length?`<th rowspan="2">ಬಾಳೆಹಣ್ಣು<br>ಒಟ್ಟು</th>`:""}<th rowspan="2">2 ಒಟ್ಟು<br>ಸೇರಿದ ಒಟ್ಟು</th></tr><tr>${displayNames.map(()=>`<th>ದಾಸ್ತಾನು</th><th>ಖರ್ಚು</th><th>ಉಳಿಕೆ</th>`).join("")}</tr>`;
-  const totals=names.map(()=>0),days=new Date(current.year,current.month,0).getDate(),prev=current.month===1?12:current.month-1;
-  const openingBalance=new Map(),running=new Map();
-  displayNames.forEach(x=>{const p=closingMap.get(`${prev}|nutrition|${x.name}`),o=openingMap.get(`nutrition|${x.name}`),v=p?num(p.closing_balance):num(o?.opening_balance);openingBalance.set(x.name,v);running.set(x.name,v);});
-  h+=`<tr class="opening-row"><th>—</th><th>ಪ್ರಾರಂಭಿಕ ಶಿಲ್ಕು</th>${bs.map(()=>`<th>—</th>`).join("")}<th>—</th>`;
-  displayNames.forEach(x=>{const v=openingBalance.get(x.name)||0;h+=`<th>—</th><th>—</th><th>${fmt(v,x.unit)}</th>`});
-  if(parts.egg.length)h+=`<th>${fmt(parts.egg.reduce((s,x)=>s+(openingBalance.get(x.name)||0),0),parts.egg[0]?.unit||"KG")}</th>`; if(parts.banana.length)h+=`<th>${fmt(parts.banana.reduce((s,x)=>s+(openingBalance.get(x.name)||0),0),parts.banana[0]?.unit||"KG")}</th>`; h+=`<th>${fmt(parts.egg.reduce((s,x)=>s+(openingBalance.get(x.name)||0),0)+parts.banana.reduce((s,x)=>s+(openingBalance.get(x.name)||0),0),"KG")}</th></tr>`;
-  for(let d=1;d<=days;d++){
-   const date=iso(current.year,current.month,d),holiday=current.holidays.get(date),counts=bs.map(b=>bucketCount(date,b)),total=counts.reduce((a,b)=>a+b,0);
-   if(holiday){h+=`<tr class="holiday"><td>${d}</td><td>${escX(date)}</td>${bs.map(()=>`<td>—</td>`).join("")}<td>—</td><td colspan="${totalCols-(2+bs.length+1)}">${escX(holiday.holiday_reason||"ರಜೆ")}</td></tr>`;continue;}
-   const rowTotals=new Map();
-   displayNames.forEach(x=>{let qty=0;bs.forEach(b=>qty+=bucketCount(date,b)*nutritionRate(x.name,b.key));rowTotals.set(x.name,qty);const idx=names.findIndex(n=>n.name===x.name);if(idx>=0)totals[idx]+=qty;});
-   const eggDay=parts.egg.reduce((sum,x)=>sum+num(rowTotals.get(x.name)),0),bananaDay=parts.banana.reduce((sum,x)=>sum+num(rowTotals.get(x.name)),0);
-   h+=`<tr><td>${d}</td><td>${escX(date)}</td>${counts.map(v=>`<td>${v}</td>`).join("")}<td>${total}</td>`;
-   displayNames.forEach(x=>{const used=num(rowTotals.get(x.name)),rec=receipts.get(`nutrition|${x.name}|${date}`),stock=num(rec?.quantity),after=(running.get(x.name)||0)+stock-used;running.set(x.name,after);h+=`<td>${rec?fmt(stock,x.unit):""}</td><td>${fmt(used,x.unit)}</td><td>${fmt(after,x.unit)}</td>`});
-   if(parts.egg.length)h+=`<td>${fmt(eggDay,parts.egg[0]?.unit||"KG")}</td>`; if(parts.banana.length)h+=`<td>${fmt(bananaDay,parts.banana[0]?.unit||"KG")}</td>`; h+=`<td>${fmt(eggDay+bananaDay,"KG")}</td></tr>`;
-  }
-  const ns=nutritionSummary(names,totals);
-  h+=`<tr class="total-row"><th colspan="${2+bs.length+1}">MONTH TOTAL</th>`;
-  displayNames.forEach(x=>{const idx=names.findIndex(n=>n.name===x.name),l=nutritionLedger(x.name);h+=`<th>${fmt(l.rows.reduce((s,r)=>s+r.stock,0),x.unit)}</th><th>${fmt(totals[idx],x.unit)}</th><th>${fmt(l.closing,x.unit)}</th>`});
-  if(parts.egg.length)h+=`<th>${fmt(ns.egg,parts.egg[0]?.unit||"KG")}</th>`; if(parts.banana.length)h+=`<th>${fmt(ns.banana,parts.banana[0]?.unit||"KG")}</th>`; h+=`<th>${fmt(ns.combined,"KG")}</th></tr></table>`;
-  return {html:h,type,group:current.group,year:current.year,month:current.month};
+  // Export exactly the same Nutrition table that is shown on screen.
+  // This keeps Egg Total / Banana Total / Final Total columns and their
+  // Daasthanu-Kharchu-Ulikke sub-columns identical in Excel and Print/PDF.
+  const liveTable=document.querySelector("#tableHost table.nutrition-print");
+  if(!liveTable)throw new Error("ಪೌಷ್ಠಿಕ ಆಹಾರ ವರದಿ ಮೊದಲು Load ಮಾಡಿ.");
+  const clone=liveTable.cloneNode(true);
+  clone.querySelectorAll("input.stock-input").forEach(inp=>{
+    const td=inp.parentElement;
+    const value=inp.value===""?"":inp.value;
+    inp.remove();
+    const span=td.querySelector(".screen-only");
+    if(span)span.remove();
+    if(value!=="")td.insertBefore(document.createTextNode(value),td.firstChild);
+  });
+  clone.querySelectorAll(".screen-only").forEach(x=>x.remove());
+  return {html:clone.outerHTML,type,group:current.group,year:current.year,month:current.month};
  }
  const totalCols=2+bs.length+1+names.length*3;let h=`<table class="export-table"><tr><th colspan="${totalCols}" class="title">${escX(dept)}</th></tr><tr><th colspan="${totalCols}" class="school">${escX(sch)}</th></tr><tr><th colspan="${totalCols}" class="month">ತಿಂಗಳು:- ${months[current.month-1]}-${current.year}</th></tr><tr><th colspan="${totalCols}" class="section-title">${type==="item"?"Items (ಆಹಾರ ಪದಾರ್ಥಗಳು)":"ಅಡುಗೆ ಪದಾರ್ಥಗಳು"} — ${escX(groupLabel(current.group))}</th></tr><tr><th>ಕ್ರ.ಸಂ</th><th>ದಿನಾಂಕ</th>${bs.map(b=>`<th>${escX(b.label)}<br>ವಿದ್ಯಾರ್ಥಿಗಳು</th>`).join("")}<th>ಒಟ್ಟು ವಿದ್ಯಾರ್ಥಿಗಳು</th>${names.map(x=>`<th colspan="3">${escX(x.name)}<br>${escX(x.unit)}</th>`).join("")}</tr><tr><th colspan="${2+bs.length+1}"></th>${names.map(()=>`<th>ದಾಸ್ತಾನು</th><th>ಖರ್ಚು</th><th>ಉಳಿಕೆ</th>`).join("")}</tr>`;
  const led=names.map(x=>({x,l:ledger(x.type,x.name)}));h+=`<tr class="opening-row"><th colspan="${2+bs.length+1}">ಪ್ರಾರಂಭಿಕ ಶಿಲ್ಕು</th>`;led.forEach(z=>h+=`<th>—</th><th>—</th><th>${fmt(z.l.opening,z.x.unit)}</th>`);h+=`</tr>`;const days=new Date(current.year,current.month,0).getDate();
