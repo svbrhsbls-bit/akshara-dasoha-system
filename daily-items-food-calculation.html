@@ -368,6 +368,7 @@ function expense(type,name,date){
   const bs=groups[current.group]||[];
   const riceItem=type==="item" && isNamedItem(name,["ಅಕ್ಕಿ","ಅಕ್ಕಿ "]);
   const wheatItem=type==="item" && isNamedItem(name,["ಗೋಧಿ","ಗೋಧಿ "]);
+  const wheatIngredient=type==="ingredient" && normalizeItemName(name).includes("ಗೋಧಿ");
   const ragiMaltItem=isRagiMalt(name);
   const dalItem=type==="item" && normalizeItemName(name).includes("ಬೇಳೆ");
 
@@ -384,6 +385,11 @@ function expense(type,name,date){
     if(day===6)return 0;
   }
 
+  // ಅಡುಗೆ ಪದಾರ್ಥದಲ್ಲಿರುವ ಗೋಧಿ:
+  // ಗೋಧಿ ದಿನದಲ್ಲಿ ಮಾತ್ರ calculation ಆಗಬೇಕು.
+  // ಮತ್ತು 8ನೇ ತರಗತಿಯ Daily Food Distribution student count ಮಾತ್ರ ಬಳಸಬೇಕು.
+  if(wheatIngredient && !wheatDay)return 0;
+
   // Wheat-day rules apply ONLY to classes 1-8.
   // 9 ಮತ್ತು 10ಕ್ಕೆ ಅಕ್ಕಿ ಪ್ರತಿದಿನವೂ ಲೆಕ್ಕವಾಗುತ್ತದೆ; ಗೋಧಿ ಎಂದಿಗೂ 0.
   let total=0;
@@ -391,14 +397,16 @@ function expense(type,name,date){
     let count=bucketCount(date,b);
     const rate=type==="item"?itemRate(name,b.key):(type==="ingredient"?ingredientRate(name,b.key):nutritionRate(name,b.key));
 
-    // ಗೋಧಿ ದಿನದ ಅಡುಗೆ ಪದಾರ್ಥ: 8ನೇ ತರಗತಿಯ Daily Food Distribution ವಿದ್ಯಾರ್ಥಿಗಳ ಸಂಖ್ಯೆಗೆ ಮಾತ್ರ amount.
-    // 8ನೇ ತರಗತಿ ಇಲ್ಲದ 1-7 groupನಲ್ಲಿ ಈ ದಿನ ಅಡುಗೆ ಪದಾರ್ಥದ ಖರ್ಚು 0.
-    if(type==="ingredient" && wheatDay){
-      if(current.group==="8-10" || current.group==="1-10") count=num(counts["8"]);
-      else count=0;
-    }
-
-    if(type==="nutrition"){ count=bucketCount(date,b); } else if(type==="item" && wheatDay){
+    if(type==="nutrition"){
+      count=bucketCount(date,b);
+    } else if(wheatIngredient){
+      // ಅಡುಗೆ ಪದಾರ್ಥದ ಗೋಧಿ:
+      // ವಿಶೇಷ ಗೋಧಿ ದಿನದಲ್ಲಿ ಮಾತ್ರ, 8ನೇ ತರಗತಿಯ Daily Food Distribution
+      // ವಿದ್ಯಾರ್ಥಿಗಳ ಸಂಖ್ಯೆಗೆ ಮಾತ್ರ calculation.
+      count=(wheatDay && (current.group==="8-10" || current.group==="1-10"))
+        ? num(counts["8"])
+        : 0;
+    } else if(type==="item" && wheatDay){
       if(riceItem){
         if(current.group==="1-7") {
           // 1-7: wheat day means rice is not used.
@@ -578,7 +586,55 @@ async function saveReceipts(){
     show($("saveMsg"),"Save failed: "+e.message,"err");
   }
 }
-async function saveWheat(){try{const date=$("wheatDate").value;if(!date)return show($("msg"),"ಗೋಧಿ ದಿನಾಂಕ ಆಯ್ಕೆ ಮಾಡಿ.","err");const q=await db.from("food_wheat_days").upsert({academic_year_id:activeYear.id,wheat_date:date,wheat_students:num($("wheatStudents").value),updated_at:new Date().toISOString()},{onConflict:"academic_year_id,wheat_date"});if(q.error)throw q.error;editingWheatId=null;$("wheatDate").value="";$("wheatStudents").value="";$("wheatCancelBtn").style.display="none";await loadWheat();renderWheatList();renderReport();show($("msg"),"ಗೋಧಿ ದಿನ Save ಆಯಿತು.","ok")}catch(e){show($("msg"),"Wheat Save failed: "+e.message,"err")}}
+async function saveWheat(){
+  try{
+    const date=$("wheatDate").value;
+    if(!date)return show($("msg"),"ಗೋಧಿ ದಿನಾಂಕ ಆಯ್ಕೆ ಮಾಡಿ.","err");
+
+    const payload={
+      academic_year_id:activeYear.id,
+      wheat_date:date,
+      wheat_students:num($("wheatStudents").value),
+      updated_at:new Date().toISOString()
+    };
+
+    let q;
+    if(editingWheatId){
+      q=await db.from("food_wheat_days").update(payload).eq("id",editingWheatId);
+    }else{
+      // ಮೊದಲು ಅದೇ academic year + date entry ಇದೆಯೇ ಎಂದು ಹುಡುಕಿ.
+      const existing=await db.from("food_wheat_days")
+        .select("id")
+        .eq("academic_year_id",activeYear.id)
+        .eq("wheat_date",date)
+        .maybeSingle();
+      if(existing.error)throw existing.error;
+
+      if(existing.data){
+        q=await db.from("food_wheat_days")
+          .update(payload)
+          .eq("id",existing.data.id);
+      }else{
+        q=await db.from("food_wheat_days").insert(payload);
+      }
+    }
+
+    if(q.error)throw q.error;
+
+    editingWheatId=null;
+    $("wheatDate").value="";
+    $("wheatStudents").value="";
+    $("wheatCancelBtn").style.display="none";
+
+    await loadWheat();
+    renderWheatList();
+    renderReport();
+    show($("msg"),"ಗೋಧಿ ದಿನ Save ಆಯಿತು.","ok");
+  }catch(e){
+    console.error(e);
+    show($("msg"),"Wheat Save failed: "+e.message,"err");
+  }
+}
 function buildExportTableHtml(){
  if(!current)throw new Error("ಮೊದಲು Load ಮಾಡಿ.");
  const type=$("reportType").value,bs=groups[current.group]||[],names=namesFor(type),dept=school?.department_name||"ಅಕ್ಷರ ದಾಸೋಹ ಕಾರ್ಯಕ್ರಮ",sch=school?.school_name||"ಶಾಲೆಯ ಹೆಸರು",escX=v=>String(v??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
@@ -694,6 +750,14 @@ function escHtml(v){return String(v??"").replace(/&/g,"&amp;").replace(/</g,"&lt
 function deptSafe(){return school?.department_name||"ಅಕ್ಷರ ದಾಸೋಹ ಕಾರ್ಯಕ್ರಮ";}
 function schoolSafe(){return school?.school_name||"ಶಾಲೆಯ ಹೆಸರು";}
 
+$("wheatSaveBtn").onclick = saveWheat;
+$("wheatCancelBtn").onclick = function(){
+  editingWheatId=null;
+  $("wheatDate").value="";
+  $("wheatStudents").value="";
+  $("wheatCancelBtn").style.display="none";
+  show($("msg"),"","");
+};
 $("loadBtn").onclick = loadAll;
 $("excelBtn").onclick = exportExcel;
 $("printBtn").onclick = printPdf;
