@@ -65,6 +65,29 @@ label{display:block;font-weight:700;margin-bottom:6px}input,select,button{font:i
 <section class="card no-print">
  <h3 style="margin:0 0 10px">ಪ್ರಾರಂಭಿಕ ಶಿಲ್ಕು / Opening Balance</h3>
  <div class="small">ಮೊದಲ ಬಾರಿಗೆ ಉಳಿದಿರುವ Items ಮತ್ತು ಅಡುಗೆ ಪದಾರ್ಥಗಳ opening balance ಇಲ್ಲಿ ನಮೂದಿಸಿ. ಹಿಂದಿನ ತಿಂಗಳ closing ಇದ್ದರೆ ಅದೇ ಮುಂದಿನ ತಿಂಗಳ opening ಆಗುತ್ತದೆ.</div>
+ <div class="lockbox" style="margin-top:10px">
+  <div style="font-weight:700;margin-bottom:8px">➕ Add New Item</div>
+  <div class="grid3">
+   <div><label>Item Type <span style="color:#b42318">*</span></label><select id="newItemType" required>
+    <option value="">-- ಆಯ್ಕೆ ಮಾಡಿ --</option>
+    <option value="item">ಆಹಾರ ಪದಾರ್ಥ</option>
+    <option value="ingredient">ಅಡುಗೆ ಪದಾರ್ಥ</option>
+    <option value="nutrition">ಪೌಷ್ಠಿಕ ಆಹಾರ</option>
+   </select></div>
+   <div><label>Item Name <span style="color:#b42318">*</span></label><input id="newItemName" type="text" placeholder="ಉದಾ: ಮೊಟ್ಟೆ" required></div>
+   <div><label>Unit <span style="color:#b42318">*</span></label><select id="newItemUnit" required>
+    <option value="">-- ಆಯ್ಕೆ ಮಾಡಿ --</option>
+    <option value="KG">Kg</option>
+    <option value="Gram">Gram</option>
+    <option value="Amount">Amount</option>
+   </select></div>
+  </div>
+  <div class="grid3" style="margin-top:10px">
+   <div><label>Rate / Quantity <span style="color:#b42318">*</span></label><input id="newItemRate" type="number" min="0" step="0.001" placeholder="ಅಗತ್ಯವಿರುವ ಪ್ರಮಾಣ" required></div>
+   <div style="display:flex;align-items:end;gap:8px"><button class="primary" id="addNewItemBtn">➕ Add New Item</button><button class="secondary" id="cancelEditItemBtn" style="display:none">Cancel</button></div>
+  </div>
+  <div id="newItemMsg" class="msg"></div>
+ </div>
  <div id="openingHost" style="margin-top:10px"></div>
  <div class="action-row"><button class="primary" id="saveOpeningBtn">💾 Opening Balance Save</button><button class="secondary" id="refreshOpeningBtn">↻ Refresh</button></div>
  <div id="openingMsg" class="msg"></div>
@@ -447,11 +470,99 @@ function expense(type,name,date){
 function openingFor(type,name){const m=current.month,prev=m===1?12:m-1;const p=closingMap.get(`${prev}|${type}|${name}`);if(p)return num(p.closing_balance);const o=openingMap.get(`${type}|${name}`);return num(o?.opening_balance)}
 function ledger(type,name){const days=new Date(current.year,current.month,0).getDate();let bal=openingFor(type,name),rows=[];for(let d=1;d<=days;d++){const date=iso(current.year,current.month,d),r=receipts.get(`${type}|${name}|${date}`),stock=num(r?.quantity),exp=expense(type,name,date),close=bal+stock-exp;rows.push({date,stock,expense:exp,closing:close,holiday:current.holidays.get(date)});bal=close;}return {opening:openingFor(type,name),rows,closing:bal}}
 function renderOpening(){
- const all=[...namesFor("item"),...namesFor("ingredient")];let h=`<div class="table-wrap"><table><thead><tr><th>ಪ್ರಕಾರ</th><th>Item / ಅಡುಗೆ ಪದಾರ್ಥ</th><th>Unit</th><th>Opening Balance</th><th>ಸ್ಥಿತಿ</th></tr></thead><tbody>`;
- if(!all.length)h+=`<tr><td colspan="5">Calculation Settingsನಲ್ಲಿ ಯಾವುದೇ Item / ಅಡುಗೆ ಪದಾರ್ಥ ಇಲ್ಲ.</td></tr>`;
- all.forEach(x=>{const prev=current.month===1?12:current.month-1,p=closingMap.get(`${prev}|${x.type}|${x.name}`),o=openingMap.get(`${x.type}|${x.name}`),val=p?num(p.closing_balance):num(o?.opening_balance);h+=`<tr><td>${x.type==="item"?"Items":"ಅಡುಗೆ ಪದಾರ್ಥಗಳು"}</td><td>${esc(x.name)}</td><td>${esc(x.unit)}</td><td><input class="opening-input" data-open-type="${x.type}" data-open-name="${esc(x.name)}" type="number" min="0" step="0.001" value="${val}" ${p?"disabled":""}></td><td>${p?'<span class="badge">ಹಿಂದಿನ Closing</span>':'<span class="badge">Initial Opening</span>'}</td></tr>`});
- h+=`</tbody></table></div>`;$("openingHost").innerHTML=h;
+ const all=[...namesFor("item"),...namesFor("ingredient")];
+ let h=`<div class="table-wrap"><table><thead><tr><th>ಪ್ರಕಾರ</th><th>Item / ಅಡುಗೆ ಪದಾರ್ಥ</th><th>Unit</th><th>Opening Balance</th><th>ಸ್ಥಿತಿ</th><th class="no-print">Action</th></tr></thead><tbody>`;
+ if(!all.length)h+=`<tr><td colspan="6">Calculation Settingsನಲ್ಲಿ ಯಾವುದೇ Item / ಅಡುಗೆ ಪದಾರ್ಥ ಇಲ್ಲ.</td></tr>`;
+ all.forEach(x=>{
+   const prev=current.month===1?12:current.month-1,p=closingMap.get(`${prev}|${x.type}|${x.name}`),o=openingMap.get(`${x.type}|${x.name}`),val=p?num(p.closing_balance):num(o?.opening_balance);
+   const action=`<button class="edit no-print" type="button" onclick='editOpeningItem(${JSON.stringify({type:x.type,name:x.name,unit:x.unit}).replace(/'/g,"&#39;")})'>✏️ Edit</button> <button class="danger no-print" type="button" onclick='deleteOpeningItem(${JSON.stringify({type:x.type,name:x.name}).replace(/'/g,"&#39;")})'>🗑️ Delete</button>`;
+   h+=`<tr><td>${x.type==="item"?"ಆಹಾರ ಪದಾರ್ಥ":x.type==="ingredient"?"ಅಡುಗೆ ಪದಾರ್ಥ":"ಪೌಷ್ಠಿಕ ಆಹಾರ"}</td><td>${esc(x.name)}</td><td>${esc(x.unit)}</td><td><input class="opening-input" data-open-type="${x.type}" data-open-name="${esc(x.name)}" type="number" min="0" step="0.001" value="${val}" ${p?"disabled":""}></td><td>${p?'<span class="badge">ಹಿಂದಿನ Closing</span>':'<span class="badge">Initial Opening</span>'}</td><td class="no-print">${action}</td></tr>`;
+ });
+ h+=`</tbody></table></div>`;$('openingHost').innerHTML=h;
 }
+
+let editingOpeningItem=null;
+function settingGroupsForNewItem(group){
+ if(group==="1-7")return ["1-5","6-7"];
+ if(group==="8-10")return ["8","9","10"];
+ if(group==="1-10")return ["1-5","6-7","8-10"];
+ return [group];
+}
+function displayUnitToDb(type,unit){
+ if(type==="ingredient" && unit==="Amount")return "₹";
+ return unit;
+}
+function clearNewItemForm(){
+ editingOpeningItem=null;
+ $('newItemType').value="";
+ $('newItemName').value="";
+ $('newItemUnit').value="";
+ $('newItemRate').value="";
+ $('addNewItemBtn').textContent="➕ Add New Item";
+ $('cancelEditItemBtn').style.display="none";
+}
+function editOpeningItem(item){
+ editingOpeningItem=item;
+ $('newItemType').value=item.type;
+ $('newItemName').value=item.name;
+ $('newItemUnit').value=item.unit==="₹"?"Amount":item.unit;
+ $('newItemRate').value="";
+ $('addNewItemBtn').textContent="💾 Update Item";
+ $('cancelEditItemBtn').style.display="inline-block";
+ $('newItemName').focus();
+}
+async function deleteOpeningItem(item){
+ if(!confirm(`“${item.name}” Item ಅನ್ನು Delete ಮಾಡಬೇಕೇ?`))return;
+ try{
+   const groupsToChange=settingGroupsForNewItem(current.group);
+   let table, nameCol;
+   if(item.type==="item"){table="calculation_settings";nameCol="item_name";}
+   else if(item.type==="ingredient"){table="kitchen_ingredients";nameCol="ingredient_name";}
+   else {table="nutritional_foods";nameCol="food_name";}
+   for(const sg of groupsToChange){
+     const q=await db.from(table).update({is_enabled:false,updated_at:new Date().toISOString()}).eq("academic_year_id",activeYear.id).eq("class_group",sg).eq(nameCol,item.name);
+     if(q.error)throw q.error;
+   }
+   await loadSettings();await loadOpening();renderOpening();renderReport();
+   show($('newItemMsg'),`“${item.name}” Delete ಆಯಿತು.`,'ok');
+ }catch(e){show($('newItemMsg'),"Delete failed: "+e.message,"err")}
+}
+async function saveNewOpeningItem(){
+ const type=$('newItemType').value;
+ const name=$('newItemName').value.trim();
+ const unit=$('newItemUnit').value;
+ const rate=num($('newItemRate').value);
+ if(!type||!name||!unit||rate<=0){show($('newItemMsg'),"Item Type, Item Name, Unit ಮತ್ತು Rate / Quantity ಕಡ್ಡಾಯ.","err");return;}
+ try{
+   let table, nameCol, rateCol;
+   if(type==="item"){table="calculation_settings";nameCol="item_name";rateCol="quantity_per_student";}
+   else if(type==="ingredient"){table="kitchen_ingredients";nameCol="ingredient_name";rateCol="amount_per_student";}
+   else {table="nutritional_foods";nameCol="food_name";rateCol="quantity_per_student";}
+   const groupsToChange=settingGroupsForNewItem(current.group);
+   if(editingOpeningItem){
+     // Rename/rate/unit across the class-group rows represented by the current locked group.
+     for(const sg of groupsToChange){
+       const q=await db.from(table).update({[nameCol]:name,[rateCol]:rate,unit:displayUnitToDb(type,unit),is_enabled:true,updated_at:new Date().toISOString()}).eq("academic_year_id",activeYear.id).eq("class_group",sg).eq(nameCol,editingOpeningItem.name);
+       if(q.error)throw q.error;
+     }
+   }else{
+     for(const sg of groupsToChange){
+       const q=await db.from(table).insert({academic_year_id:activeYear.id,class_group:sg,[nameCol]:name,[rateCol]:rate,unit:displayUnitToDb(type,unit),is_enabled:true,created_at:new Date().toISOString(),updated_at:new Date().toISOString()});
+       if(q.error){
+         // If the item already exists, update it instead of creating a duplicate.
+         if(String(q.error.message||'').toLowerCase().includes('duplicate')||String(q.error.code||'')==='23505'){
+           const u=await db.from(table).update({[rateCol]:rate,unit:displayUnitToDb(type,unit),is_enabled:true,updated_at:new Date().toISOString()}).eq("academic_year_id",activeYear.id).eq("class_group",sg).eq(nameCol,name);
+           if(u.error)throw u.error;
+         }else throw q.error;
+       }
+     }
+   }
+   await loadSettings();await loadOpening();renderOpening();renderReport();
+   show($('newItemMsg'),editingOpeningItem?`“${name}” Update ಆಯಿತು.`:`“${name}” Add ಆಯಿತು.`,'ok');
+   clearNewItemForm();
+ }catch(e){show($('newItemMsg'),"Save failed: "+e.message,"err")}
+}
+
 function renderWheatList(){const rows=[...wheatDays.values()];$("wheatList").innerHTML=rows.length?rows.map(r=>`<div style="padding:5px 0;border-bottom:1px solid #ddd"><b>${esc(r.wheat_date)}</b> — ${num(r.wheat_students)||"Daily 8th count"} <button class="edit" onclick='editWheat(${JSON.stringify(r)})'>Edit</button> <button class="danger" onclick="deleteWheat('${r.id}')">Delete</button></div>`).join(""):"<div class='small'>ಈ ತಿಂಗಳಿಗೆ ಗೋಧಿ ದಿನ entry ಇಲ್ಲ.</div>"}
 function editWheat(r){editingWheatId=r.id;$("wheatDate").value=r.wheat_date;$("wheatStudents").value=num(r.wheat_students)||"";$("wheatCancelBtn").style.display="inline-block"}
 async function deleteWheat(id){if(!confirm("ಗೋಧಿ ದಿನ entry ಅಳಿಸಬೇಕೇ?"))return;const q=await db.from("food_wheat_days").delete().eq("id",id);if(q.error)throw q.error;await loadWheat();renderWheatList();renderReport()}
@@ -758,6 +869,12 @@ $("wheatCancelBtn").onclick = function(){
   $("wheatCancelBtn").style.display="none";
   show($("msg"),"","");
 };
+$("addNewItemBtn").onclick = saveNewOpeningItem;
+$("cancelEditItemBtn").onclick = clearNewItemForm;
+$("saveOpeningBtn").onclick = saveOpenings;
+$("refreshOpeningBtn").onclick = async function(){try{await loadOpening();renderOpening();show($("openingMsg"),"Opening Balance Refresh ಆಯಿತು.","ok")}catch(e){show($("openingMsg"),"Refresh failed: "+e.message,"err")}};
+$("addNewItemBtn").onclick = saveNewOpeningItem;
+$("cancelEditItemBtn").onclick = clearNewItemForm;
 $("loadBtn").onclick = loadAll;
 $("excelBtn").onclick = exportExcel;
 $("printBtn").onclick = printPdf;
