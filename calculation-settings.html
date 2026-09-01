@@ -145,6 +145,56 @@ Academic Year ಅನ್ನು ಇಲ್ಲಿ ಆಯ್ಕೆ ಮಾಡುವು
 </div>
 </div>
 
+
+<!-- WHEAT RATE — SEPARATE SETTING -->
+<div class="card">
+<h2 style="margin-top:0">🌾 ಗೋಧಿ — ಪ್ರತ್ಯೇಕ ಪರಿವರ್ತನೆ / Rate</h2>
+
+<div class="grid">
+<div>
+<label>ಗೋಧಿ ಪ್ರಮಾಣ (ಒಬ್ಬ ವಿದ್ಯಾರ್ಥಿಗೆ)</label>
+<input id="wheatQty" type="number" min="0" step="any" placeholder="ಉದಾ: 0.150">
+</div>
+
+<div>
+<label>ಸರ್ಕಾರದ Rate (₹ / KG)</label>
+<input id="wheatRate" type="number" min="0" step="any" placeholder="ಉದಾ: 2.95">
+</div>
+
+<div>
+<label>ವಿವರಣೆ</label>
+<input value="ಗೋಧಿಗೆ ಮಾತ್ರ" disabled>
+</div>
+
+<div>
+<button class="primary" id="wheatSaveBtn">💾 Save</button>
+</div>
+</div>
+
+<div class="small" style="margin-top:8px">
+ಉದಾ: 20 ವಿದ್ಯಾರ್ಥಿಗಳು × 0.150 KG × ₹2.95 =
+<b id="wheatExample">₹8.85</b>.
+ಮುಂದೆ ಸರ್ಕಾರ Rate ಬದಲಿಸಿದರೆ ಇಲ್ಲಿ Rate ಮಾತ್ರ ಬದಲಿಸಿ Save ಮಾಡಿದರೆ ಸಾಕು.
+</div>
+
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>ತರಗತಿ Group</th>
+<th>ಗೋಧಿ ಪ್ರಮಾಣ / ವಿದ್ಯಾರ್ಥಿ</th>
+<th>ಸರ್ಕಾರದ Rate</th>
+<th>20 Students ಒಟ್ಟು</th>
+<th>20 Students ಖರ್ಚು</th>
+</tr>
+</thead>
+<tbody id="wheatBody">
+<tr><td colspan="5">Class ಆಯ್ಕೆ ಮಾಡಿ.</td></tr>
+</tbody>
+</table>
+</div>
+</div>
+
 <!-- KITCHEN INGREDIENT AMOUNT -->
 <div class="card">
 <h2 style="margin-top:0">🥕 ಅಡಿಗೆ ಪದಾರ್ಥ — ಮೊತ್ತ</h2>
@@ -282,6 +332,7 @@ let selectedGroup="";
 let editingItemId=null;
 let editingIngredientId=null;
 let editingNutritionId=null;
+let wheatSettingId=null;
 
 function esc(v){
  return String(v??"").replace(/[&<>"']/g,c=>({
@@ -350,6 +401,7 @@ function restoreSelection(){
    loadItems();
    loadIngredients();
    loadNutrition();
+    loadWheatSetting();
   }
  }catch(e){}
 }
@@ -643,6 +695,104 @@ function resetItem(){
 
  $("itemSaveBtn").textContent="💾 Save";
  $("itemCancelBtn").style.display="none";
+}
+
+
+/* =========================
+   WHEAT — SEPARATE RATE
+   ========================= */
+
+function updateWheatExample(){
+  const qty=Number($("wheatQty").value||0);
+  const rate=Number($("wheatRate").value||0);
+  $("wheatExample").textContent="₹"+(qty*20*rate).toFixed(2);
+}
+
+async function loadWheatSetting(){
+  if(!activeYear||!selectedGroup){
+    $("wheatBody").innerHTML='<tr><td colspan="5">Class ಆಯ್ಕೆ ಮಾಡಿ.</td></tr>';
+    return;
+  }
+
+  const {data,error}=await db
+    .from("wheat_rate_settings")
+    .select("*")
+    .eq("academic_year_id",activeYear.id)
+    .eq("class_group",selectedGroup)
+    .maybeSingle();
+
+  if(error){
+    $("wheatBody").innerHTML='<tr><td colspan="5">ಗೋಧಿ Setting table ಇನ್ನೂ ಸಿದ್ಧವಾಗಿಲ್ಲ.</td></tr>';
+    show("ಗೋಧಿ Setting load failed: "+error.message,"err");
+    return;
+  }
+
+  wheatSettingId=data?.id||null;
+  $("wheatQty").value=data?.quantity_per_student??"";
+  $("wheatRate").value=data?.rate_per_kg??"";
+  updateWheatExample();
+
+  if(data){
+    const qty=Number(data.quantity_per_student||0);
+    const rate=Number(data.rate_per_kg||0);
+    $("wheatBody").innerHTML=`<tr>
+      <td>${esc(groupLabel(selectedGroup))}</td>
+      <td>${qty}</td>
+      <td>₹ ${rate}</td>
+      <td>${(qty*20).toFixed(3)} KG</td>
+      <td>₹ ${(qty*20*rate).toFixed(2)}</td>
+    </tr>`;
+  }else{
+    $("wheatBody").innerHTML='<tr><td colspan="5">ಈ Classಗೆ ಗೋಧಿ Setting ಇಲ್ಲ.</td></tr>';
+  }
+}
+
+async function saveWheatSetting(){
+  if(!activeYear||!selectedGroup){
+    show("ಮೊದಲು Class Group Load ಮಾಡಿ.","err");
+    return;
+  }
+
+  const qty=$("wheatQty").value;
+  const rate=$("wheatRate").value;
+
+  if(qty===""||Number(qty)<0){
+    show("ಗೋಧಿ ಪ್ರಮಾಣ ನಮೂದಿಸಿ.","err");
+    return;
+  }
+  if(rate===""||Number(rate)<0){
+    show("ಗೋಧಿ Rate ನಮೂದಿಸಿ.","err");
+    return;
+  }
+
+  const payload={
+    academic_year_id:activeYear.id,
+    class_group:selectedGroup,
+    quantity_per_student:Number(qty),
+    rate_per_kg:Number(rate),
+    updated_at:new Date().toISOString()
+  };
+
+  let result;
+  if(wheatSettingId){
+    result=await db.from("wheat_rate_settings")
+      .update(payload)
+      .eq("id",wheatSettingId)
+      .select().single();
+  }else{
+    result=await db.from("wheat_rate_settings")
+      .upsert(payload,{onConflict:"academic_year_id,class_group"})
+      .select().single();
+  }
+
+  if(result.error){
+    show("ಗೋಧಿ Rate Save failed: "+result.error.message,"err");
+    return;
+  }
+
+  wheatSettingId=result.data?.id||wheatSettingId;
+  await loadWheatSetting();
+  show("ಗೋಧಿ ಪ್ರಮಾಣ ಮತ್ತು Rate Save ಆಯಿತು.","ok");
 }
 
 /* =========================
@@ -1049,6 +1199,9 @@ $("itemSaveBtn").onclick=saveItem;
 $("itemCancelBtn").onclick=resetItem;
 
 $("ingredientSaveBtn").onclick=saveIngredient;
+$("wheatSaveBtn").onclick=saveWheatSetting;
+$("wheatQty").oninput=updateWheatExample;
+$("wheatRate").oninput=updateWheatExample;
 $("ingredientCancelBtn").onclick=resetIngredient;
 
 $("nutritionSaveBtn").onclick=saveNutrition;
