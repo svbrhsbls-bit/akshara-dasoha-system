@@ -305,17 +305,32 @@ function del(type,id){
   state[type]=state[type].filter(x=>x.id!==id);save();renderAll();
 }
 function tableHead(){
-  return `<tr class="group">
-    <th rowspan="2">ದಿನಾಂಕ</th><th rowspan="2">ವಿವರ</th>
-    <th colspan="2">ಪೋಷಣಾ ಶಕ್ತಿ</th><th rowspan="2">ಉಪ್ಪು</th>
-    <th colspan="2">ತರಕಾರಿ</th><th colspan="2">ಸಾಂಬಾರು</th><th colspan="2">ಅನಿಲ</th>
-    <th rowspan="2">ಗೋದಿ</th><th rowspan="2">ಗ್ಯಾಸ್</th><th colspan="2">ಕ್ಷೀರಭಾಗ್ಯ</th>
-    <th rowspan="2">ಇತರೆ</th><th rowspan="2">ಬಡ್ಡಿ</th><th rowspan="2">ಒಟ್ಟು</th><th rowspan="2" class="no-print">Action</th>
-  </tr>
-  <tr class="sub">
-    <th>ಸರ್ಕಾರಿ</th><th>APF</th><th>8</th><th>9-10</th><th>8</th><th>9-10</th><th>8</th><th>9-10</th>
-    <th>ಸಕ್ಕರೆ</th><th>ಇತರೆ</th>
-  </tr>`
+  const groups=[
+    ['ಪೋಷಣಾ ಶಕ್ತಿ',['ಸರ್ಕಾರಿ','APF']],
+    ['ಉಪ್ಪು',null],
+    ['ತರಕಾರಿ',['8','9-10']],
+    ['ಸಾಂಬಾರು',['8','9-10']],
+    ['ಅನಿಲ',['8','9-10']],
+    ['ಗೋದಿ',null],
+    ['ಗ್ಯಾಸ್',null],
+    ['ಕ್ಷೀರಭಾಗ್ಯ',['ಸಕ್ಕರೆ','ಇತರೆ']],
+    ['ಇತರೆ - ಅನಿಲ',null],
+    ['ಇತರೆ',null],
+    ['ಬಡ್ಡಿ',null]
+  ];
+  let r1='<tr class="group"><th rowspan="2">ದಿನಾಂಕ</th><th rowspan="2">ವಿವರ</th>';
+  let r2='<tr class="sub">';
+  groups.forEach(([g,subs])=>{
+    if(subs) {
+      r1+=`<th colspan="${subs.length}">${g}</th>`;
+      subs.forEach(s=>r2+=`<th>${s}</th>`);
+    } else {
+      r1+=`<th rowspan="2">${g}</th>`;
+    }
+  });
+  r1+='<th rowspan="2">ಒಟ್ಟು</th><th rowspan="2" class="no-print">Action</th></tr>';
+  r2+='</tr>';
+  return r1+r2;
 }
 function renderTable(type){
   const data=state[type].slice().sort((a,b)=>a.date.localeCompare(b.date));
@@ -323,29 +338,65 @@ function renderTable(type){
   const body=document.getElementById(type==='jama'?'jamaBody':'khBody');
   head.innerHTML=tableHead();
 
-  let html='';
   const openingReady=state.openingBalance && typeof state.openingBalance==="object";
+  let html='';
+
+  // Opening Balance row — each Item has its own opening balance.
+  const openingTotal=state.items.reduce((s,it)=>s+openingValue(it),0);
   if(openingReady){
     html+=`<tr>
       <td></td><td><b>ಪ್ರಾರಂಭಿಕ ಶಿಲ್ಕು</b></td>
       ${state.items.map(it=>`<td>${money(openingValue(it))}</td>`).join('')}
-      <td></td>
+      <td><b>${money(openingTotal)}</b></td><td></td>
     </tr>`;
   }
+
   const grouped=[...new Set(data.map(x=>x.date))].sort();
   if(!grouped.length && !openingReady){
-    body.innerHTML=`<tr><td colspan="${state.items.length+3}" class="empty">ಯಾವುದೇ Entry ಇಲ್ಲ</td></tr>`;return;
+    body.innerHTML=`<tr><td colspan="${state.items.length+4}" class="empty">ಯಾವುದೇ Entry ಇಲ್ಲ</td></tr>`;
+    return;
   }
+
+  // Entry rows: one row per Date, with each entered Item in its own column.
   grouped.forEach(date=>{
     const entries=data.filter(x=>x.date===date);
     const desc=entries.map(x=>x.desc).find(x=>x) || '';
+    const dayTotal=entries.reduce((s,x)=>s+Number(x.amount||0),0);
+
     html+=`<tr><td>${esc(date)}</td><td>${esc(desc)}</td>`;
     html+=state.items.map(it=>{
-      const e=entries.find(x=>x.item===it);
-      return `<td>${e?money(e.amount):'—'}</td>`;
+      const amount=entries.filter(x=>x.item===it)
+        .reduce((s,x)=>s+Number(x.amount||0),0);
+      return amount!==0 ? `<td>${money(amount)}</td>` : '<td>—</td>';
     }).join('');
+    html+=`<td><b>${money(dayTotal)}</b></td>`;
     html+=`<td class="no-print"><button class="danger" onclick="deleteDate('${type}','${date}')">Delete</button></td></tr>`;
   });
+
+  // Final row: Opening + JAMA, or Opening - KHARCHU, for EVERY Item.
+  if(openingReady){
+    const final={};
+    state.items.forEach(it=>final[it]=openingValue(it));
+
+    grouped.forEach(date=>{
+      state.items.forEach(it=>{
+        const amount=(state[type]||[])
+          .filter(x=>x.date===date && x.item===it)
+          .reduce((s,x)=>s+Number(x.amount||0),0);
+        final[it] = type==='jama' ? final[it]+amount : final[it]-amount;
+      });
+    });
+
+    const finalTotal=state.items.reduce((s,it)=>s+final[it],0);
+    html+=`<tr>
+      <td></td>
+      <td><b>${type==='jama'?'ಒಟ್ಟು':'ಅಂತಿಮ ಶಿಲ್ಕು'}</b></td>
+      ${state.items.map(it=>`<td><b>${money(final[it])}</b></td>`).join('')}
+      <td><b>${money(finalTotal)}</b></td>
+      <td></td>
+    </tr>`;
+  }
+
   body.innerHTML=html;
 }
 function deleteDate(type,date){
@@ -363,51 +414,64 @@ function renderAll(){
   renderPreview();
 }
 function reportPage(type,from,to){
-  const rows=balanceRows(from,to);
+  const ds=allDates(from,to);
   const title=type==='jama'?'ಜಮಾ':'ಖರ್ಚು';
   let h=`<div class="card print-report"><div class="report-title">${title} — Cash Book</div>`;
-  if(!rows.length){h+=`<div class="empty">Entry ಮಾಡಿದ ದಿನಾಂಕಗಳಿಲ್ಲ</div></div>`;return h}
+  if(!ds.length){h+=`<div class="empty">Entry ಮಾಡಿದ ದಿನಾಂಕಗಳಿಲ್ಲ</div></div>`;return h}
 
-  // Show item-wise opening balances once at the beginning.
-  const initial=rows[0].opening;
+  const initial={};
+  state.items.forEach(it=>initial[it]=openingValue(it));
+
   h+=`<table><thead>${tableHead()}</thead><tbody>`;
+  const initialTotal=state.items.reduce((s,it)=>s+initial[it],0);
   h+=`<tr><td></td><td><b>ಪ್ರಾರಂಭಿಕ ಶಿಲ್ಕು</b></td>`;
   h+=state.items.map(it=>`<td>${money(initial[it])}</td>`).join('');
-  h+=`<td></td></tr>`;
+  h+=`<td><b>${money(initialTotal)}</b></td><td></td></tr>`;
 
-  for(const r of rows){
+  const running={...initial};
+
+  ds.forEach(date=>{
     const source=type==='jama'?state.jama:state.kharchu;
-    const entries=source.filter(x=>x.date===r.date);
+    const entries=source.filter(x=>x.date===date);
     if(!entries.length){
-      h+=`<tr><td></td><td>${type==='jama'?'ಯಾವುದೇ ಜಮಾ ಇರುವುದಿಲ್ಲ':'ಯಾವುದೇ ಖರ್ಚು ಇರುವುದಿಲ್ಲ'}</td>${state.items.map(()=>'<td></td>').join('')}<td></td></tr>`;
-    }else{
-      // One row per entry, with date only on the first row of that date.
-      entries.forEach((e,idx)=>{
-        h+=`<tr><td>${idx===0?esc(r.date):''}</td><td>${esc(e.item)}</td>`;
-        h+=state.items.map(it=>`<td>${it===e.item?money(e.amount):'—'}</td>`).join('');
-        h+=`<td></td></tr>`;
-      });
+      h+=`<tr><td></td><td>${type==='jama'?'ಯಾವುದೇ ಜಮಾ ಇರುವುದಿಲ್ಲ':'ಯಾವುದೇ ಖರ್ಚು ಇರುವುದಿಲ್ಲ'}</td>`;
+      h+=state.items.map(()=>'<td></td>').join('');
+      h+=`<td></td><td></td></tr>`;
+      return;
     }
-  }
 
-  const final=rows[rows.length-1].closing;
+    const dayByItem={};
+    state.items.forEach(it=>dayByItem[it]=0);
+    entries.forEach(e=>dayByItem[e.item]=(dayByItem[e.item]||0)+Number(e.amount||0));
+
+    // One row for each date: every entered item's amount appears in its own column.
+    h+=`<tr><td>${esc(date)}</td><td>${esc(entries.map(x=>x.desc).find(x=>x)||'')}</td>`;
+    h+=state.items.map(it=>dayByItem[it]>0?`<td>${money(dayByItem[it])}</td>`:'<td>—</td>').join('');
+    const dayTotal=entries.reduce((s,x)=>s+Number(x.amount||0),0);
+    h+=`<td><b>${money(dayTotal)}</b></td><td></td></tr>`;
+
+    state.items.forEach(it=>{
+      running[it]=type==='jama'
+        ? running[it]+dayByItem[it]
+        : running[it]-dayByItem[it];
+    });
+  });
+
+  const finalTotal=state.items.reduce((s,it)=>s+running[it],0);
   h+=`<tr><td></td><td><b>${type==='jama'?'ಒಟ್ಟು / ಜಮಾ ನಂತರ':'ಅಂತಿಮ ಶಿಲ್ಕು'}</b></td>`;
-  h+=state.items.map(it=>{
-    if(type==='jama'){
-      const v=initial[it]+rows.reduce((s,r)=>s+r.jama,0); // informational total row handled below
-      return `<td>${money(final[it])}</td>`;
-    }
-    return `<td>${money(final[it])}</td>`;
-  }).join('');
-  h+=`<td></td></tr></tbody></table>`;
+  h+=state.items.map(it=>`<td><b>${money(running[it])}</b></td>`).join('');
+  h+=`<td><b>${money(finalTotal)}</b></td><td></td></tr>`;
+  h+=`</tbody></table>`;
 
-  const initialTotal=state.items.reduce((s,it)=>s+Number(initial[it]||0),0);
-  const movementTotal=rows.reduce((s,r)=>s+(type==='jama'?r.jama:r.kharchu),0);
-  const finalTotal=state.items.reduce((s,it)=>s+Number(final[it]||0),0);
+  const movementTotal=ds.reduce((sum,date)=>{
+    const source=type==='jama'?state.jama:state.kharchu;
+    return sum+source.filter(x=>x.date===date).reduce((s,x)=>s+Number(x.amount||0),0);
+  },0);
+
   h+=`<div class="balance-box">
     <div>ಪ್ರಾರಂಭಿಕ ಶಿಲ್ಕು — ಒಟ್ಟು<br><b>${money(initialTotal)}</b></div>
     <div>${type==='jama'?'ಒಟ್ಟು ಜಮಾ':'ಒಟ್ಟು ಖರ್ಚು'}<br><b>${money(movementTotal)}</b></div>
-    <div>ಅಂತಿಮ ಶಿಲ್ಕು — ಒಟ್ಟು<br><b>${money(finalTotal)}</b></div>
+    <div>${type==='jama'?'ಜಮಾ ನಂತರದ ಶಿಲ್ಕು':'ಅಂತಿಮ ಶಿಲ್ಕು'} — ಒಟ್ಟು<br><b>${money(finalTotal)}</b></div>
   </div></div>`;
   return h;
 }
