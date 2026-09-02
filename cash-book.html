@@ -458,6 +458,7 @@ async function changeYear(){
   try{
     loading=true;
     await loadYearData();
+    fillItems();
     renderAll();
     updateOpeningUI();
   }catch(e){
@@ -935,6 +936,7 @@ async function init(){
     }
     await loadItems();
     await loadYearData();
+    fillItems();
     renderAll();
     renderOpeningBalance();
     updateHeaderYear();
