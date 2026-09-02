@@ -46,18 +46,23 @@ td input{height:34px;min-width:90px;text-align:right}
 .balance-box div{padding:6px;border-right:1px solid #222;text-align:center}.balance-box div:last-child{border-right:0}
 @media(max-width:900px){.grid{grid-template-columns:1fr 1fr}.item-grid{grid-template-columns:1fr}}
 @media print{
- body{background:#fff}
- .no-print,.tabs{display:none!important}
- .wrap{max-width:none;margin:0;padding:0}
- .card{border:0;box-shadow:none;padding:0}
- .school-header{padding:0 0 8px}
- .school-header .dept{font-size:16px}.school-header .school{font-size:15px}.school-header .year{font-size:14px}
- .print-only{display:block}
- table{min-width:0;width:100%}
- th,td{font-size:9px;padding:4px}
- .print-report{page-break-after:always}
-}
-</style>
+  @page{size:A4 landscape;margin:7mm}
+  body{background:#fff}
+  .no-print,.tabs{display:none!important}
+  .wrap{max-width:none;margin:0;padding:0}
+  .card{border:0;box-shadow:none;padding:0}
+  .school-header{padding:0 0 8px}
+  .school-header .dept{font-size:19px}
+  .school-header .school{font-size:18px}
+  .school-header .year{font-size:17px}
+  .print-only{display:block}
+  table{min-width:0;width:100%;table-layout:auto}
+  th,td{font-size:11px;padding:5px 4px;line-height:1.15}
+  .report-title{font-size:20px;margin-bottom:8px}
+  .balance-box{font-size:12px}
+  .print-report{page-break-after:always}
+  .print-report:last-child{page-break-after:auto}
+} </style>
 </head>
 <body>
 
@@ -173,7 +178,7 @@ td input{height:34px;min-width:90px;text-align:right}
         <div><label>From Date</label><input id="fromDate" type="date"></div>
         <div><label>To Date</label><input id="toDate" type="date"></div>
         <div><label>Print</label><select id="reportType"><option value="both">JAMA + KHARCHU</option><option value="jama">JAMA</option><option value="kharchu">KHARCHU</option></select></div>
-        <div class="actions"><button class="primary" onclick="printReport()">🖨️ Print</button></div>
+        <div class="actions"><button class="primary" onclick="printReport()">🖨️ Print</button><button class="primary" onclick="exportExcel()">📊 Excel Export</button></div>
       </div>
       <p class="small">ನೀವು Entry ಮಾಡಿದ ದಿನಾಂಕಗಳು ಮಾತ್ರ ಬರುತ್ತವೆ. ಪ್ರತಿದಿನದ date automatic ಆಗಿ ಬರುವುದಿಲ್ಲ.</p>
       <p class="small">ಮೊದಲ ಬಾರಿಗೆ ಮಾತ್ರ Opening Balance ಹಾಕಬೇಕು. ನಂತರ ಹಿಂದಿನ Closing Balance ಮುಂದಿನ Entry ದಿನದ Opening Balance ಆಗಿ automatic ಆಗುತ್ತದೆ.</p>
@@ -183,6 +188,7 @@ td input{height:34px;min-width:90px;text-align:right}
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script>
 const SUPABASE_URL="https://ezmudfrpcvjsgnjibvoq.supabase.co";
 const SUPABASE_ANON_KEY="sb_publishable__FYyH6NQaqgARaq2dvuovQ_rKmus0js";
@@ -801,6 +807,72 @@ function renderPreview(){
   if(type==='both'||type==='kharchu')h+=reportPage('kharchu',from,to);
   document.getElementById('reportPreview').innerHTML=h||'<div class="card empty">Entry ಮಾಡಿದ ದಿನಾಂಕಗಳಿಲ್ಲ</div>';
 }
+function exportExcel(){
+  if(typeof XLSX==='undefined'){
+    alert('Excel Export library load ಆಗಿಲ್ಲ. Internet connection ಪರಿಶೀಲಿಸಿ.');
+    return;
+  }
+  const from=document.getElementById('fromDate').value;
+  const to=document.getElementById('toDate').value;
+  const type=document.getElementById('reportType').value;
+
+  const makeSheet=(kind)=>{
+    const rows=balanceRows(from,to);
+    const title=kind==='jama'?'ಜಮಾ — Cash Book':'ಖರ್ಚು — Cash Book';
+    const dept=document.getElementById('departmentName')?.textContent||'ಇಲಾಖೆಯ ಹೆಸರು';
+    const school=document.getElementById('schoolName')?.textContent||'ಶಾಲೆಯ ಹೆಸರು';
+    const year=document.getElementById('academicYear')?.textContent||selectedYear||'-';
+    const aoa=[[dept],[school],[`ವರ್ಷ: ${year}`],[title],[],
+      ['ದಿನಾಂಕ','ವಿವರ',...state.items,'ಒಟ್ಟು']];
+
+    const source=kind==='jama'?state.jama:state.kharchu;
+    rows.forEach((r,i)=>{
+      const movement=kind==='jama'?r.jama:r.kharchu;
+      const entries=source.filter(x=>x.date===r.date);
+      const desc=entries.map(x=>x.desc).find(x=>x)||'';
+      aoa.push([r.date,'ಪ್ರಾರಂಭಿಕ ಶಿಲ್ಕು',...state.items.map(it=>r.opening[it]),
+        state.items.reduce((s,it)=>s+r.opening[it],0)]);
+      aoa.push(['',entries.length?desc:`ಯಾವುದೇ ${kind==='jama'?'ಜಮಾ':'ಖರ್ಚು'} ಇರುವುದಿಲ್ಲ`,
+        ...state.items.map(it=>movement[it]!==0?movement[it]:''),kind==='jama'?r.jamaTotal:r.kharchuTotal]);
+      aoa.push(['',kind==='jama'?'ಒಟ್ಟು':'ಅಂತಿಮ ಶಿಲ್ಕು',
+        ...state.items.map(it=>r.closing[it]),state.items.reduce((s,it)=>s+r.closing[it],0)]);
+      if(i<rows.length-1){aoa.push([]);aoa.push([]);}
+    });
+
+    const ws=XLSX.utils.aoa_to_sheet(aoa);
+    const lastCol=aoa[5].length-1;
+    ws['!merges']=[];
+    for(let r=0;r<4;r++)ws['!merges'].push({s:{r,c:0},e:{r,c:lastCol}});
+
+    const border={top:{style:'thin'},bottom:{style:'thin'},left:{style:'thin'},right:{style:'thin'}};
+    const cellBorder=(r,c)=>{
+      const a=XLSX.utils.encode_cell({r,c});
+      if(!ws[a])ws[a]={v:''};
+      ws[a].s=ws[a].s||{};
+      ws[a].s.border=border;
+      ws[a].s.alignment={vertical:'center',horizontal:'center',wrapText:true};
+    };
+    for(let c=0;c<=lastCol;c++)cellBorder(5,c);
+    for(let r=6;r<aoa.length;r++){
+      if(aoa[r].some(v=>v!==''&&v!==null&&v!==undefined))
+        for(let c=0;c<=lastCol;c++)cellBorder(r,c);
+    }
+    for(let r=0;r<4;r++){
+      const a=XLSX.utils.encode_cell({r,c:0});
+      ws[a].s={font:{bold:true,sz:r===3?14:12},alignment:{horizontal:'center',vertical:'center'}};
+    }
+    ws['!cols']=[{wch:14},{wch:28},...state.items.map(()=>({wch:14})),{wch:16}];
+    return ws;
+  };
+
+  const wb=XLSX.utils.book_new();
+  if(type==='both'||type==='jama')XLSX.utils.book_append_sheet(wb,makeSheet('jama'),'JAMA');
+  if(type==='both'||type==='kharchu')XLSX.utils.book_append_sheet(wb,makeSheet('kharchu'),'KHARCHU');
+  const safeYear=(selectedYear||'year').replace(/[^\w-]+/g,'_');
+  const suffix=type==='both'?'CashBook':(type==='jama'?'JAMA':'KHARCHU');
+  XLSX.writeFile(wb,`Cash-Book-${safeYear}-${suffix}.xlsx`);
+}
+
 function printReport(){renderPreview();window.print()}
 
 document.querySelectorAll('.tab').forEach(btn=>btn.addEventListener('click',()=>{
