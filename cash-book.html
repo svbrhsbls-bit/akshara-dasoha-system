@@ -226,6 +226,11 @@ function esc(s){
   return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]))
 }
 function safeDate(s){return /^\d{4}-\d{2}-\d{2}$/.test(s||'')}
+function displayDate(s){
+  if(!safeDate(s)) return s||'';
+  const [y,m,d]=s.split('-');
+  return `${d}-${m}-${y}`;
+}
 function yearNumber(y){
   const m=String(y||'').match(/^(\d{4})-(\d{2,4})$/);
   return m?Number(m[1]):999999;
@@ -655,7 +660,7 @@ function renderTable(type){
     const movement=type==='jama'?r.jama:r.kharchu;
     const movementTotal=type==='jama'?r.jamaTotal:r.kharchuTotal;
     const details=(type==='jama'?state.jama:state.kharchu).filter(x=>x.date===r.date).map(x=>x.desc).find(x=>x)||'';
-    html+=`<tr><td>${esc(r.date)}</td><td><b>ಪ್ರಾರಂಭಿಕ ಶಿಲ್ಕು</b></td>
+    html+=`<tr><td>${esc(displayDate(r.date))}</td><td><b>ಪ್ರಾರಂಭಿಕ ಶಿಲ್ಕು</b></td>
       ${state.items.map(it=>`<td>${money(r.opening[it])}</td>`).join('')}
       <td><b>${money(state.items.reduce((s,it)=>s+r.opening[it],0))}</b></td><td></td></tr>`;
     html+=`<tr><td></td><td>${movementTotal!==0?esc(details||(type==='jama'?'ಜಮಾ':'ಖರ್ಚು')):`ಯಾವುದೇ ${type==='jama'?'ಜಮಾ':'ಖರ್ಚು'} ಇರುವುದಿಲ್ಲ`}</td>
@@ -791,7 +796,7 @@ function reportPage(type,from,to){
     const details=entries.map(x=>x.desc).find(x=>x)||'';
     const openingTotal=state.items.reduce((s,it)=>s+r.opening[it],0);
     const closingTotal=state.items.reduce((s,it)=>s+r.closing[it],0);
-    h+=`<tr><td>${esc(r.date)}</td><td><b>ಪ್ರಾರಂಭಿಕ ಶಿಲ್ಕು</b></td>
+    h+=`<tr><td>${esc(displayDate(r.date))}</td><td><b>ಪ್ರಾರಂಭಿಕ ಶಿಲ್ಕು</b></td>
       ${state.items.map(it=>`<td>${money(r.opening[it])}</td>`).join('')}
       <td><b>${money(openingTotal)}</b></td><td></td></tr>`;
     h+=`<tr><td></td><td>${entries.length?esc(details||(type==='jama'?'ಜಮಾ':'ಖರ್ಚು')):`ಯಾವುದೇ ${type==='jama'?'ಜಮಾ':'ಖರ್ಚು'} ಇರುವುದಿಲ್ಲ`}</td>
@@ -861,7 +866,7 @@ function exportExcel(){
       const movement=kind==='jama'?r.jama:r.kharchu;
       const entries=source.filter(x=>x.date===r.date);
       const desc=entries.map(x=>x.desc).find(x=>x)||'';
-      aoa.push([r.date,'ಪ್ರಾರಂಭಿಕ ಶಿಲ್ಕು',...state.items.map(it=>r.opening[it]),state.items.reduce((s,it)=>s+r.opening[it],0)]);
+      aoa.push([displayDate(r.date),'ಪ್ರಾರಂಭಿಕ ಶಿಲ್ಕು',...state.items.map(it=>r.opening[it]),state.items.reduce((s,it)=>s+r.opening[it],0)]);
       aoa.push(['',entries.length?desc:`ಯಾವುದೇ ${kind==='jama'?'ಜಮಾ':'ಖರ್ಚು'} ಇರುವುದಿಲ್ಲ`,...state.items.map(it=>movement[it]!==0?movement[it]:''),kind==='jama'?r.jamaTotal:r.kharchuTotal]);
       aoa.push(['',kind==='jama'?'ಒಟ್ಟು':'ಅಂತಿಮ ಶಿಲ್ಕು',...state.items.map(it=>r.closing[it]),state.items.reduce((s,it)=>s+r.closing[it],0)]);
       if(i<rows.length-1){aoa.push([]);aoa.push([]);}
