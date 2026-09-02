@@ -68,6 +68,21 @@ td input{height:34px;min-width:90px;text-align:right}
 </header>
 
 <div class="wrap">
+  <div class="card no-print" style="margin-bottom:12px">
+    <div class="grid" style="grid-template-columns:260px minmax(260px,420px) 1fr;align-items:end">
+      <div>
+        <label>ಶೈಕ್ಷಣಿಕ ವರ್ಷ / Academic Year</label>
+        <select id="cashBookYearSelect">
+          <option value="">Loading...</option>
+        </select>
+      </div>
+      <div class="notice" style="margin:0">
+        <b>Cash Book Year</b><br>
+        ಆಯ್ಕೆ ಮಾಡಿದ ವರ್ಷದ JAMA / KHARCHU ಮಾತ್ರ ಇಲ್ಲಿ ಕಾಣುತ್ತದೆ. ಹಿಂದಿನ ವರ್ಷದ Closing → ಈ ವರ್ಷದ Opening automatic.
+      </div>
+    </div>
+  </div>
+
   <div class="tabs no-print">
     <button class="tab active" data-page="opening">Opening Balance</button>
     <button class="tab" data-page="jama">ಜಮಾ Entry</button>
@@ -173,91 +188,273 @@ const SUPABASE_URL="https://ezmudfrpcvjsgnjibvoq.supabase.co";
 const SUPABASE_ANON_KEY="sb_publishable__FYyH6NQaqgARaq2dvuovQ_rKmus0js";
 const db=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
 
-const DEFAULT_ITEMS=["ಪೋಷಣಾ ಶಕ್ತಿ - ಸರ್ಕಾರಿ", "ಪೋಷಣಾ ಶಕ್ತಿ - APF", "ಉಪ್ಪು", "ತರಕಾರಿ - 8", "ತರಕಾರಿ - 9-10", "ಸಾಂಬಾರು - 8", "ಸಾಂಬಾರು - 9-10", "ಅನಿಲ - 8", "ಅನಿಲ - 9-10", "ಗೋದಿ", "ಗ್ಯಾಸ್", "ಕ್ಷೀರಭಾಗ್ಯ - ಸಕ್ಕರೆ", "ಕ್ಷೀರಭಾಗ್ಯ - ಇತರೆ", "ಇತರೆ - ಅನಿಲ", "ಇತರೆ", "ಬಡ್ಡಿ", "ಒಟ್ಟು"];
-const KEY='cashbook_v2';
-let state=JSON.parse(localStorage.getItem(KEY)||'null')||{
-  items: DEFAULT_ITEMS.slice(),
+const DEFAULT_ITEMS=[
+  "ಪೋಷಣಾ ಶಕ್ತಿ - ಸರ್ಕಾರಿ","ಪೋಷಣಾ ಶಕ್ತಿ - APF","ಉಪ್ಪು",
+  "ತರಕಾರಿ - 8","ತರಕಾರಿ - 9-10","ಸಾಂಬಾರು - 8","ಸಾಂಬಾರು - 9-10",
+  "ಅನಿಲ - 8","ಅನಿಲ - 9-10","ಗೋದಿ","ಗ್ಯಾಸ್",
+  "ಕ್ಷೀರಭಾಗ್ಯ - ಸಕ್ಕರೆ","ಕ್ಷೀರಭಾಗ್ಯ - ಇತರೆ","ಇತರೆ - ಅನಿಲ","ಇತರೆ","ಬಡ್ಡಿ"
+];
+
+let state={
+  items:DEFAULT_ITEMS.slice(),
   jama:[],
   kharchu:[],
   openingBalance:null
 };
-if(!Array.isArray(state.items)||!state.items.length) state.items=DEFAULT_ITEMS.slice();
-// "ಒಟ್ಟು" is a calculated column, never an Item.
-state.items=state.items.filter(it=>it!=="ಒಟ್ಟು");
-if(!Array.isArray(state.jama))state.jama=[];
-if(!Array.isArray(state.kharchu))state.kharchu=[];
-state.jama=state.jama.filter(x=>x.item!=="ಒಟ್ಟು");
-state.kharchu=state.kharchu.filter(x=>x.item!=="ಒಟ್ಟು");
-if(state.openingBalance!==null && typeof state.openingBalance!=="object"){
-  const legacy=Number(state.openingBalance)||0;
-  state.openingBalance={};
-  DEFAULT_ITEMS.forEach(it=>state.openingBalance[it]=legacy);
-}
-if(state.openingBalance && typeof state.openingBalance==="object"){
-  delete state.openingBalance["ಒಟ್ಟು"];
-}
-if(state.openingBalance===undefined)state.openingBalance=null;
-localStorage.setItem(KEY,JSON.stringify(state));
 
-function save(){localStorage.setItem(KEY,JSON.stringify(state))}
-function money(n){return '₹'+Number(n||0).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2})}
-function esc(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]))}
+let academicYears=[];
+let selectedYear="";
+let selectedYearId=null;
+let firstAcademicYear="";
+let loading=false;
+
+function money(n){
+  return '₹'+Number(n||0).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2})
+}
+function esc(s){
+  return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]))
+}
+function safeDate(s){return /^\d{4}-\d{2}-\d{2}$/.test(s||'')}
+function yearNumber(y){
+  const m=String(y||'').match(/^(\d{4})-(\d{2,4})$/);
+  return m?Number(m[1]):999999;
+}
+function previousAcademicYearName(year){
+  const idx=academicYears.findIndex(x=>x.year_name===year);
+  return idx>0?academicYears[idx-1].year_name:null;
+}
 function dates(){
-  return [...new Set([...state.jama,...state.kharchu].map(x=>x.date))].sort()
+  return [...new Set([...state.jama,...state.kharchu].map(x=>x.date).filter(Boolean))].sort()
 }
 function allDates(from,to){
   return dates().filter(d=>(!from||d>=from)&&(!to||d<=to))
 }
 function totalsForDate(date){
-  const j=state.jama.filter(x=>x.date===date).reduce((s,x)=>s+Number(x.amount),0);
-  const k=state.kharchu.filter(x=>x.date===date).reduce((s,x)=>s+Number(x.amount),0);
+  const j=state.jama.filter(x=>x.date===date).reduce((s,x)=>s+Number(x.amount||0),0);
+  const k=state.kharchu.filter(x=>x.date===date).reduce((s,x)=>s+Number(x.amount||0),0);
   return {j,k};
 }
-function balanceRows(from,to){
-  // One common date sequence for BOTH JAMA and KHARCHU.
-  // This makes the next entry date's opening balance equal to the previous
-  // date's final balance, item by item.
-  const ds=allDates(from,to);
-  if(!ds.length)return [];
 
-  const all=dates();
-  const opening={};
-  state.items.forEach(it=>opening[it]=openingValue(it));
-  const rows=[];
+/* =========================================================
+   SUPABASE: YEAR LIST + SCHOOL SETTINGS
+========================================================= */
+async function loadSchoolAndYears(){
+  const [yearsRes,schoolRes]=await Promise.all([
+    db.from("academic_years").select("id,year_name,is_active,created_at").order("created_at",{ascending:true}),
+    db.from("school_settings").select("department_name,school_name,academic_year").order("created_at",{ascending:true}).limit(1).maybeSingle()
+  ]);
 
-  for(const d of all){
-    const jamaByItem={}, kharchuByItem={};
-    state.items.forEach(it=>{jamaByItem[it]=0;kharchuByItem[it]=0;});
+  if(yearsRes.error) throw yearsRes.error;
+  academicYears=(yearsRes.data||[]).filter(x=>x.year_name).sort((a,b)=>{
+    const na=yearNumber(a.year_name),nb=yearNumber(b.year_name);
+    return na-nb || String(a.year_name).localeCompare(String(b.year_name));
+  });
 
-    state.jama.filter(x=>x.date===d).forEach(x=>{
-      if(Object.prototype.hasOwnProperty.call(jamaByItem,x.item))
-        jamaByItem[x.item]+=Number(x.amount||0);
-    });
-    state.kharchu.filter(x=>x.date===d).forEach(x=>{
-      if(Object.prototype.hasOwnProperty.call(kharchuByItem,x.item))
-        kharchuByItem[x.item]+=Number(x.amount||0);
-    });
+  document.getElementById('departmentName').textContent=schoolRes.data?.department_name||'ಇಲಾಖೆಯ ಹೆಸರು';
+  document.getElementById('schoolName').textContent=schoolRes.data?.school_name||'ಶಾಲೆಯ ಹೆಸರು';
 
-    const closing={};
-    state.items.forEach(it=>{
-      closing[it]=opening[it]+jamaByItem[it]-kharchuByItem[it];
-    });
+  const active=(academicYears.find(x=>x.is_active)?.year_name)||schoolRes.data?.academic_year||academicYears[0]?.year_name||"";
+  firstAcademicYear=academicYears[0]?.year_name||active||"";
 
-    if(ds.includes(d)){
-      rows.push({
-        date:d,
-        opening:{...opening},
-        jama:{...jamaByItem},
-        kharchu:{...kharchuByItem},
-        closing:{...closing},
-        jamaTotal:Object.values(jamaByItem).reduce((s,v)=>s+v,0),
-        kharchuTotal:Object.values(kharchuByItem).reduce((s,v)=>s+v,0)
-      });
-    }
-    state.items.forEach(it=>opening[it]=closing[it]);
-  }
-  return rows;
+  const remembered=localStorage.getItem('cashbook_selected_year');
+  selectedYear=(academicYears.some(x=>x.year_name===remembered)?remembered:active);
+  if(!selectedYear && academicYears[0])selectedYear=academicYears[0].year_name;
+
+  const row=academicYears.find(x=>x.year_name===selectedYear);
+  selectedYearId=row?.id||null;
+
+  renderYearSelect();
+  updateHeaderYear();
 }
+function renderYearSelect(){
+  const el=document.getElementById('cashBookYearSelect');
+  if(!el)return;
+  if(!academicYears.length){
+    el.innerHTML='<option value="">Academic Year ಇಲ್ಲ</option>';
+    return;
+  }
+  el.innerHTML=academicYears.map(y=>`<option value="${esc(y.year_name)}">${esc(y.year_name)}${y.is_active?' — Active':''}</option>`).join('');
+  el.value=selectedYear;
+}
+function updateHeaderYear(){
+  document.getElementById('academicYear').textContent=selectedYear||'—';
+}
+
+/* =========================================================
+   SUPABASE: ITEMS
+========================================================= */
+async function loadItems(){
+  const {data,error}=await db.from("cash_book_items")
+    .select("id,item_name,sort_order,created_at")
+    .order("sort_order",{ascending:true})
+    .order("created_at",{ascending:true});
+  if(error)throw error;
+
+  if((data||[]).length){
+    state.items=data.map(x=>x.item_name).filter(x=>x && x!=="ಒಟ್ಟು");
+  }else{
+    const payload=DEFAULT_ITEMS.map((item,i)=>({item_name:item,sort_order:i}));
+    const ins=await db.from("cash_book_items").insert(payload);
+    if(ins.error)throw ins.error;
+    state.items=DEFAULT_ITEMS.slice();
+  }
+}
+
+/* =========================================================
+   SUPABASE: YEAR DATA
+========================================================= */
+async function loadYearData(){
+  state.jama=[];
+  state.kharchu=[];
+  state.openingBalance=null;
+
+  const [jRes,kRes,oRes]=await Promise.all([
+    db.from("cash_book_entries").select("id,academic_year,entry_type,entry_date,item_name,amount,details,created_at")
+      .eq("academic_year",selectedYear).eq("entry_type","jama").order("entry_date",{ascending:true}).order("created_at",{ascending:true}),
+    db.from("cash_book_entries").select("id,academic_year,entry_type,entry_date,item_name,amount,details,created_at")
+      .eq("academic_year",selectedYear).eq("entry_type","kharchu").order("entry_date",{ascending:true}).order("created_at",{ascending:true}),
+    db.from("cash_book_opening_balances").select("id,academic_year,item_name,amount,created_at")
+      .eq("academic_year",selectedYear).order("created_at",{ascending:true})
+  ]);
+  if(jRes.error)throw jRes.error;
+  if(kRes.error)throw kRes.error;
+  if(oRes.error)throw oRes.error;
+
+  state.jama=(jRes.data||[]).map(x=>({
+    id:x.id,date:x.entry_date,item:x.item_name,amount:Number(x.amount||0),desc:x.details||'',createdAt:x.created_at
+  }));
+  state.kharchu=(kRes.data||[]).map(x=>({
+    id:x.id,date:x.entry_date,item:x.item_name,amount:Number(x.amount||0),desc:x.details||'',createdAt:x.created_at
+  }));
+
+  if((oRes.data||[]).length){
+    state.openingBalance={};
+    (oRes.data||[]).forEach(x=>state.openingBalance[x.item_name]=Number(x.amount||0));
+  }
+
+  // Only the very first academic year needs a manually entered opening balance.
+  // Later years receive the previous year's final closing automatically.
+  if(selectedYear!==firstAcademicYear){
+    const prev=previousAcademicYearName(selectedYear);
+    if(prev){
+      const prevClosing=await calculateYearClosing(prev);
+      if(prevClosing){
+        state.openingBalance=prevClosing;
+      }
+    }
+  }
+
+  await migrateLegacyLocalDataIfNeeded();
+}
+async function calculateYearClosing(year){
+  const [jRes,kRes,oRes]=await Promise.all([
+    db.from("cash_book_entries").select("entry_date,item_name,amount").eq("academic_year",year).eq("entry_type","jama").order("entry_date",{ascending:true}),
+    db.from("cash_book_entries").select("entry_date,item_name,amount").eq("academic_year",year).eq("entry_type","kharchu").order("entry_date",{ascending:true}),
+    db.from("cash_book_opening_balances").select("item_name,amount").eq("academic_year",year)
+  ]);
+  if(jRes.error)throw jRes.error;
+  if(kRes.error)throw kRes.error;
+  if(oRes.error)throw oRes.error;
+
+  const base={};
+  state.items.forEach(it=>base[it]=0);
+  (oRes.data||[]).forEach(x=>{if(Object.prototype.hasOwnProperty.call(base,x.item_name))base[x.item_name]=Number(x.amount||0)});
+
+  const all=[...(jRes.data||[]).map(x=>({...x,type:'jama'})),...(kRes.data||[]).map(x=>({...x,type:'kharchu'}))]
+    .sort((a,b)=>String(a.entry_date).localeCompare(String(b.entry_date)));
+  all.forEach(x=>{
+    if(!Object.prototype.hasOwnProperty.call(base,x.item_name))return;
+    const n=Number(x.amount||0);
+    base[x.item_name]+=x.type==='jama'?n:-n;
+  });
+  return base;
+}
+
+/* One-time migration from the old localStorage version, preserving current 2026-27 data.
+   It runs only when the selected year's Supabase data is empty. */
+async function migrateLegacyLocalDataIfNeeded(){
+  if(!selectedYear || localStorage.getItem('cashbook_supabase_migrated_'+selectedYear))return;
+
+  const localRaw=localStorage.getItem('cashbook_v2');
+  if(!localRaw)return;
+  let old;
+  try{old=JSON.parse(localRaw)}catch(e){return}
+  if(!old || !Array.isArray(old.items))return;
+
+  const remoteHasData=state.jama.length||state.kharchu.length||state.openingBalance;
+  if(remoteHasData){
+    localStorage.setItem('cashbook_supabase_migrated_'+selectedYear,'1');
+    return;
+  }
+
+  const oldOpening=old.openingBalance&&typeof old.openingBalance==="object"?old.openingBalance:null;
+  if(oldOpening && selectedYear===firstAcademicYear){
+    const payload=Object.entries(oldOpening)
+      .filter(([item])=>state.items.includes(item) && item!=="ಒಟ್ಟು")
+      .map(([item,amount])=>({academic_year:selectedYear,item_name:item,amount:Number(amount||0)}));
+    if(payload.length){
+      const r=await db.from("cash_book_opening_balances").upsert(payload,{onConflict:"academic_year,item_name"});
+      if(r.error)throw r.error;
+      state.openingBalance={};
+      payload.forEach(x=>state.openingBalance[x.item_name]=x.amount);
+    }
+  }
+
+  for(const type of ['jama','kharchu']){
+    const arr=Array.isArray(old[type])?old[type]:[];
+    for(const x of arr){
+      if(!safeDate(x.date)||!state.items.includes(x.item)||Number(x.amount||0)<=0)continue;
+      const row={
+        academic_year:selectedYear,entry_type:type,entry_date:x.date,
+        item_name:x.item,amount:Number(x.amount||0),details:x.desc||''
+      };
+      const r=await db.from("cash_book_entries").upsert(row,{onConflict:"academic_year,entry_type,entry_date,item_name"});
+      if(r.error)throw r.error;
+    }
+  }
+  localStorage.setItem('cashbook_supabase_migrated_'+selectedYear,'1');
+
+  // Reload after migration so IDs and server timestamps are present.
+  const [jRes,kRes]=await Promise.all([
+    db.from("cash_book_entries").select("id,academic_year,entry_type,entry_date,item_name,amount,details,created_at")
+      .eq("academic_year",selectedYear).eq("entry_type","jama").order("entry_date",{ascending:true}),
+    db.from("cash_book_entries").select("id,academic_year,entry_type,entry_date,item_name,amount,details,created_at")
+      .eq("academic_year",selectedYear).eq("entry_type","kharchu").order("entry_date",{ascending:true})
+  ]);
+  if(jRes.error)throw jRes.error;if(kRes.error)throw kRes.error;
+  state.jama=(jRes.data||[]).map(x=>({id:x.id,date:x.entry_date,item:x.item_name,amount:Number(x.amount||0),desc:x.details||'',createdAt:x.created_at}));
+  state.kharchu=(kRes.data||[]).map(x=>({id:x.id,date:x.entry_date,item:x.item_name,amount:Number(x.amount||0),desc:x.details||'',createdAt:x.created_at}));
+}
+
+/* =========================================================
+   YEAR CHANGE
+========================================================= */
+async function changeYear(){
+  if(loading)return;
+  const el=document.getElementById('cashBookYearSelect');
+  const y=el.value;
+  const row=academicYears.find(x=>x.year_name===y);
+  if(!row)return;
+  selectedYear=y;selectedYearId=row.id||null;
+  localStorage.setItem('cashbook_selected_year',selectedYear);
+  updateHeaderYear();
+
+  try{
+    loading=true;
+    await loadYearData();
+    renderAll();
+    updateOpeningUI();
+  }catch(e){
+    console.error(e);
+    alert('Academic Year data load failed: '+e.message);
+  }finally{loading=false}
+}
+document.getElementById('cashBookYearSelect').addEventListener('change',changeYear);
+
+/* =========================================================
+   BALANCE CALCULATION — unchanged logic
+========================================================= */
+function openingValue(item){return Number(state.openingBalance?.[item]||0)}
 function ensureOpening(){
   if(state.openingBalance && typeof state.openingBalance==="object"){
     return state.items.every(it=>Object.prototype.hasOwnProperty.call(state.openingBalance,it));
@@ -266,6 +463,38 @@ function ensureOpening(){
   document.querySelector('.tab[data-page="opening"]').click();
   return false;
 }
+function balanceRows(from,to){
+  const ds=allDates(from,to);
+  if(!ds.length)return [];
+  const firstAll=dates();
+  const opening={};
+  state.items.forEach(it=>opening[it]=openingValue(it));
+  const rows=[];
+  for(const d of firstAll){
+    const closing={};
+    state.items.forEach(it=>{
+      const j=state.jama.filter(x=>x.date===d&&x.item===it).reduce((s,x)=>s+Number(x.amount||0),0);
+      const k=state.kharchu.filter(x=>x.date===d&&x.item===it).reduce((s,x)=>s+Number(x.amount||0),0);
+      closing[it]=opening[it]+j-k;
+    });
+    if(ds.includes(d)){
+      rows.push({
+        date:d,opening:{...opening},
+        jama:state.items.reduce((o,it)=>{o[it]=state.jama.filter(x=>x.date===d&&x.item===it).reduce((s,x)=>s+Number(x.amount||0),0);return o},{}),
+        kharchu:state.items.reduce((o,it)=>{o[it]=state.kharchu.filter(x=>x.date===d&&x.item===it).reduce((s,x)=>s+Number(x.amount||0),0);return o},{}),
+        closing:{...closing},
+        jamaTotal:state.items.reduce((s,it)=>s+(state.jama.filter(x=>x.date===d&&x.item===it).reduce((a,x)=>a+Number(x.amount||0),0)),0),
+        kharchuTotal:state.items.reduce((s,it)=>s+(state.kharchu.filter(x=>x.date===d&&x.item===it).reduce((a,x)=>a+Number(x.amount||0),0)),0)
+      });
+    }
+    state.items.forEach(it=>opening[it]=closing[it]);
+  }
+  return rows;
+}
+
+/* =========================================================
+   ITEMS UI
+========================================================= */
 function fillItems(){
   renderBulkEntry('jama');
   renderBulkEntry('kharchu');
@@ -275,21 +504,49 @@ function fillItems(){
       ${i>=DEFAULT_ITEMS.length?`<button class="danger remove" onclick="removeItem(${i})">×</button>`:''}
     </div>`).join('');
 }
-function addItem(){
+async function addItem(){
   const v=document.getElementById('newItem').value.trim();
   if(!v)return alert('Item ಹೆಸರು ನಮೂದಿಸಿ');
+  if(v==="ಒಟ್ಟು")return alert('ಒಟ್ಟು Item ಆಗಿ ಸೇರಿಸಲಾಗುವುದಿಲ್ಲ');
   if(state.items.some(x=>x.toLowerCase()===v.toLowerCase()))return alert('ಈ Item ಈಗಾಗಲೇ ಇದೆ');
-  state.items.push(v);document.getElementById('newItem').value='';save();fillItems();renderAll();
+  const r=await db.from("cash_book_items").insert({item_name:v,sort_order:state.items.length}).select("id,item_name").single();
+  if(r.error)return alert('Item save failed: '+r.error.message);
+  state.items.push(v);
+  document.getElementById('newItem').value='';
+  fillItems();renderAll();
 }
-function renameItem(i,v){
-  v=v.trim(); if(!v)return fillItems();
+async function renameItem(i,v){
+  v=v.trim();
+  if(!v)return fillItems();
+  if(v==="ಒಟ್ಟು")return alert('ಒಟ್ಟು Item ಆಗಿ ಬಳಸಲಾಗುವುದಿಲ್ಲ');
   if(state.items.some((x,n)=>n!==i&&x.toLowerCase()===v.toLowerCase()))return alert('ಈ Item ಈಗಾಗಲೇ ಇದೆ');
-  state.items[i]=v;save();fillItems();renderAll();
+  const old=state.items[i];
+  const r=await db.from("cash_book_items").update({item_name:v}).eq("item_name",old);
+  if(r.error)return alert('Item update failed: '+r.error.message);
+  // Existing year data is also renamed so historical data remains connected to the item.
+  const [j,k,o]=await Promise.all([
+    db.from("cash_book_entries").update({item_name:v}).eq("academic_year",selectedYear).eq("entry_type","jama").eq("item_name",old),
+    db.from("cash_book_entries").update({item_name:v}).eq("academic_year",selectedYear).eq("entry_type","kharchu").eq("item_name",old),
+    db.from("cash_book_opening_balances").update({item_name:v}).eq("academic_year",selectedYear).eq("item_name",old)
+  ]);
+  if(j.error||k.error||o.error)console.warn('Item historical rename warning');
+  state.items[i]=v;
+  if(state.openingBalance){state.openingBalance[v]=state.openingBalance[old]||0;delete state.openingBalance[old]}
+  state.jama.forEach(x=>{if(x.item===old)x.item=v});
+  state.kharchu.forEach(x=>{if(x.item===old)x.item=v});
+  fillItems();renderAll();
 }
-function removeItem(i){
+async function removeItem(i){
   if(i<DEFAULT_ITEMS.length)return;
-  if(!confirm('ಈ Item ತೆಗೆದುಹಾಕಬೇಕೇ?'))return;
-  state.items.splice(i,1);save();fillItems();renderAll();
+  const item=state.items[i];
+  if(!confirm('ಈ Item ಅನ್ನು Item Masterನಿಂದ ತೆಗೆದುಹಾಕಬೇಕೇ?'))return;
+  const r=await db.from("cash_book_items").delete().eq("item_name",item);
+  if(r.error)return alert('Item delete failed: '+r.error.message);
+  state.items.splice(i,1);
+  delete state.openingBalance?.[item];
+  state.jama=state.jama.filter(x=>x.item!==item);
+  state.kharchu=state.kharchu.filter(x=>x.item!==item);
+  fillItems();renderAll();
 }
 function renderBulkEntry(type){
   const box=document.getElementById(type==='jama'?'jamaEntryItems':'khEntryItems');
@@ -301,30 +558,44 @@ function renderBulkEntry(type){
       <input id="${prefix}_${i}" type="number" step="0.01" placeholder="₹ 0.00" data-item="${esc(it)}">
     </div>`).join('');
 }
-function saveBulkEntry(type){
+
+/* =========================================================
+   JAMA / KHARCHU SAVE — one date, many items
+========================================================= */
+async function saveBulkEntry(type){
   if(!ensureOpening())return;
   const date=document.getElementById(type==='jama'?'jamaDate':'khDate').value;
   const desc=(document.getElementById(type==='jama'?'jamaDesc':'khDesc')?.value||'').trim();
-  if(!date)return alert('ದಿನಾಂಕ ಆಯ್ಕೆ ಮಾಡಿ');
+  if(!safeDate(date))return alert('ದಿನಾಂಕ ಆಯ್ಕೆ ಮಾಡಿ');
+
   const prefix=type==='jama'?'jamaBulk':'khBulk';
   const inputs=[...document.querySelectorAll(`[id^="${prefix}_"]`)];
   const rows=inputs.map(el=>({item:el.dataset.item,amount:Number(el.value||0)})).filter(x=>x.amount>0);
   if(!rows.length)return alert('ಕನಿಷ್ಠ ಒಂದು Itemಗೆ Amount ನಮೂದಿಸಿ');
 
-  rows.forEach(r=>{
-    const existing=state[type].find(x=>x.date===date && x.item===r.item);
-    if(existing){
-      existing.amount=r.amount;
-      existing.desc=desc;
-    }else{
-      state[type].push({
-        id:crypto.randomUUID(),date,item:r.item,amount:r.amount,desc,
-        createdAt:new Date().toISOString()
-      });
+  try{
+    for(const r of rows){
+      const payload={
+        academic_year:selectedYear,entry_type:type,entry_date:date,
+        item_name:r.item,amount:r.amount,details:desc
+      };
+      const existing=state[type].find(x=>x.date===date&&x.item===r.item);
+      let result;
+      if(existing){
+        result=await db.from("cash_book_entries").update(payload).eq("id",existing.id).select("id,entry_date,item_name,amount,details,created_at").single();
+      }else{
+        result=await db.from("cash_book_entries").upsert(payload,{onConflict:"academic_year,entry_type,entry_date,item_name"})
+          .select("id,entry_date,item_name,amount,details,created_at").single();
+      }
+      if(result.error)throw result.error;
     }
-  });
-  state[type].sort((a,b)=>a.date.localeCompare(b.date)||a.createdAt.localeCompare(b.createdAt));
-  save(); clearBulkEntry(type); renderAll();
+    await loadYearData();
+    clearBulkEntry(type);
+    renderAll();
+  }catch(e){
+    console.error(e);
+    alert('Save failed: '+e.message);
+  }
 }
 function clearBulkEntry(type){
   const prefix=type==='jama'?'jamaBulk':'khBulk';
@@ -332,88 +603,57 @@ function clearBulkEntry(type){
   const desc=document.getElementById(type==='jama'?'jamaDesc':'khDesc');
   if(desc)desc.value='';
 }
-function del(type,id){
-  if(!confirm('ಈ entry ಅಳಿಸಬೇಕೇ?'))return;
-  state[type]=state[type].filter(x=>x.id!==id);save();renderAll();
+async function deleteDate(type,date){
+  if(!confirm(`${date} ದಿನದ ಎಲ್ಲಾ ${type==='jama'?'ಜಮಾ':'ಖರ್ಚು'} entries ಅಳಿಸಬೇಕೇ?`))return;
+  const r=await db.from("cash_book_entries").delete().eq("academic_year",selectedYear).eq("entry_type",type).eq("entry_date",date);
+  if(r.error)return alert('Delete failed: '+r.error.message);
+  await loadYearData();renderAll();
 }
+
+/* =========================================================
+   TABLE
+========================================================= */
 function tableHead(){
   const groups=[
-    ['ಪೋಷಣಾ ಶಕ್ತಿ',['ಸರ್ಕಾರಿ','APF']],
-    ['ಉಪ್ಪು',null],
-    ['ತರಕಾರಿ',['8','9-10']],
-    ['ಸಾಂಬಾರು',['8','9-10']],
-    ['ಅನಿಲ',['8','9-10']],
-    ['ಗೋದಿ',null],
-    ['ಗ್ಯಾಸ್',null],
-    ['ಕ್ಷೀರಭಾಗ್ಯ',['ಸಕ್ಕರೆ','ಇತರೆ']],
-    ['ಇತರೆ - ಅನಿಲ',null],
-    ['ಇತರೆ',null],
-    ['ಬಡ್ಡಿ',null]
+    ['ಪೋಷಣಾ ಶಕ್ತಿ',['ಸರ್ಕಾರಿ','APF']],['ಉಪ್ಪು',null],
+    ['ತರಕಾರಿ',['8','9-10']],['ಸಾಂಬಾರು',['8','9-10']],
+    ['ಅನಿಲ',['8','9-10']],['ಗೋದಿ',null],['ಗ್ಯಾಸ್',null],
+    ['ಕ್ಷೀರಭಾಗ್ಯ',['ಸಕ್ಕರೆ','ಇತರೆ']],['ಇತರೆ - ಅನಿಲ',null],
+    ['ಇತರೆ',null],['ಬಡ್ಡಿ',null]
   ];
   let r1='<tr class="group"><th rowspan="2">ದಿನಾಂಕ</th><th rowspan="2">ವಿವರ</th>';
   let r2='<tr class="sub">';
   groups.forEach(([g,subs])=>{
-    if(subs) {
-      r1+=`<th colspan="${subs.length}">${g}</th>`;
-      subs.forEach(s=>r2+=`<th>${s}</th>`);
-    } else {
-      r1+=`<th rowspan="2">${g}</th>`;
-    }
+    if(subs){r1+=`<th colspan="${subs.length}">${g}</th>`;subs.forEach(s=>r2+=`<th>${s}</th>`)}
+    else r1+=`<th rowspan="2">${g}</th>`;
   });
   r1+='<th rowspan="2">ಒಟ್ಟು</th><th rowspan="2" class="no-print">Action</th></tr>';
-  r2+='</tr>';
-  return r1+r2;
+  return r1+r2+'</tr>';
 }
 function renderTable(type){
   const head=document.getElementById(type==='jama'?'jamaHead':'khHead');
   const body=document.getElementById(type==='jama'?'jamaBody':'khBody');
   head.innerHTML=tableHead();
-
   const rows=balanceRows('','');
   if(!rows.length){
     body.innerHTML=`<tr><td colspan="${state.items.length+4}" class="empty">ಯಾವುದೇ Entry ಇಲ್ಲ</td></tr>`;
     return;
   }
-
   let html='';
   rows.forEach((r,index)=>{
     const movement=type==='jama'?r.jama:r.kharchu;
     const movementTotal=type==='jama'?r.jamaTotal:r.kharchuTotal;
-    const otherMovement=type==='jama'?r.kharchuTotal:r.jamaTotal;
-
-    // Opening balance for this date.
-    html+=`<tr>
-      <td>${esc(r.date)}</td>
-      <td><b>ಪ್ರಾರಂಭಿಕ ಶಿಲ್ಕು</b></td>
+    const details=(type==='jama'?state.jama:state.kharchu).filter(x=>x.date===r.date).map(x=>x.desc).find(x=>x)||'';
+    html+=`<tr><td>${esc(r.date)}</td><td><b>ಪ್ರಾರಂಭಿಕ ಶಿಲ್ಕು</b></td>
       ${state.items.map(it=>`<td>${money(r.opening[it])}</td>`).join('')}
-      <td><b>${money(state.items.reduce((s,it)=>s+r.opening[it],0))}</b></td>
-      <td></td>
-    </tr>`;
-
-    // The day's entry row. If this page has no entry, explicitly say so.
-    const hasMovement=movementTotal!==0;
-    const details=(type==='jama'
-      ? state.jama.filter(x=>x.date===r.date).map(x=>x.desc).find(x=>x)
-      : state.kharchu.filter(x=>x.date===r.date).map(x=>x.desc).find(x=>x))||'';
-
-    html+=`<tr>
-      <td></td>
-      <td>${hasMovement?esc(details|| (type==='jama'?'ಜಮಾ':'ಖರ್ಚು')) : `ಯಾವುದೇ ${type==='jama'?'ಜಮಾ':'ಖರ್ಚು'} ಇರುವುದಿಲ್ಲ`}</td>
+      <td><b>${money(state.items.reduce((s,it)=>s+r.opening[it],0))}</b></td><td></td></tr>`;
+    html+=`<tr><td></td><td>${movementTotal!==0?esc(details||(type==='jama'?'ಜಮಾ':'ಖರ್ಚು')):`ಯಾವುದೇ ${type==='jama'?'ಜಮಾ':'ಖರ್ಚು'} ಇರುವುದಿಲ್ಲ`}</td>
       ${state.items.map(it=>movement[it]!==0?`<td>${money(movement[it])}</td>`:'<td>—</td>').join('')}
-      <td><b>${money(movementTotal)}</b></td>
-      <td class="no-print"></td>
-    </tr>`;
-
-    // Closing/final balance row — this is also the next date's opening balance.
-    html+=`<tr>
-      <td></td>
-      <td><b>${type==='jama'?'ಒಟ್ಟು':'ಅಂತಿಮ ಶಿಲ್ಕು'}</b></td>
+      <td><b>${money(movementTotal)}</b></td><td></td></tr>`;
+    html+=`<tr><td></td><td><b>${type==='jama'?'ಒಟ್ಟು':'ಅಂತಿಮ ಶಿಲ್ಕು'}</b></td>
       ${state.items.map(it=>`<td><b>${money(r.closing[it])}</b></td>`).join('')}
       <td><b>${money(state.items.reduce((s,it)=>s+r.closing[it],0))}</b></td>
-      <td class="no-print"><button class="danger" onclick="deleteDate('${type}','${r.date}')">Delete</button></td>
-    </tr>`;
-
-    // Two blank rows between different dates for easy reading/printing.
+      <td class="no-print"><button class="danger" onclick="deleteDate('${type}','${r.date}')">Delete</button></td></tr>`;
     if(index<rows.length-1){
       html+=`<tr class="spacer-row"><td colspan="${state.items.length+4}" style="height:18px;border-left:0;border-right:0;background:#fff"></td></tr>`;
       html+=`<tr class="spacer-row"><td colspan="${state.items.length+4}" style="height:18px;border-left:0;border-right:0;background:#fff"></td></tr>`;
@@ -421,28 +661,84 @@ function renderTable(type){
   });
   body.innerHTML=html;
 }
-function deleteDate(type,date){
-  if(!confirm(`${date} ದಿನದ ಎಲ್ಲಾ ${type==='jama'?'ಜಮಾ':'ಖರ್ಚು'} entries ಅಳಿಸಬೇಕೇ?`))return;
-  state[type]=state[type].filter(x=>x.date!==date);
-  save();renderAll();
+
+/* =========================================================
+   OPENING BALANCE
+========================================================= */
+function isFirstYear(){return selectedYear===firstAcademicYear}
+function renderOpeningBalance(){
+  const box=document.getElementById('openingItems'),saveBtn=document.getElementById('openingSaveBtn'),
+        editBtn=document.getElementById('openingEditBtn'),status=document.getElementById('openingStatus'),
+        totalEl=document.getElementById('openingTotal'),lockEl=document.getElementById('openingLockStatus');
+  if(!box)return;
+
+  const hasManual=!!state.openingBalance && typeof state.openingBalance==="object";
+  const manualAllowed=isFirstYear();
+  const locked=hasManual;
+  const values=state.openingBalance||{};
+
+  box.innerHTML=state.items.map((it,i)=>`
+    <div class="item-row">
+      <label style="flex:1;margin:0">${esc(it)}</label>
+      <input id="opening_${i}" type="number" step="0.01" placeholder="₹ 0.00"
+        value="${values[it]!==undefined?Number(values[it]):''}"
+        ${(manualAllowed&&!locked)?'':'disabled'}>
+    </div>`).join('');
+
+  const total=state.items.reduce((s,it)=>s+Number(values[it]||0),0);
+  totalEl.textContent=money(total);
+
+  if(!manualAllowed){
+    lockEl.textContent='🔗 Previous Year Closing';
+    saveBtn.style.display='none';editBtn.style.display='none';
+    status.style.display='block';
+    status.textContent=`✅ ${previousAcademicYearName(selectedYear)||'ಹಿಂದಿನ ವರ್ಷದ'} Closing Balance → ${selectedYear} Opening Balance automatic ಆಗಿದೆ.`;
+  }else{
+    lockEl.textContent=locked?'🔒 Locked':'ಹೊಸದಾಗಿದೆ';
+    saveBtn.style.display=locked?'none':'inline-block';
+    editBtn.style.display=locked?'inline-block':'none';
+    status.style.display=locked?'block':'none';
+    if(locked)status.textContent='✅ ಪ್ರತಿಯೊಂದು Itemನ Opening Balance Save ಆಗಿದೆ ಮತ್ತು Lock ಆಗಿದೆ. ಬದಲಾಯಿಸಲು Edit ಒತ್ತಿ.';
+  }
 }
-function renderAll(){
-  fillItems();renderTable('jama');renderTable('kharchu');
-  const jt=state.jama.reduce((s,x)=>s+x.amount,0),kt=state.kharchu.reduce((s,x)=>s+x.amount,0);
-  document.getElementById('jamaSummary').innerHTML=`<div class="stat">ಒಟ್ಟು ಜಮಾ<b>${money(jt)}</b></div>`;
-  document.getElementById('khSummary').innerHTML=`<div class="stat">ಒಟ್ಟು ಖರ್ಚು<b>${money(kt)}</b></div><div class="stat">ಪ್ರಸ್ತುತ ಶಿಲ್ಕು<b>${money(state.items.reduce((s,it)=>s+openingValue(it),0)+jt-kt)}</b></div>`;
-  const ob=document.getElementById('openingBalanceView'); if(ob) ob.textContent=money(state.items.reduce((s,it)=>s+openingValue(it),0));
-  renderOpeningBalance();
-  renderPreview();
+function updateOpeningUI(){renderOpeningBalance()}
+async function saveOpeningBalance(){
+  if(!isFirstYear())return alert('ಈ ವರ್ಷದ Opening Balance ಹಿಂದಿನ ವರ್ಷದ Closing Balanceನಿಂದ automatic ಆಗಿದೆ.');
+  const next={};
+  state.items.forEach((it,i)=>{
+    const el=document.getElementById(`opening_${i}`);
+    const n=Number(el?.value||0);
+    if(!Number.isFinite(n)){alert('ಸರಿಯಾದ Opening Balance ನಮೂದಿಸಿ: '+it);throw new Error('invalid opening')}
+    next[it]=n;
+  });
+  if(state.openingBalance && typeof state.openingBalance==="object"){
+    if(!confirm('Opening Balance ಬದಲಾಯಿಸಿದರೆ ಈ ವರ್ಷದ Closing Balanceಗಳು ಮರುಲೆಕ್ಕವಾಗುತ್ತವೆ. Save ಮಾಡಬೇಕೇ?'))return;
+  }
+  const payload=state.items.map(it=>({academic_year:selectedYear,item_name:it,amount:next[it]}));
+  const r=await db.from("cash_book_opening_balances").upsert(payload,{onConflict:"academic_year,item_name"});
+  if(r.error)return alert('Opening Balance save failed: '+r.error.message);
+  state.openingBalance=next;
+  renderOpeningBalance();renderAll();
 }
+function editOpeningBalance(){
+  if(!isFirstYear())return;
+  const box=document.getElementById('openingItems');
+  box.querySelectorAll('input').forEach(x=>x.disabled=false);
+  document.getElementById('openingSaveBtn').style.display='inline-block';
+  document.getElementById('openingEditBtn').style.display='none';
+  const status=document.getElementById('openingStatus');
+  status.style.display='block';status.textContent='✏️ Edit mode: Item-wise Opening Balance ಬದಲಾಯಿಸಿ Save ಒತ್ತಿ.';
+  const first=box.querySelector('input');if(first)first.focus();
+}
+
+/* =========================================================
+   REPORTS
+========================================================= */
 function reportPage(type,from,to){
-  const rows=balanceRows(from,to);
-  const title=type==='jama'?'ಜಮಾ':'ಖರ್ಚು';
-  let h=`<div class="card print-report"><div class="report-title">${title} — Cash Book</div>`;
+  const rows=balanceRows(from,to),title=type==='jama'?'ಜಮಾ':'ಖರ್ಚು';
+  let h=`<div class="card print-report"><div class="report-title">${title} — Cash Book — ${esc(selectedYear)}</div>`;
   if(!rows.length){h+=`<div class="empty">Entry ಮಾಡಿದ ದಿನಾಂಕಗಳಿಲ್ಲ</div></div>`;return h}
-
   h+=`<table><thead>${tableHead()}</thead><tbody>`;
-
   rows.forEach((r,index)=>{
     const movement=type==='jama'?r.jama:r.kharchu;
     const movementTotal=type==='jama'?r.jamaTotal:r.kharchuTotal;
@@ -451,48 +747,27 @@ function reportPage(type,from,to){
     const details=entries.map(x=>x.desc).find(x=>x)||'';
     const openingTotal=state.items.reduce((s,it)=>s+r.opening[it],0);
     const closingTotal=state.items.reduce((s,it)=>s+r.closing[it],0);
-
-    // 1) Opening balance for this date.
-    h+=`<tr>
-      <td>${esc(r.date)}</td>
-      <td><b>ಪ್ರಾರಂಭಿಕ ಶಿಲ್ಕು</b></td>
+    h+=`<tr><td>${esc(r.date)}</td><td><b>ಪ್ರಾರಂಭಿಕ ಶಿಲ್ಕು</b></td>
       ${state.items.map(it=>`<td>${money(r.opening[it])}</td>`).join('')}
-      <td><b>${money(openingTotal)}</b></td><td></td>
-    </tr>`;
-
-    // 2) JAMA/KHARCHU entry row. The opposite page gets an explicit blank message.
-    h+=`<tr>
-      <td></td>
-      <td>${entries.length?esc(details||(type==='jama'?'ಜಮಾ':'ಖರ್ಚು')):`ಯಾವುದೇ ${type==='jama'?'ಜಮಾ':'ಖರ್ಚು'} ಇರುವುದಿಲ್ಲ`}</td>
+      <td><b>${money(openingTotal)}</b></td><td></td></tr>`;
+    h+=`<tr><td></td><td>${entries.length?esc(details||(type==='jama'?'ಜಮಾ':'ಖರ್ಚು')):`ಯಾವುದೇ ${type==='jama'?'ಜಮಾ':'ಖರ್ಚು'} ಇರುವುದಿಲ್ಲ`}</td>
       ${state.items.map(it=>movement[it]!==0?`<td>${money(movement[it])}</td>`:'<td>—</td>').join('')}
-      <td><b>${money(movementTotal)}</b></td><td></td>
-    </tr>`;
-
-    // 3) Closing balance. On JAMA page this is "ಒಟ್ಟು"; on KHARCHU page it is final balance.
-    h+=`<tr>
-      <td></td>
-      <td><b>${type==='jama'?'ಒಟ್ಟು':'ಅಂತಿಮ ಶಿಲ್ಕು'}</b></td>
+      <td><b>${money(movementTotal)}</b></td><td></td></tr>`;
+    h+=`<tr><td></td><td><b>${type==='jama'?'ಒಟ್ಟು':'ಅಂತಿಮ ಶಿಲ್ಕು'}</b></td>
       ${state.items.map(it=>`<td><b>${money(r.closing[it])}</b></td>`).join('')}
-      <td><b>${money(closingTotal)}</b></td><td></td>
-    </tr>`;
-
+      <td><b>${money(closingTotal)}</b></td><td></td></tr>`;
     if(index<rows.length-1){
       h+=`<tr class="spacer-row"><td colspan="${state.items.length+4}" style="height:18px;border-left:0;border-right:0;background:#fff"></td></tr>`;
       h+=`<tr class="spacer-row"><td colspan="${state.items.length+4}" style="height:18px;border-left:0;border-right:0;background:#fff"></td></tr>`;
     }
   });
-
   h+=`</tbody></table>`;
-
   const firstOpeningTotal=state.items.reduce((s,it)=>s+rows[0].opening[it],0);
   const movementTotal=rows.reduce((s,r)=>s+(type==='jama'?r.jamaTotal:r.kharchuTotal),0);
   const finalTotal=state.items.reduce((s,it)=>s+rows[rows.length-1].closing[it],0);
-
-  h+=`<div class="balance-box">
-    <div>ಪ್ರಾರಂಭಿಕ ಶಿಲ್ಕು — ಒಟ್ಟು<br><b>${money(firstOpeningTotal)}</b></div>
+  h+=`<div class="balance-box"><div>ಪ್ರಾರಂಭಿಕ ಶಿಲ್ಕು — ಒಟ್ಟು<br><b>${money(firstOpeningTotal)}</b></div>
     <div>${type==='jama'?'ಒಟ್ಟು ಜಮಾ':'ಒಟ್ಟು ಖರ್ಚು'}<br><b>${money(movementTotal)}</b></div>
-    <div>${type==='jama'?'ಜಮಾ ನಂತರದ ಶಿಲ್ಕು':'ಅಂತಿಮ ಶಿಲ್ಕು'} — ಒಟ್ಟು<br><b>${money(finalTotal)}</b></div>
-  </div></div>`;
+    <div>${type==='jama'?'ಜಮಾ ನಂತರದ ಶಿಲ್ಕು':'ಅಂತಿಮ ಶಿಲ್ಕು'} — ಒಟ್ಟು<br><b>${money(finalTotal)}</b></div></div></div>`;
   return h;
 }
 function renderPreview(){
@@ -502,85 +777,8 @@ function renderPreview(){
   if(type==='both'||type==='kharchu')h+=reportPage('kharchu',from,to);
   document.getElementById('reportPreview').innerHTML=h||'<div class="card empty">Entry ಮಾಡಿದ ದಿನಾಂಕಗಳಿಲ್ಲ</div>';
 }
-function renderOpeningBalance(){
-  const box=document.getElementById('openingItems');
-  const saveBtn=document.getElementById('openingSaveBtn');
-  const editBtn=document.getElementById('openingEditBtn');
-  const status=document.getElementById('openingStatus');
-  const totalEl=document.getElementById('openingTotal');
-  const lockEl=document.getElementById('openingLockStatus');
-  if(!box)return;
-
-  const locked=!!state.openingBalance && typeof state.openingBalance==="object";
-  const values=state.openingBalance||{};
-  box.innerHTML=state.items.map((it,i)=>`
-    <div class="item-row">
-      <label style="flex:1;margin:0">${esc(it)}</label>
-      <input id="opening_${i}" type="number" step="0.01" placeholder="₹ 0.00"
-             value="${values[it]!==undefined?Number(values[it]):''}" ${locked?'disabled':''}>
-    </div>`).join('');
-
-  const total=state.items.reduce((s,it)=>s+Number(values[it]||0),0); // calculated total; "ಒಟ್ಟು" is not an item
-  totalEl.textContent=money(total);
-  lockEl.textContent=locked?'🔒 Locked':'ಹೊಸದಾಗಿದೆ';
-  saveBtn.style.display=locked?'none':'inline-block';
-  editBtn.style.display=locked?'inline-block':'none';
-  status.style.display=locked?'block':'none';
-  if(locked)status.textContent='✅ ಪ್ರತಿಯೊಂದು Itemನ Opening Balance Save ಆಗಿದೆ ಮತ್ತು Lock ಆಗಿದೆ. ಬದಲಾಯಿಸಲು Edit ಒತ್ತಿ.';
-}
-function saveOpeningBalance(){
-  const next={};
-  let total=0;
-  state.items.forEach((it,i)=>{
-    const el=document.getElementById(`opening_${i}`);
-    const n=Number(el?.value||0);
-    if(!Number.isFinite(n)){alert('ಸರಿಯಾದ Opening Balance ನಮೂದಿಸಿ: '+it);throw new Error('invalid opening')}
-    next[it]=n; total+=n;
-  });
-  if(state.openingBalance && typeof state.openingBalance==="object"){
-    if(!confirm('Opening Balance ಬದಲಾಯಿಸಿದರೆ ಎಲ್ಲಾ Itemಗಳ Closing Balanceಗಳು ಮರುಲೆಕ್ಕವಾಗುತ್ತವೆ. Save ಮಾಡಬೇಕೇ?'))return;
-  }
-  state.openingBalance=next;
-  save();
-  renderOpeningBalance();
-  renderAll();
-}
-function editOpeningBalance(){
-  const box=document.getElementById('openingItems');
-  const saveBtn=document.getElementById('openingSaveBtn');
-  const editBtn=document.getElementById('openingEditBtn');
-  const status=document.getElementById('openingStatus');
-  box.querySelectorAll('input').forEach(x=>x.disabled=false);
-  saveBtn.style.display='inline-block';
-  editBtn.style.display='none';
-  status.style.display='block';
-  status.textContent='✏️ Edit mode: Item-wise Opening Balance ಬದಲಾಯಿಸಿ Save ಒತ್ತಿ.';
-  const first=box.querySelector('input'); if(first)first.focus();
-}
-function openingValue(item){
-  return Number(state.openingBalance?.[item]||0);
-}
-function balanceRows(from,to){
-  const ds=allDates(from,to);
-  if(!ds.length)return [];
-  const firstAll=dates();
-  const opening={};
-  state.items.forEach(it=>opening[it]=openingValue(it));
-  const rows=[];
-  for(const d of firstAll){
-    const t=totalsForDate(d);
-    const closing={};
-    state.items.forEach(it=>{
-      const j=state.jama.filter(x=>x.date===d&&x.item===it).reduce((s,x)=>s+Number(x.amount),0);
-      const k=state.kharchu.filter(x=>x.date===d&&x.item===it).reduce((s,x)=>s+Number(x.amount),0);
-      closing[it]=opening[it]+j-k;
-    });
-    if(ds.includes(d)) rows.push({date:d,opening:{...opening},jama:t.j,kharchu:t.k,closing:{...closing}});
-    state.items.forEach(it=>opening[it]=closing[it]);
-  }
-  return rows;
-}
 function printReport(){renderPreview();window.print()}
+
 document.querySelectorAll('.tab').forEach(btn=>btn.addEventListener('click',()=>{
   document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));btn.classList.add('active');
   document.querySelectorAll('.page').forEach(x=>x.style.display='none');
@@ -589,23 +787,28 @@ document.querySelectorAll('.tab').forEach(btn=>btn.addEventListener('click',()=>
 }));
 ['fromDate','toDate','reportType'].forEach(id=>document.getElementById(id).addEventListener('change',renderPreview));
 
-async function loadSchoolSettings(){
+/* =========================================================
+   STARTUP
+========================================================= */
+async function init(){
   try{
-    const {data,error}=await db.from("school_settings")
-      .select("department_name,school_name,academic_year")
-      .order("created_at",{ascending:true}).limit(1).maybeSingle();
-    if(error)throw error;
-    document.getElementById('departmentName').textContent=data?.department_name||'ಇಲಾಖೆಯ ಹೆಸರು';
-    document.getElementById('schoolName').textContent=data?.school_name||'ಶಾಲೆಯ ಹೆಸರು';
-    document.getElementById('academicYear').textContent=data?.academic_year||'—';
+    loading=true;
+    await loadSchoolAndYears();
+    if(!selectedYear){
+      alert('School Settingsನಲ್ಲಿ Academic Year ಸೇರಿಸಿ.');
+      renderAll();return;
+    }
+    await loadItems();
+    await loadYearData();
+    renderAll();
+    renderOpeningBalance();
+    updateHeaderYear();
   }catch(e){
-    console.error('School Settings load failed',e);
-  }
+    console.error(e);
+    alert('Cash Book load failed: '+e.message+'\n\nSupabase tables/policies setup ಆಗಿದೆಯೇ ಪರಿಶೀಲಿಸಿ.');
+  }finally{loading=false}
 }
-
-renderAll();
-renderOpeningBalance();
-loadSchoolSettings();
+init();
 </script>
 </body>
 </html>
