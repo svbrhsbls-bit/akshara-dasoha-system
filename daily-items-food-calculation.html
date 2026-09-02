@@ -426,6 +426,34 @@ function wheatStudentsForDate(date){
   const m=current.counts[String(date).slice(0,10)]||{};
   return [1,2,3,4,5,6,7,8].reduce((sum,c)=>sum+num(m[String(c)]),0);
 }
+function wheatConversionStudentsForDate(date){
+  const r=wheatDays.get(String(date).slice(0,10));
+  if(!r)return 0;
+  const manual=num(r.wheat_students);
+  if(manual>0)return manual;
+  const m=current.counts[String(date).slice(0,10)]||{};
+  if(current.group==="1-7")return [1,2,3,4,5,6,7].reduce((sum,c)=>sum+num(m[String(c)]),0);
+  if(current.group==="8-10")return num(m["8"]);
+  if(current.group==="1-10")return [1,2,3,4,5,6,7,8].reduce((sum,c)=>sum+num(m[String(c)]),0);
+  return 0;
+}
+function wheatConversionExpense(date){
+  if(current.holidays.has(date))return 0;
+  const r=wheatDays.get(String(date).slice(0,10));
+  if(!r)return 0;
+  const students=wheatConversionStudentsForDate(date);
+  if(!students)return 0;
+  const name="ಗೋಧಿ";
+  const manual=num(r.wheat_students);
+  if(manual>0){
+    const bucket=current.group==="8-10"?"8":current.group==="1-10"?"8-10":"1-5";
+    return students*ingredientRate(name,bucket);
+  }
+  if(current.group==="1-7")return bucketCount(date,{key:"1-5"})*ingredientRate(name,"1-5")+bucketCount(date,{key:"6-7"})*ingredientRate(name,"6-7");
+  if(current.group==="8-10")return students*ingredientRate(name,"8");
+  if(current.group==="1-10")return bucketCount(date,{key:"1-5"})*ingredientRate(name,"1-5")+bucketCount(date,{key:"6-7"})*ingredientRate(name,"6-7")+num(current.counts[date]?.["8"])*ingredientRate(name,"8-10");
+  return 0;
+}
 function expense(type,name,date){
   if(current.holidays.has(date))return 0;
 
@@ -452,9 +480,19 @@ function expense(type,name,date){
   }
 
   // ಅಡುಗೆ ಪದಾರ್ಥದಲ್ಲಿರುವ ಗೋಧಿ:
-  // ಗೋಧಿ ದಿನದಲ್ಲಿ ಮಾತ್ರ calculation ಆಗಬೇಕು.
-  // ಮತ್ತು 8ನೇ ತರಗತಿಯ Daily Food Distribution student count ಮಾತ್ರ ಬಳಸಬೇಕು.
-  if(wheatIngredient && !wheatDay)return 0;
+  // ಗೋಧಿ ವಿಶೇಷ ದಿನವನ್ನು Save ಮಾಡಿದ ದಿನಾಂಕ ಇದ್ದಾಗ ಮಾತ್ರ calculation.
+  // ಇಲ್ಲಿ Class Group student count ಬಳಸಬಾರದು; Wheat Dayನಲ್ಲಿ Save ಮಾಡಿದ
+  // wheat_students ಸಂಖ್ಯೆಯನ್ನೇ ನೇರವಾಗಿ ಬಳಸಬೇಕು.
+  if(wheatIngredient){
+    if(!wheatDay)return 0;
+    const savedStudents=num(wheatDays.get(String(date).slice(0,10))?.wheat_students);
+    if(savedStudents<=0)return 0;
+
+    // Calculation Settingsನ ಗೋಧಿ ಪರಿವರ್ತನೆ rate ಮಾತ್ರ ತೆಗೆದುಕೊಳ್ಳಬೇಕು.
+    // Class Groupನ student count calculationಗೆ ಬಳಸುವುದಿಲ್ಲ.
+    const rateBucket=current.group==="8-10"?"8":current.group==="1-7"?"1-5":"8-10";
+    return savedStudents * ingredientRate(name,rateBucket);
+  }
 
   // Wheat-day rules apply ONLY to classes 1-8.
   // 9 ಮತ್ತು 10ಕ್ಕೆ ಅಕ್ಕಿ ಪ್ರತಿದಿನವೂ ಲೆಕ್ಕವಾಗುತ್ತದೆ; ಗೋಧಿ ಎಂದಿಗೂ 0.
@@ -466,12 +504,9 @@ function expense(type,name,date){
     if(type==="nutrition"){
       count=bucketCount(date,b);
     } else if(wheatIngredient){
-      // ಅಡುಗೆ ಪದಾರ್ಥದ ಗೋಧಿ:
-      // ವಿಶೇಷ ಗೋಧಿ ದಿನದಲ್ಲಿ ಮಾತ್ರ, 8ನೇ ತರಗತಿಯ Daily Food Distribution
-      // ವಿದ್ಯಾರ್ಥಿಗಳ ಸಂಖ್ಯೆಗೆ ಮಾತ್ರ calculation.
-      count=(wheatDay && (current.group==="8-10" || current.group==="1-10"))
-        ? num(counts["8"])
-        : 0;
+      // ಗೋಧಿ ಪರಿವರ್ತನೆಯ calculation ಮೇಲೆಯೇ ನೇರವಾಗಿ return ಆಗುತ್ತದೆ.
+      // ಈ loopನಲ್ಲಿ ಮತ್ತೆ count ಹಾಕಿ double calculation ಆಗದಂತೆ 0.
+      count=0;
     } else if(type==="item" && wheatDay){
       if(riceItem){
         if(current.group==="1-7") {
@@ -922,12 +957,33 @@ function renderNutritionReport(){
 }
 function renderReport(){
  const type=$("reportType").value;if(type==="nutrition")return renderNutritionReport();
- const bs=groups[current.group],names=namesFor(type),label=type==="item"?"Items (ಆಹಾರ ಪದಾರ್ಥಗಳು)":"ಅಡುಗೆ ಪದಾರ್ಥಗಳು",cols=2+bs.length+1+names.length*3;$("reportMonth").textContent=`ತಿಂಗಳು:- ${months[current.month-1]}-${current.year}`;
- let h=`<div class="table-wrap"><table><thead><tr><th colspan="${cols}" class="group-head">${label} — ${esc(groupLabel(current.group))}</th></tr><tr><th rowspan="2">ಕ್ರ.ಸಂ</th><th rowspan="2">ದಿನಾಂಕ</th>${bs.map(b=>`<th rowspan="2">${b.label}<br><small>ವಿದ್ಯಾರ್ಥಿಗಳು</small></th>`).join("")}<th rowspan="2">ಒಟ್ಟು<br>ವಿದ್ಯಾರ್ಥಿಗಳು</th>${names.map(x=>`<th colspan="3" class="group-head">${esc(x.name)}<br><small>${esc(x.unit)}</small></th>`).join("")}</tr><tr>${names.map(()=>`<th>ದಾಸ್ತಾನು</th><th>ಖರ್ಚು</th><th>ಉಳಿಕೆ</th>`).join("")}</tr></thead><tbody>`;
- const led=names.map(x=>({x,l:ledger(x.type,x.name)})),days=new Date(current.year,current.month,0).getDate();h+=`<tr class="opening-row"><td>—</td><td><b>ಪ್ರಾರಂಭಿಕ ಶಿಲ್ಕು</b></td>${bs.map(()=>`<td>—</td>`).join("")}<td class="total">—</td>`;led.forEach(z=>h+=`<td>—</td><td>—</td><td class="total"><b>${fmt(z.l.opening,z.x.unit)}</b></td>`);h+=`</tr>`;
- for(let d=1;d<=days;d++){const date=iso(current.year,current.month,d),displayDate=`${pad(d)}-${pad(current.month)}-${current.year}`,holiday=current.holidays.get(date);if(holiday){h+=`<tr class="holiday"><td>${d}</td><td><b>${displayDate}</b></td><td colspan="${cols-2}"><b>${esc(holiday.holiday_reason||"ರಜೆ")}</b></td></tr>`;continue;}const counts=bs.map(b=>bucketCount(date,b)),total=counts.reduce((a,b)=>a+b,0);h+=`<tr><td>${d}</td><td>${displayDate}</td>${counts.map(v=>`<td>${v}</td>`).join("")}<td class="total">${total}</td>`;led.forEach(z=>{const r=z.l.rows[d-1],rec=receipts.get(`${z.x.type}|${z.x.name}|${date}`);h+=`<td><input class="stock-input no-print" type="number" min="0" step="0.001" data-receipt-type="${z.x.type}" data-receipt-name="${esc(z.x.name)}" data-receipt-date="${date}" value="${rec?num(rec.quantity):""}"><span class="screen-only" style="display:none">${rec?fmt(rec.quantity,z.x.unit):""}</span></td><td>${fmt(r.expense,z.x.unit)}</td><td class="total">${fmt(r.closing,z.x.unit)}</td>`});h+=`</tr>`;}
- h+=`</tbody><tfoot><tr><td colspan="${2+bs.length+1}">TOTAL</td>`;led.forEach(z=>{const stock=z.l.rows.reduce((sum,r)=>sum+r.stock,0),exp=z.l.rows.reduce((sum,r)=>sum+r.expense,0);h+=`<td>${fmt(stock,z.x.unit)}</td><td>${fmt(exp,z.x.unit)}</td><td class="total">${fmt(z.l.closing,z.x.unit)}</td>`});h+=`</tr></tfoot></table></div>`;$("tableHost").innerHTML=h;
+ const bs=groups[current.group],names=namesFor(type),label=type==="item"?"Items (ಆಹಾರ ಪದಾರ್ಥಗಳು)":"ಅಡುಗೆ ಪದಾರ್ಥಗಳು";
+ const wheatExtra=type==="ingredient"?3:0,cols=2+bs.length+1+names.length*3+wheatExtra;
+ $("reportMonth").textContent=`ತಿಂಗಳು:- ${months[current.month-1]}-${current.year}`;
+ let h=`<div class="table-wrap"><table><thead><tr><th colspan="${cols}" class="group-head">${label} — ${esc(groupLabel(current.group))}</th></tr><tr><th rowspan="2">ಕ್ರ.ಸಂ</th><th rowspan="2">ದಿನಾಂಕ</th>${bs.map(b=>`<th rowspan="2">${b.label}<br><small>ವಿದ್ಯಾರ್ಥಿಗಳು</small></th>`).join("")}<th rowspan="2">ಒಟ್ಟು<br>ವಿದ್ಯಾರ್ಥಿಗಳು</th>${names.map(x=>`<th colspan="3" class="group-head">${esc(x.name)}<br><small>${esc(x.unit)}</small></th>`).join("")}${type==="ingredient"?`<th colspan="3" class="group-head">ಗೋಧಿ ಪರಿವರ್ತನೆ<br><small>₹</small></th>`:""}</tr><tr>${names.map(()=>`<th>ದಾಸ್ತಾನು</th><th>ಖರ್ಚು</th><th>ಉಳಿಕೆ</th>`).join("")}${type==="ingredient"?`<th>ದಾಸ್ತಾನು</th><th>ಖರ್ಚು</th><th>ಉಳಿಕೆ</th>`:""}</tr></thead><tbody>`;
+ const led=names.map(x=>({x,l:ledger(x.type,x.name)})),days=new Date(current.year,current.month,0).getDate();
+ let wheatBal=0;
+ const wheatName=names.find(x=>normalizeItemName(x.name)==="ಗೋಧಿ");
+ if(type==="ingredient"&&wheatName)wheatBal=openingFor("ingredient",wheatName.name);
+ h+=`<tr class="opening-row"><td>—</td><td><b>ಪ್ರಾರಂಭಿಕ ಶಿಲ್ಕು</b></td>${bs.map(()=>`<td>—</td>`).join("")}<td class="total">—</td>`;
+ led.forEach(z=>h+=`<td>—</td><td>—</td><td class="total"><b>${fmt(z.l.opening,z.x.unit)}</b></td>`);
+ if(type==="ingredient")h+=`<td>—</td><td>—</td><td class="total"><b>${wheatBal.toFixed(2)}</b></td>`;
+ h+=`</tr>`;
+ for(let d=1;d<=days;d++){
+  const date=iso(current.year,current.month,d),displayDate=`${pad(d)}-${pad(current.month)}-${current.year}`,holiday=current.holidays.get(date);
+  if(holiday){h+=`<tr class="holiday"><td>${d}</td><td><b>${displayDate}</b></td><td colspan="${cols-2}"><b>${esc(holiday.holiday_reason||"ರಜೆ")}</b></td></tr>`;continue;}
+  const counts=bs.map(b=>bucketCount(date,b)),total=counts.reduce((a,b)=>a+b,0);
+  h+=`<tr><td>${d}</td><td>${displayDate}</td>${counts.map(v=>`<td>${v}</td>`).join("")}<td class="total">${total}</td>`;
+  led.forEach(z=>{const r=z.l.rows[d-1],rec=receipts.get(`${z.x.type}|${z.x.name}|${date}`);h+=`<td><input class="stock-input no-print" type="number" min="0" step="0.001" data-receipt-type="${z.x.type}" data-receipt-name="${esc(z.x.name)}" data-receipt-date="${date}" value="${rec?num(rec.quantity):""}"><span class="screen-only" style="display:none">${rec?fmt(rec.quantity,z.x.unit):""}</span></td><td>${fmt(r.expense,z.x.unit)}</td><td class="total">${fmt(r.closing,z.x.unit)}</td>`});
+  if(type==="ingredient"){const recW=receipts.get(`ingredient|ಗೋಧಿ|${date}`),stockW=num(recW?.quantity),expW=wheatConversionExpense(date);wheatBal=wheatBal+stockW-expW;h+=`<td>${stockW?fmt(stockW,"KG"):""}</td><td>${expW.toFixed(2)}</td><td class="total"><b>${wheatBal.toFixed(2)}</b></td>`;}
+  h+=`</tr>`;
+ }
+ h+=`</tbody><tfoot><tr><td colspan="${2+bs.length+1}">TOTAL</td>`;
+ led.forEach(z=>{const stock=z.l.rows.reduce((sum,r)=>sum+r.stock,0),exp=z.l.rows.reduce((sum,r)=>sum+r.expense,0);h+=`<td>${fmt(stock,z.x.unit)}</td><td>${fmt(exp,z.x.unit)}</td><td class="total">${fmt(z.l.closing,z.x.unit)}</td>`});
+ if(type==="ingredient"){let ws=0,we=0;for(let d=1;d<=days;d++){const date=iso(current.year,current.month,d);if(current.holidays.has(date))continue;ws+=num(receipts.get(`ingredient|ಗೋಧಿ|${date}`)?.quantity);we+=wheatConversionExpense(date);}h+=`<td>${ws?fmt(ws,"KG"):""}</td><td>${we.toFixed(2)}</td><td class="total">${wheatBal.toFixed(2)}</td>`;}
+ h+=`</tr></tfoot></table></div>`;$('tableHost').innerHTML=h;
 }
+
 async function loadAll(){
  try{
   if(!activeYear)throw new Error("Active Academic Year ಇಲ್ಲ.");
@@ -1157,6 +1213,14 @@ async function saveWheat(){
 function buildExportTableHtml(){
  if(!current)throw new Error("ಮೊದಲು Load ಮಾಡಿ.");
  const type=$("reportType").value,bs=groups[current.group]||[],names=namesFor(type),dept=school?.department_name||"ಅಕ್ಷರ ದಾಸೋಹ ಕಾರ್ಯಕ್ರಮ",sch=school?.school_name||"ಶಾಲೆಯ ಹೆಸರು",escX=v=>String(v??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+  if(type==="ingredient"){
+   const liveTable=document.querySelector("#tableHost table");
+   if(!liveTable)throw new Error("ಅಡುಗೆ ಪದಾರ್ಥಗಳ ವರದಿ ಮೊದಲು Load ಮಾಡಿ.");
+   const clone=liveTable.cloneNode(true);
+   clone.querySelectorAll("input.stock-input").forEach(inp=>{const td=inp.parentElement,value=inp.value===""?"":inp.value;inp.remove();const span=td.querySelector(".screen-only");if(span)span.remove();if(value!=="")td.insertBefore(document.createTextNode(value),td.firstChild);});
+   clone.querySelectorAll(".screen-only").forEach(x=>x.remove());
+   return {html:clone.outerHTML,type,group:current.group,year:current.year,month:current.month};
+  }
  if(type==="nutrition"){
   // Export exactly the same Nutrition table that is shown on screen.
   // This keeps Egg Total / Banana Total / Final Total columns and their
