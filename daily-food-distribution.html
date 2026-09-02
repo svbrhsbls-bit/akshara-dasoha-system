@@ -552,14 +552,25 @@ function enableDayEdit(date){
 
 async function loadHolidayList(){
   const yearId=currentYear?.id;if(!yearId){$("holidayList").innerHTML="";return}
+  const month=Number($("month").value||0);
+  const year=getYearNumber(currentYear?.year_name);
+  if(!month||!year){$("holidayList").innerHTML="";return}
+  const start=dateISO(year,month,1);
+  const end=dateISO(year,month,new Date(year,month,0).getDate());
   try{
-    const {data,error}=await db.from("school_holidays").select("id,holiday_date,holiday_reason").eq("academic_year_id",yearId).order("holiday_date",{ascending:true});
+    // ಆಯ್ಕೆ ಮಾಡಿದ ತಿಂಗಳ ರಜೆ ದಿನಗಳು ಮಾತ್ರ ತೋರಿಸಬೇಕು.
+    const {data,error}=await db.from("school_holidays")
+      .select("id,holiday_date,holiday_reason")
+      .eq("academic_year_id",yearId)
+      .gte("holiday_date",start)
+      .lte("holiday_date",end)
+      .order("holiday_date",{ascending:true});
     if(error)throw error;
     $("holidayList").innerHTML=(data||[]).map(r=>
       `<div class="holiday-item"><b>${esc(r.holiday_date)}</b><span>${esc(r.holiday_reason)}</span>
        <button class="secondary holiday-edit" data-id="${r.id}" data-date="${esc(r.holiday_date)}" data-reason="${esc(r.holiday_reason)}">Edit</button>
        <button class="danger holiday-delete" data-id="${r.id}">Delete</button></div>`
-    ).join("")||'<div class="small">ಈ Academic Yearಗೆ ರಜೆ entry ಇಲ್ಲ.</div>';
+    ).join("")||'<div class="small">ಈ ತಿಂಗಳಿಗೆ ರಜೆ entry ಇಲ್ಲ.</div>';
   }catch(e){show($("holidayMsg"),"ರಜೆ load failed: "+e.message,"err")}
 }
 
@@ -600,7 +611,7 @@ $("printBtn").onclick=()=>window.print();
 $("excelBtn").onclick=exportExcel;
 $("saveAllBottom").onclick=saveAll;
 $("holidaySaveBtn").onclick=saveHoliday;
-$("month").onchange=()=>{ if(!monthClassLocked) loadSheet(); };
+$("month").onchange=()=>{ if(!monthClassLocked){ loadSheet(); loadHolidayList(); } };
 $("classGroup").onchange=()=>{ if(!monthClassLocked) loadSheet(); };
 // Academic Year is controlled only by School Settings Active Year.
 
