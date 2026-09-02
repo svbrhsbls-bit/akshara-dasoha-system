@@ -108,7 +108,7 @@ td input{height:34px;min-width:90px;text-align:right}
     </div>
   </section>
 
-  <section id="jama" class="page"> class="page">
+  <section id="jama" class="page">
     <div class="card no-print">
       <h2>ಜಮಾ Entry</h2>
       <div class="grid" style="grid-template-columns:220px 300px 1fr;">
@@ -154,7 +154,7 @@ td input{height:34px;min-width:90px;text-align:right}
     </div>
   </section>
 
-  <section id="items" class="page" style="display:none"> class="page" style="display:none">
+  <section id="items" class="page" style="display:none">
     <div class="card no-print">
       <h2>Item Master</h2>
       <p class="small">Excel‌ನ title, school name, date, formula ಮತ್ತು totals Item ಆಗಿ ಬರುವುದಿಲ್ಲ. ಕೆಳಗಿನ ನಿಜವಾದ Item columns ಮಾತ್ರ ಬಳಸಲಾಗುತ್ತವೆ. ಹೊಸ Item ಸೇರಿಸಿದರೆ JAMA/KHARCHU ಎರಡೂ ಕಡೆ ಬರುತ್ತದೆ.</p>
@@ -660,6 +660,30 @@ function renderTable(type){
     }
   });
   body.innerHTML=html;
+}
+
+function renderAll(){
+  renderTable('jama');
+  renderTable('kharchu');
+
+  const jamaTotal=state.jama.reduce((s,x)=>s+Number(x.amount||0),0);
+  const kharchuTotal=state.kharchu.reduce((s,x)=>s+Number(x.amount||0),0);
+  const openingTotal=state.items.reduce((s,it)=>s+openingValue(it),0);
+
+  const jt=document.getElementById('jamaSummary');
+  const kt=document.getElementById('khSummary');
+
+  if(jt)jt.innerHTML=`
+    <div class="stat">ಪ್ರಾರಂಭಿಕ ಶಿಲ್ಕು <b>${money(openingTotal)}</b></div>
+    <div class="stat">ಒಟ್ಟು ಜಮಾ <b>${money(jamaTotal)}</b></div>
+  `;
+  if(kt)kt.innerHTML=`
+    <div class="stat">ಪ್ರಾರಂಭಿಕ ಶಿಲ್ಕು <b>${money(openingTotal)}</b></div>
+    <div class="stat">ಒಟ್ಟು ಖರ್ಚು <b>${money(kharchuTotal)}</b></div>
+  `;
+
+  const activePage=document.querySelector('.tab.active')?.dataset.page;
+  if(activePage==='reports')renderPreview();
 }
 
 /* =========================================================
