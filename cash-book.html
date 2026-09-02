@@ -2,60 +2,70 @@
 <html lang="kn">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>Cash Book — 2026-27</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Cash Book</title>
 <style>
-:root{--primary:#14532d;--primary2:#166534;--bg:#f3f7f4;--card:#fff;--border:#d6e2da;--text:#17221b;--muted:#66756b}
-*{box-sizing:border-box} body{margin:0;font-family:"Noto Sans Kannada","Nirmala UI",Arial,sans-serif;background:var(--bg);color:var(--text)}
-header{background:#fff;color:#111;padding:12px 22px;box-shadow:0 2px 8px #0002;text-align:center;border-bottom:1px solid #d6e2da}
-.school-header #departmentName{font-size:22px;font-weight:800;line-height:1.35}
-.school-header #schoolName{font-size:21px;font-weight:800;line-height:1.35}
-.school-header .year-line{font-size:19px;font-weight:800;line-height:1.35}
-@media print{
-  .school-header{display:block!important;background:#fff!important;color:#000!important;box-shadow:none!important;border:0!important;padding:0 0 8px!important}
-  .school-header #departmentName{font-size:16px}
-  .school-header #schoolName{font-size:15px}
-  .school-header .year-line{font-size:14px}
-}
-.container{max-width:1450px;margin:18px auto;padding:0 14px}
+*{box-sizing:border-box}
+body{margin:0;background:#f3f7f4;color:#17221b;font-family:"Noto Sans Kannada","Nirmala UI",Arial,sans-serif}
+.school-header{text-align:center;background:#fff;padding:16px 12px 12px;border-bottom:1px solid #d8e2dc}
+.school-header .dept{font-size:24px;font-weight:800;line-height:1.35}
+.school-header .school{font-size:23px;font-weight:800;line-height:1.35}
+.school-header .year{font-size:20px;font-weight:800;line-height:1.35}
+.wrap{max-width:1500px;margin:18px auto;padding:0 14px}
 .tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
-.tab{border:1px solid var(--border);background:#fff;padding:10px 18px;border-radius:8px;cursor:pointer;font-weight:700}
-.tab.active{background:var(--primary);color:#fff;border-color:var(--primary)}
-.card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:14px;box-shadow:0 2px 8px #0000000a}
-.grid{display:grid;grid-template-columns:repeat(6,minmax(120px,1fr));gap:10px}
-label{font-weight:700;font-size:13px}input,select,button{font:inherit}
-input,select{width:100%;padding:9px;border:1px solid #cbd5ce;border-radius:7px;background:#fff}
-button{border:0;border-radius:7px;padding:9px 14px;cursor:pointer;font-weight:700}
-.primary{background:var(--primary);color:#fff}.secondary{background:#e7eee9;color:#183522}.danger{background:#fee2e2;color:#991b1b}
-.actions{display:flex;gap:8px;align-items:end;flex-wrap:wrap}.actions button{height:40px}
-.table-wrap{overflow:auto;border:1px solid var(--border);border-radius:8px}
-table{border-collapse:collapse;width:100%;min-width:1250px;background:#fff}
-th,td{border:1px solid #d8e0db;padding:7px;text-align:center;font-size:13px;white-space:nowrap}
-th{background:#edf5ef;position:sticky;top:0;z-index:1}
-td.amount input{min-width:105px;text-align:right}
-.summary{display:flex;gap:12px;flex-wrap:wrap}.stat{padding:11px 15px;background:#f7faf8;border:1px solid var(--border);border-radius:8px}.stat b{display:block;font-size:18px;margin-top:3px}
-.item-list{display:flex;flex-wrap:wrap;gap:7px;margin-top:10px}.item-chip{background:#edf5ef;border:1px solid #cbded0;padding:6px 10px;border-radius:20px}
-.empty{padding:25px;text-align:center;color:var(--muted)}
-.small{font-size:12px;color:var(--muted)}
-.notice{background:#fff7ed;border:1px solid #fed7aa;padding:10px;border-radius:8px;margin-top:10px}
-@media(max-width:900px){.grid{grid-template-columns:repeat(2,1fr)}}
+.tab{padding:11px 18px;border:1px solid #ccd8d0;border-radius:8px;background:#fff;font-weight:800;cursor:pointer}
+.tab.active{background:#146c3a;color:#fff;border-color:#146c3a}
+.card{background:#fff;border:1px solid #d7e2da;border-radius:12px;padding:16px;margin-bottom:14px;box-shadow:0 2px 8px #0000000b}
+h2{margin:0 0 14px}
+.grid{display:grid;grid-template-columns:repeat(5,minmax(150px,1fr));gap:10px}
+label{display:block;font-weight:700;font-size:13px;margin-bottom:5px}
+input,select{width:100%;height:42px;padding:8px 10px;border:1px solid #cbd5ce;border-radius:7px;font:inherit;background:#fff}
+button{border:0;border-radius:7px;padding:10px 14px;font:inherit;font-weight:800;cursor:pointer}
+.primary{background:#146c3a;color:#fff}.secondary{background:#e8efeb}.danger{background:#fee2e2;color:#991b1b}
+.actions{display:flex;gap:8px;align-items:end;flex-wrap:wrap}
+.small{font-size:12px;color:#65736a}
+.notice{background:#fff7ed;border:1px solid #fed7aa;border-radius:8px;padding:9px;margin-top:10px}
+.table-wrap{overflow:auto;border:1px solid #d7e2da;border-radius:8px}
+table{border-collapse:collapse;width:100%;min-width:1250px}
+th,td{border:1px solid #cfd8d2;padding:6px;text-align:center;white-space:nowrap;font-size:12px}
+thead tr.group th{background:#edf5ef;font-weight:800}
+thead tr.sub th{background:#f8faf9;font-weight:800}
+td input{height:34px;min-width:90px;text-align:right}
+.summary{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+.stat{border:1px solid #d7e2da;background:#f8fbf9;border-radius:8px;padding:9px 13px}.stat b{display:block;font-size:17px}
+.item-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.item-row{display:flex;gap:8px;align-items:center;border:1px solid #dbe5df;padding:7px;border-radius:8px}
+.item-row input{height:36px}.item-row .remove{padding:6px 9px}
+.empty{text-align:center;padding:25px;color:#68766d}
+.print-only{display:none}
+.print-report{background:#fff}
+.report-title{text-align:center;font-weight:800;font-size:18px;margin-bottom:8px}
+.balance-box{display:grid;grid-template-columns:repeat(3,1fr);border:1px solid #222;margin:8px 0}
+.balance-box div{padding:6px;border-right:1px solid #222;text-align:center}.balance-box div:last-child{border-right:0}
+@media(max-width:900px){.grid{grid-template-columns:1fr 1fr}.item-grid{grid-template-columns:1fr}}
 @media print{
-  body{background:#fff}.no-print{display:none!important}.container{max-width:none;margin:0;padding:0}
-  .card{box-shadow:none;border:0;padding:0}.print-title{display:block!important}
-  table{min-width:0;width:100%;font-size:9px}th,td{padding:4px;font-size:9px}
-  .print-page{page-break-after:always}
+ body{background:#fff}
+ .no-print,.tabs{display:none!important}
+ .wrap{max-width:none;margin:0;padding:0}
+ .card{border:0;box-shadow:none;padding:0}
+ .school-header{padding:0 0 8px}
+ .school-header .dept{font-size:16px}.school-header .school{font-size:15px}.school-header .year{font-size:14px}
+ .print-only{display:block}
+ table{min-width:0;width:100%}
+ th,td{font-size:9px;padding:4px}
+ .print-report{page-break-after:always}
 }
-.print-title{display:none;text-align:center;margin:0 0 10px}
 </style>
 </head>
 <body>
+
 <header class="school-header">
-  <div id="departmentName">ಇಲಾಖೆಯ ಹೆಸರು</div>
-  <div id="schoolName">ಶಾಲೆಯ ಹೆಸರು</div>
-  <div class="year-line">ವರ್ಷ: <span id="academicYear">-</span></div>
+  <div class="dept" id="departmentName">ಇಲಾಖೆಯ ಹೆಸರು</div>
+  <div class="school" id="schoolName">ಶಾಲೆಯ ಹೆಸರು</div>
+  <div class="year">ವರ್ಷ: <span id="academicYear">-</span></div>
 </header>
 
-<div class="container">
+<div class="wrap">
   <div class="tabs no-print">
     <button class="tab active" data-page="jama">ಜಮಾ Entry</button>
     <button class="tab" data-page="kharchu">ಖರ್ಚು Entry</button>
@@ -71,12 +81,14 @@ td.amount input{min-width:105px;text-align:right}
         <div><label>Item</label><select id="jamaItem"></select></div>
         <div><label>Amount (₹)</label><input id="jamaAmount" type="number" step="0.01" min="0"></div>
         <div><label>ವಿವರ</label><input id="jamaDesc" placeholder="ವಿವರ"></div>
-        <div class="actions"><button class="primary" onclick="addEntry('jama')">+ ಜಮಾ ಸೇರಿಸಿ</button><button class="secondary" onclick="clearForm('jama')">Clear</button></div>
+        <div class="actions">
+          <button class="primary" onclick="addEntry('jama')">+ ಜಮಾ ಸೇರಿಸಿ</button>
+          <button class="secondary" onclick="clearForm('jama')">Clear</button>
+        </div>
       </div>
       <div class="notice">ಒಂದು ದಿನದಲ್ಲಿ ಬೇಕಾದಷ್ಟು Item entryಗಳನ್ನು ಸೇರಿಸಬಹುದು.</div>
     </div>
     <div class="card">
-      <h2 class="print-title">ಜಮಾ — Cash Book</h2>
       <div class="summary" id="jamaSummary"></div>
       <div class="table-wrap"><table><thead id="jamaHead"></thead><tbody id="jamaBody"></tbody></table></div>
     </div>
@@ -90,11 +102,13 @@ td.amount input{min-width:105px;text-align:right}
         <div><label>Item</label><select id="khItem"></select></div>
         <div><label>Amount (₹)</label><input id="khAmount" type="number" step="0.01" min="0"></div>
         <div><label>ವಿವರ</label><input id="khDesc" placeholder="ವಿವರ"></div>
-        <div class="actions"><button class="primary" onclick="addEntry('kharchu')">+ ಖರ್ಚು ಸೇರಿಸಿ</button><button class="secondary" onclick="clearForm('kharchu')">Clear</button></div>
+        <div class="actions">
+          <button class="primary" onclick="addEntry('kharchu')">+ ಖರ್ಚು ಸೇರಿಸಿ</button>
+          <button class="secondary" onclick="clearForm('kharchu')">Clear</button>
+        </div>
       </div>
     </div>
     <div class="card">
-      <h2 class="print-title">ಖರ್ಚು — Cash Book</h2>
       <div class="summary" id="khSummary"></div>
       <div class="table-wrap"><table><thead id="khHead"></thead><tbody id="khBody"></tbody></table></div>
     </div>
@@ -103,73 +117,124 @@ td.amount input{min-width:105px;text-align:right}
   <section id="items" class="page" style="display:none">
     <div class="card no-print">
       <h2>Item Master</h2>
-      <p class="small">Excel‌ನ ಮೂಲ columns ಉಳಿಯುತ್ತವೆ. ಇಲ್ಲಿ ಹೊಸ Item ಸೇರಿಸಿದರೆ JAMA ಮತ್ತು KHARCHU ಎರಡೂ ಕಡೆ ಲಭ್ಯವಾಗುತ್ತದೆ.</p>
-      <div class="grid">
-        <div><label>ಹೊಸ Item ಹೆಸರು</label><input id="newItem" placeholder="ಉದಾ: Donation"></div>
-        <div class="actions"><button class="primary" onclick="addItem()">+ ಹೊಸ Item</button></div>
+      <p class="small">Excel‌ನ title, school name, date, formula ಮತ್ತು totals Item ಆಗಿ ಬರುವುದಿಲ್ಲ. ಕೆಳಗಿನ ನಿಜವಾದ Item columns ಮಾತ್ರ ಬಳಸಲಾಗುತ್ತವೆ. ಹೊಸ Item ಸೇರಿಸಿದರೆ JAMA/KHARCHU ಎರಡೂ ಕಡೆ ಬರುತ್ತದೆ.</p>
+      <div id="itemList" class="item-grid"></div>
+      <div style="margin-top:12px;display:flex;gap:8px">
+        <input id="newItem" placeholder="ಹೊಸ Item ಹೆಸರು">
+        <button class="primary" onclick="addItem()">+ ಹೊಸ Item</button>
       </div>
-      <div id="itemList" class="item-list"></div>
     </div>
   </section>
 
   <section id="reports" class="page" style="display:none">
     <div class="card no-print">
       <h2>Reports / Print</h2>
-      <div class="small" id="settingsStatus">School Settings load ಆಗುತ್ತಿದೆ...</div>
       <div class="grid">
         <div><label>From Date</label><input id="fromDate" type="date"></div>
         <div><label>To Date</label><input id="toDate" type="date"></div>
-        <div><label>Report</label><select id="reportType"><option value="jama">ಜಮಾ</option><option value="kharchu">ಖರ್ಚು</option></select></div>
-        <div class="actions"><button class="primary" onclick="printReport()">🖨️ Print</button><button class="secondary" onclick="exportCSV()">⬇️ Excel/CSV</button></div>
+        <div><label>Print</label><select id="reportType"><option value="both">JAMA + KHARCHU</option><option value="jama">JAMA</option><option value="kharchu">KHARCHU</option></select></div>
+        <div class="actions"><button class="primary" onclick="printReport()">🖨️ Print</button></div>
       </div>
-      <p class="small">Entry ಮಾಡಿದ ದಿನಾಂಕಗಳಷ್ಟೇ report ನಲ್ಲಿ ಬರುತ್ತವೆ. ಪ್ರತಿದಿನದ date automatic ಆಗಿ ಸೇರಿಸಲಾಗುವುದಿಲ್ಲ.</p>
-      <p class="small">Print heading: ಇಲಾಖೆ ಹೆಸರು, ಶಾಲೆಯ ಹೆಸರು ಮತ್ತು ವರ್ಷವು School Settings‌ನಿಂದ automatic ಆಗಿ ಬರುತ್ತದೆ.</p>
+      <p class="small">ನೀವು Entry ಮಾಡಿದ ದಿನಾಂಕಗಳು ಮಾತ್ರ ಬರುತ್ತವೆ. ಪ್ರತಿದಿನದ date automatic ಆಗಿ ಬರುವುದಿಲ್ಲ.</p>
+      <p class="small">ಮೊದಲ ಬಾರಿಗೆ ಮಾತ್ರ Opening Balance ಹಾಕಬೇಕು. ನಂತರ ಹಿಂದಿನ Closing Balance ಮುಂದಿನ Entry ದಿನದ Opening Balance ಆಗಿ automatic ಆಗುತ್ತದೆ.</p>
     </div>
-    <div id="reportPreview" class="card"></div>
+    <div id="reportPreview"></div>
   </section>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const BASE_HEADERS = ["Item 1", "ಶ್ರೀ ವೀರಬಲ್ಲಾಳ ಗ್ರಾಮಾಂತರ ಪ್ರೌಢಶಾಲೆ ಬಲ್ಲಾಳಸಮುದ್ರ ಹೊಸದುರ್ಗ ತಾ|| ಚಿತ್ರದುರ್ಗ ಜಿ|| / ಜಮಾ                                                                          ವರ್ಷ:2026-27 / ದಿನಾಂಕ / 25.06.2026", "ವಿವರ / ಪ್ರಾರಂಬಿಕ ಶಿಲ್ಕು / ಬಡ್ಡಿ / ಒಟ್ಟು", "ಪೋಷಣಾ ಶಕ್ತಿ / ಸರ್ಕಾರಿ / =[1]Sheet3!C144 / - / =SUM(D5:D6)", "APF / =[1]Sheet3!D144 / - / =SUM(E5:E6)", "ಉಪ್ಪು / =[1]Sheet3!E144 / - / =SUM(F5:F6)", "ತರಕಾರಿ / 8 / =[1]Sheet3!F144 / - / =SUM(G5:G6)", "9-10 / =[1]Sheet3!G144 / - / =SUM(H5:H6)", "ಸಾಂಬಾರು / 8 / =[1]Sheet3!H144 / - / =SUM(I5:I6)", "9-10 / =[1]Sheet3!I144 / - / =SUM(J5:J6)", "ಅನಿಲ / 8 / =[1]Sheet3!J144 / - / =SUM(K5:K6)", "9-10 / =[1]Sheet3!K144 / - / =SUM(L5:L6)", "ಗೋಧಿ / =[1]Sheet3!L144 / - / =SUM(M5:M6)", "ಗ್ಯಾಸ್ / =[1]Sheet3!M144 / - / =SUM(N5:N6)", "ಕ್ಷೀರಭಾಗ್ಯ / ಸಕ್ಕರೆ / =[1]Sheet3!N144 / - / =SUM(O5:O6)", "ಇತರೆ / =[1]Sheet3!O144 / - / =SUM(P5:P6)", "ಅನಿಲ / =[1]Sheet3!P144 / - / =SUM(Q5:Q6)", "ಇತರೆ / =[1]Sheet3!Q144 / - / =SUM(R5:R6)", "ಬಡ್ಡಿ / =[1]Sheet3!R144 / 619 / =SUM(S5:S6)", "ಒಟ್ಟು / =[1]Sheet3!S144 / 619 / =SUM(T5:T6)"];
-const KEY='cashbook_2026_27_v1';
+const SUPABASE_URL="https://ezmudfrpcvjsgnjibvoq.supabase.co";
+const SUPABASE_ANON_KEY="sb_publishable__FYyH6NQaqgARaq2dvuovQ_rKmus0js";
+const db=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
+
+const DEFAULT_ITEMS=["ಪೋಷಣಾ ಶಕ್ತಿ - ಸರ್ಕಾರಿ", "ಪೋಷಣಾ ಶಕ್ತಿ - APF", "ಉಪ್ಪು", "ತರಕಾರಿ - 8", "ತರಕಾರಿ - 9-10", "ಸಾಂಬಾರು - 8", "ಸಾಂಬಾರು - 9-10", "ಅನಿಲ - 8", "ಅನಿಲ - 9-10", "ಗೋದಿ", "ಗ್ಯಾಸ್", "ಕ್ಷೀರಭಾಗ್ಯ - ಸಕ್ಕರೆ", "ಕ್ಷೀರಭಾಗ್ಯ - ಇತರೆ", "ಇತರೆ - ಅನಿಲ", "ಇತರೆ", "ಬಡ್ಡಿ", "ಒಟ್ಟು"];
+const KEY='cashbook_v2';
 let state=JSON.parse(localStorage.getItem(KEY)||'null')||{
-  items: BASE_HEADERS.filter(x=>x && !/^Item \d+$/.test(x)),
-  jama:[], kharchu:[]
+  items: DEFAULT_ITEMS.slice(),
+  jama:[],
+  kharchu:[],
+  openingBalance:null
 };
-if(!state.items.length) state.items=['ಮುಖ್ಯ Item'];
+if(!Array.isArray(state.items)||!state.items.length) state.items=DEFAULT_ITEMS.slice();
+if(!Array.isArray(state.jama))state.jama=[];
+if(!Array.isArray(state.kharchu))state.kharchu=[];
+if(state.openingBalance!==null)state.openingBalance=Number(state.openingBalance);
 
-function save(){localStorage.setItem(KEY,JSON.stringify(state));}
-function money(n){return '₹'+Number(n||0).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2});}
-function esc(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));}
-
+function save(){localStorage.setItem(KEY,JSON.stringify(state))}
+function money(n){return '₹'+Number(n||0).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2})}
+function esc(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]))}
+function dates(){
+  return [...new Set([...state.jama,...state.kharchu].map(x=>x.date))].sort()
+}
+function allDates(from,to){
+  return dates().filter(d=>(!from||d>=from)&&(!to||d<=to))
+}
+function totalsForDate(date){
+  const j=state.jama.filter(x=>x.date===date).reduce((s,x)=>s+Number(x.amount),0);
+  const k=state.kharchu.filter(x=>x.date===date).reduce((s,x)=>s+Number(x.amount),0);
+  return {j,k};
+}
+function balanceRows(from,to){
+  const ds=allDates(from,to);
+  if(!ds.length)return [];
+  const firstAll=dates();
+  let opening=Number(state.openingBalance||0);
+  const rows=[];
+  for(const d of firstAll){
+    const t=totalsForDate(d);
+    const closing=opening+t.j-t.k;
+    if(ds.includes(d)) rows.push({date:d,opening,jama:t.j,kharchu:t.k,closing});
+    opening=closing;
+  }
+  return rows;
+}
+function ensureOpening(){
+  if(state.openingBalance!==null && Number.isFinite(Number(state.openingBalance))) return true;
+  const v=prompt('ಮೊದಲ ಬಾರಿಗೆ Opening Balance ನಮೂದಿಸಿ (₹):','0');
+  if(v===null)return false;
+  const n=Number(v);
+  if(!Number.isFinite(n)||n<0){alert('ಸರಿಯಾದ Opening Balance ನಮೂದಿಸಿ.');return false}
+  state.openingBalance=n;save();return true;
+}
 function fillItems(){
   for(const id of ['jamaItem','khItem']){
     const el=document.getElementById(id);
     el.innerHTML=state.items.map(x=>`<option value="${esc(x)}">${esc(x)}</option>`).join('');
   }
-  document.getElementById('itemList').innerHTML=state.items.map((x,i)=>`<span class="item-chip">${esc(x)} ${i>=BASE_HEADERS.filter(y=>y&&!/^Item \d+$/.test(y)).length?`<button class="danger no-print" style="padding:2px 6px" onclick="removeItem(${i})">×</button>`:''}</span>`).join('');
+  document.getElementById('itemList').innerHTML=state.items.map((x,i)=>`
+    <div class="item-row">
+      <input value="${esc(x)}" onchange="renameItem(${i},this.value)">
+      ${i>=DEFAULT_ITEMS.length?`<button class="danger remove" onclick="removeItem(${i})">×</button>`:''}
+    </div>`).join('');
 }
 function addItem(){
   const v=document.getElementById('newItem').value.trim();
   if(!v)return alert('Item ಹೆಸರು ನಮೂದಿಸಿ');
   if(state.items.some(x=>x.toLowerCase()===v.toLowerCase()))return alert('ಈ Item ಈಗಾಗಲೇ ಇದೆ');
-  state.items.push(v); save(); document.getElementById('newItem').value=''; fillItems(); renderAll();
+  state.items.push(v);document.getElementById('newItem').value='';save();fillItems();renderAll();
+}
+function renameItem(i,v){
+  v=v.trim(); if(!v)return fillItems();
+  if(state.items.some((x,n)=>n!==i&&x.toLowerCase()===v.toLowerCase()))return alert('ಈ Item ಈಗಾಗಲೇ ಇದೆ');
+  state.items[i]=v;save();fillItems();renderAll();
 }
 function removeItem(i){
-  if(i<0 || i>=state.items.length)return;
-  if(!confirm(`"${state.items[i]}" Item ತೆಗೆದುಹಾಕಬೇಕೇ?`))return;
-  state.items.splice(i,1); save(); fillItems(); renderAll();
+  if(i<DEFAULT_ITEMS.length)return;
+  if(!confirm('ಈ Item ತೆಗೆದುಹಾಕಬೇಕೇ?'))return;
+  state.items.splice(i,1);save();fillItems();renderAll();
 }
 function addEntry(type){
-  const prefix=type==='jama'?'jama':'kh';
-  const date=document.getElementById(prefix+'Date').value;
-  const item=document.getElementById(prefix+'Item').value;
-  const amount=Number(document.getElementById(prefix+'Amount').value);
-  const desc=document.getElementById(prefix+'Desc').value.trim();
+  if(!ensureOpening())return;
+  const p=type==='jama'?'jama':'kh';
+  const date=document.getElementById(p+'Date').value;
+  const item=document.getElementById(p+'Item').value;
+  const amount=Number(document.getElementById(p+'Amount').value);
+  const desc=document.getElementById(p+'Desc').value.trim();
   if(!date||!item||!(amount>0))return alert('ದಿನಾಂಕ, Item ಮತ್ತು Amount ಸರಿಯಾಗಿ ನಮೂದಿಸಿ');
   state[type].push({id:crypto.randomUUID(),date,item,amount,desc,createdAt:new Date().toISOString()});
   state[type].sort((a,b)=>a.date.localeCompare(b.date)||a.createdAt.localeCompare(b.createdAt));
-  save(); clearForm(type); renderAll();
+  save();clearForm(type);renderAll();
 }
 function clearForm(type){
   const p=type==='jama'?'jama':'kh';
@@ -180,75 +245,98 @@ function del(type,id){
   if(!confirm('ಈ entry ಅಳಿಸಬೇಕೇ?'))return;
   state[type]=state[type].filter(x=>x.id!==id);save();renderAll();
 }
+function tableHead(){
+  return `<tr class="group">
+    <th rowspan="2">ದಿನಾಂಕ</th><th rowspan="2">ವಿವರ</th>
+    <th colspan="2">ಪೋಷಣಾ ಶಕ್ತಿ</th><th rowspan="2">ಉಪ್ಪು</th>
+    <th colspan="2">ತರಕಾರಿ</th><th colspan="2">ಸಾಂಬಾರು</th><th colspan="2">ಅನಿಲ</th>
+    <th rowspan="2">ಗೋದಿ</th><th rowspan="2">ಗ್ಯಾಸ್</th><th colspan="2">ಕ್ಷೀರಭಾಗ್ಯ</th>
+    <th rowspan="2">ಇತರೆ</th><th rowspan="2">ಬಡ್ಡಿ</th><th rowspan="2">ಒಟ್ಟು</th><th rowspan="2" class="no-print">Action</th>
+  </tr>
+  <tr class="sub">
+    <th>ಸರ್ಕಾರಿ</th><th>APF</th><th>8</th><th>9-10</th><th>8</th><th>9-10</th><th>8</th><th>9-10</th>
+    <th>ಸಕ್ಕರೆ</th><th>ಇತರೆ</th>
+  </tr>`
+}
 function renderTable(type){
   const data=state[type].slice().sort((a,b)=>a.date.localeCompare(b.date)||a.createdAt.localeCompare(b.createdAt));
   const head=document.getElementById(type==='jama'?'jamaHead':'khHead');
   const body=document.getElementById(type==='jama'?'jamaBody':'khBody');
-  head.innerHTML='<tr><th>ದಿನಾಂಕ</th><th>Item</th><th>ವಿವರ</th><th>Amount (₹)</th><th class="no-print">Action</th></tr>';
-  if(!data.length){body.innerHTML='<tr><td colspan="5" class="empty">ಇನ್ನೂ ಯಾವುದೇ Entry ಇಲ್ಲ</td></tr>';return;}
-  body.innerHTML=data.map(x=>`<tr><td>${x.date}</td><td>${esc(x.item)}</td><td>${esc(x.desc)}</td><td style="text-align:right">${money(x.amount)}</td><td class="no-print"><button class="danger" onclick="del('${type}','${x.id}')">Delete</button></td></tr>`).join('');
+  head.innerHTML=tableHead();
+  if(!data.length){body.innerHTML='<tr><td colspan="19" class="empty">ಯಾವುದೇ Entry ಇಲ್ಲ</td></tr>';return}
+  body.innerHTML=data.map(x=>{
+    const cells=state.items.map(it=>it===x.item?money(x.amount):'—');
+    return `<tr><td>${x.date}</td><td>${esc(x.desc||x.item)}</td>${cells.map(v=>`<td>${v}</td>`).join('')}
+      <td class="no-print"><button class="danger" onclick="del('${type}','${x.id}')">Delete</button></td></tr>`;
+  }).join('');
 }
 function renderAll(){
   fillItems();renderTable('jama');renderTable('kharchu');
   const jt=state.jama.reduce((s,x)=>s+x.amount,0),kt=state.kharchu.reduce((s,x)=>s+x.amount,0);
   document.getElementById('jamaSummary').innerHTML=`<div class="stat">ಒಟ್ಟು ಜಮಾ<b>${money(jt)}</b></div>`;
-  document.getElementById('khSummary').innerHTML=`<div class="stat">ಒಟ್ಟು ಖರ್ಚು<b>${money(kt)}</b></div><div class="stat">Net Balance<b>${money(jt-kt)}</b></div>`;
+  document.getElementById('khSummary').innerHTML=`<div class="stat">ಒಟ್ಟು ಖರ್ಚು<b>${money(kt)}</b></div><div class="stat">ಪ್ರಸ್ತುತ ಶಿಲ್ಕು<b>${money((state.openingBalance||0)+jt-kt)}</b></div>`;
   renderPreview();
 }
-function sharedDates(from='',to=''){
-  const all=[...state.jama,...state.kharchu].map(x=>x.date).filter(d=>(!from||d>=from)&&(!to||d<=to));
-  return [...new Set(all)].sort();
-}
-function buildPrintRows(type,from,to){
-  const dates=sharedDates(from,to), arr=state[type];
-  return dates.map(date=>{
-    const entries=arr.filter(x=>x.date===date&&( !from||x.date>=from)&&(!to||x.date<=to));
-    return {date,entries};
-  });
+function reportPage(type,from,to){
+  const rows=balanceRows(from,to);
+  const title=type==='jama'?'ಜಮಾ':'ಖರ್ಚು';
+  const other=type==='jama'?'ಖರ್ಚು':'ಜಮಾ';
+  let h=`<div class="card print-report"><div class="report-title">${title} — Cash Book</div>`;
+  if(!rows.length){h+=`<div class="empty">Entry ಮಾಡಿದ ದಿನಾಂಕಗಳಿಲ್ಲ</div></div>`;return h}
+  h+=`<table><thead>${tableHead()}</thead><tbody>`;
+  for(const r of rows){
+    const source=type==='jama'?state.jama:state.kharchu;
+    const entries=source.filter(x=>x.date===r.date);
+    if(!entries.length){
+      h+=`<tr><td></td><td>${type==='jama'?'ಯಾವುದೇ ಜಮಾ ಇರುವುದಿಲ್ಲ':'ಯಾವುದೇ ಖರ್ಚು ಇರುವುದಿಲ್ಲ'}</td>${state.items.map(()=>'<td></td>').join('')}<td></td></tr>`;
+      continue;
+    }
+    entries.forEach((e,idx)=>{
+      h+=`<tr><td>${idx===0?esc(r.date):''}</td><td>${esc(e.desc||e.item)}</td>`;
+      h+=state.items.map(it=>`<td>${it===e.item?money(e.amount):'—'}</td>`).join('');
+      h+=`<td></td></tr>`;
+    });
+  }
+  h+=`</tbody></table>`;
+  h+=`<div class="balance-box">
+    <div>ಪ್ರಾರಂಭಿಕ ಶಿಲ್ಕು<br><b>${money(rows[0].opening)}</b></div>
+    <div>${type==='jama'?'ಒಟ್ಟು ಜಮಾ':'ಒಟ್ಟು ಖರ್ಚು'}<br><b>${money(rows.reduce((s,r)=>s+(type==='jama'?r.jama:r.kharchu),0))}</b></div>
+    <div>${type==='jama'?'ಒಟ್ಟು ಜಮಾ ನಂತರದ ಶಿಲ್ಕು':'ಅಂತಿಮ ಶಿಲ್ಕು'}<br><b>${money(rows[rows.length-1].closing)}</b></div>
+  </div></div>`;
+  return h;
 }
 function renderPreview(){
-  const from=document.getElementById('fromDate').value,to=document.getElementById('toDate').value;
-  const type=document.getElementById('reportType').value;
-  const title=type==='jama'?'ಜಮಾ':'ಖರ್ಚು', other=type==='jama'?'ಖರ್ಚು':'ಜಮಾ';
-  const rows=buildPrintRows(type,from,to);
-  let html=`<h2>${title} Report</h2>`;
-  if(!rows.length){html+='<div class="empty">ಆಯ್ಕೆ ಮಾಡಿದ ಅವಧಿಯಲ್ಲಿ Entry ಇಲ್ಲ</div>';document.getElementById('reportPreview').innerHTML=html;return;}
-  let running=0;
-  html+=`<div class="table-wrap"><table><thead><tr><th>ದಿನಾಂಕ</th><th>Item</th><th>ವಿವರ</th><th>Amount (₹)</th></tr></thead><tbody>`;
-  rows.forEach(r=>{
-    if(!r.entries.length){
-      html+=`<tr><td>${r.date}</td><td colspan="2">${type==='jama'?'ಯಾವುದೇ ಜಮಾ ಇರುವುದಿಲ್ಲ':'ಯಾವುದೇ ಖರ್ಚು ಇರುವುದಿಲ್ಲ'}</td><td>—</td></tr>`;
-    }else{
-      r.entries.forEach((e,i)=>{running+=type==='jama'?e.amount:-e.amount;html+=`<tr><td>${i===0?r.date:''}</td><td>${esc(e.item)}</td><td>${esc(e.desc)}</td><td style="text-align:right">${money(e.amount)}</td></tr>`;});
-    }
-  });
-  html+=`</tbody></table></div>`;
-  document.getElementById('reportPreview').innerHTML=html;
+  const from=document.getElementById('fromDate').value,to=document.getElementById('toDate').value,type=document.getElementById('reportType').value;
+  let h='';
+  if(type==='both'||type==='jama')h+=reportPage('jama',from,to);
+  if(type==='both'||type==='kharchu')h+=reportPage('kharchu',from,to);
+  document.getElementById('reportPreview').innerHTML=h||'<div class="card empty">Entry ಮಾಡಿದ ದಿನಾಂಕಗಳಿಲ್ಲ</div>';
 }
-function printReport(){
-  renderPreview();
-  const old=document.title; document.title='Cash Book Report';
-  window.print(); document.title=old;
-}
-function exportCSV(){
-  const type=document.getElementById('reportType').value,from=document.getElementById('fromDate').value,to=document.getElementById('toDate').value;
-  const rows=buildPrintRows(type,from,to);
-  const out=[['Date','Item','Description','Amount']];
-  rows.forEach(r=>{
-    if(!r.entries.length)out.push([r.date,type==='jama'?'ಯಾವುದೇ ಜಮಾ ಇರುವುದಿಲ್ಲ':'ಯಾವುದೇ ಖರ್ಚು ಇರುವುದಿಲ್ಲ','','']);
-    else r.entries.forEach(e=>out.push([e.date,e.item,e.desc,e.amount]));
-  });
-  const csv=out.map(r=>r.map(v=>`"${String(v??'').replace(/"/g,'""')}"`).join(',')).join('\\n');
-  const blob=new Blob(['\\ufeff'+csv],{type:'text/csv;charset=utf-8'});
-  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=(type==='jama'?'jama':'kharchu')+'-cash-book.csv';a.click();
-}
+function printReport(){renderPreview();window.print()}
 document.querySelectorAll('.tab').forEach(btn=>btn.addEventListener('click',()=>{
   document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));btn.classList.add('active');
   document.querySelectorAll('.page').forEach(x=>x.style.display='none');
   document.getElementById(btn.dataset.page).style.display='block';
+  renderPreview();
 }));
 ['fromDate','toDate','reportType'].forEach(id=>document.getElementById(id).addEventListener('change',renderPreview));
+
+async function loadSchoolSettings(){
+  try{
+    const {data,error}=await db.from("school_settings")
+      .select("department_name,school_name,academic_year")
+      .order("created_at",{ascending:true}).limit(1).maybeSingle();
+    if(error)throw error;
+    document.getElementById('departmentName').textContent=data?.department_name||'ಇಲಾಖೆಯ ಹೆಸರು';
+    document.getElementById('schoolName').textContent=data?.school_name||'ಶಾಲೆಯ ಹೆಸರು';
+    document.getElementById('academicYear').textContent=data?.academic_year||'—';
+  }catch(e){
+    console.error('School Settings load failed',e);
+  }
+}
+
 renderAll();
+loadSchoolSettings();
 </script>
 </body>
 </html>
