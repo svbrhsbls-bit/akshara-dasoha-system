@@ -179,14 +179,22 @@ let state=JSON.parse(localStorage.getItem(KEY)||'null')||{
   openingBalance:null
 };
 if(!Array.isArray(state.items)||!state.items.length) state.items=DEFAULT_ITEMS.slice();
+// "ಒಟ್ಟು" is a calculated column, never an Item.
+state.items=state.items.filter(it=>it!=="ಒಟ್ಟು");
 if(!Array.isArray(state.jama))state.jama=[];
 if(!Array.isArray(state.kharchu))state.kharchu=[];
+state.jama=state.jama.filter(x=>x.item!=="ಒಟ್ಟು");
+state.kharchu=state.kharchu.filter(x=>x.item!=="ಒಟ್ಟು");
 if(state.openingBalance!==null && typeof state.openingBalance!=="object"){
   const legacy=Number(state.openingBalance)||0;
   state.openingBalance={};
   DEFAULT_ITEMS.forEach(it=>state.openingBalance[it]=legacy);
 }
+if(state.openingBalance && typeof state.openingBalance==="object"){
+  delete state.openingBalance["ಒಟ್ಟು"];
+}
 if(state.openingBalance===undefined)state.openingBalance=null;
+localStorage.setItem(KEY,JSON.stringify(state));
 
 function save(){localStorage.setItem(KEY,JSON.stringify(state))}
 function money(n){return '₹'+Number(n||0).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2})}
@@ -402,7 +410,7 @@ function renderOpeningBalance(){
              value="${values[it]!==undefined?Number(values[it]):''}" ${locked?'disabled':''}>
     </div>`).join('');
 
-  const total=state.items.reduce((s,it)=>s+Number(values[it]||0),0);
+  const total=state.items.reduce((s,it)=>s+Number(values[it]||0),0); // calculated total; "ಒಟ್ಟು" is not an item
   totalEl.textContent=money(total);
   lockEl.textContent=locked?'🔒 Locked':'ಹೊಸದಾಗಿದೆ';
   saveBtn.style.display=locked?'none':'inline-block';
