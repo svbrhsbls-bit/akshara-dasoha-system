@@ -515,44 +515,89 @@ function balanceRows(from,to){
 function fillItems(){
   renderBulkEntry('jama');
   renderBulkEntry('kharchu');
+
   document.getElementById('itemList').innerHTML=state.items.map((x,i)=>`
-    <div class="item-row">
-      <input value="${esc(x)}" onchange="renameItem(${i},this.value)">
-      ${i>=DEFAULT_ITEMS.length?`<button class="danger remove" onclick="removeItem(${i})">×</button>`:''}
+    <div class="item-row" id="master_item_${i}">
+      <input id="master_input_${i}" value="${esc(x)}" disabled
+             style="flex:1;background:#f1f5f3;font-weight:600">
+      <button class="secondary" id="master_btn_${i}" onclick="editItem(${i})">✏️ Edit</button>
+      ${i>=DEFAULT_ITEMS.length?`<button class="danger remove" onclick="removeItem(${i})" title="Item ತೆಗೆದುಹಾಕಿ">×</button>`:''}
     </div>`).join('');
 }
-async function addItem(){
-  const v=document.getElementById('newItem').value.trim();
-  if(!v)return alert('Item ಹೆಸರು ನಮೂದಿಸಿ');
-  if(v==="ಒಟ್ಟು")return alert('ಒಟ್ಟು Item ಆಗಿ ಸೇರಿಸಲಾಗುವುದಿಲ್ಲ');
-  if(state.items.some(x=>x.toLowerCase()===v.toLowerCase()))return alert('ಈ Item ಈಗಾಗಲೇ ಇದೆ');
-  const r=await db.from("cash_book_items").insert({item_name:v,sort_order:state.items.length}).select("id,item_name").single();
-  if(r.error)return alert('Item save failed: '+r.error.message);
-  state.items.push(v);
-  document.getElementById('newItem').value='';
-  fillItems();renderAll();
+
+function editItem(i){
+  const input=document.getElementById(`master_input_${i}`);
+  const btn=document.getElementById(`master_btn_${i}`);
+  if(!input||!btn)return;
+  input.disabled=false;
+  input.style.background='#fff';
+  input.focus();
+  input.select();
+  btn.textContent='💾 Save';
+  btn.onclick=()=>saveItem(i);
 }
-async function renameItem(i,v){
-  v=v.trim();
-  if(!v)return fillItems();
+
+async function saveItem(i){
+  const input=document.getElementById(`master_input_${i}`);
+  const btn=document.getElementById(`master_btn_${i}`);
+  if(!input)return;
+
+  const v=input.value.trim();
+  if(!v)return alert('Item ಹೆಸರು ಖಾಲಿ ಇರಬಾರದು');
   if(v==="ಒಟ್ಟು")return alert('ಒಟ್ಟು Item ಆಗಿ ಬಳಸಲಾಗುವುದಿಲ್ಲ');
-  if(state.items.some((x,n)=>n!==i&&x.toLowerCase()===v.toLowerCase()))return alert('ಈ Item ಈಗಾಗಲೇ ಇದೆ');
+  if(state.items.some((x,n)=>n!==i&&x.toLowerCase()===v.toLowerCase())){
+    return alert('ಈ Item ಈಗಾಗಲೇ ಇದೆ');
+  }
+
   const old=state.items[i];
-  const r=await db.from("cash_book_items").update({item_name:v}).eq("item_name",old);
-  if(r.error)return alert('Item update failed: '+r.error.message);
-  // Existing year data is also renamed so historical data remains connected to the item.
-  const [j,k,o]=await Promise.all([
-    db.from("cash_book_entries").update({item_name:v}).eq("academic_year",selectedYear).eq("entry_type","jama").eq("item_name",old),
-    db.from("cash_book_entries").update({item_name:v}).eq("academic_year",selectedYear).eq("entry_type","kharchu").eq("item_name",old),
-    db.from("cash_book_opening_balances").update({item_name:v}).eq("academic_year",selectedYear).eq("item_name",old)
-  ]);
-  if(j.error||k.error||o.error)console.warn('Item historical rename warning');
-  state.items[i]=v;
-  if(state.openingBalance){state.openingBalance[v]=state.openingBalance[old]||0;delete state.openingBalance[old]}
-  state.jama.forEach(x=>{if(x.item===old)x.item=v});
-  state.kharchu.forEach(x=>{if(x.item===old)x.item=v});
-  fillItems();renderAll();
+  if(v===old){
+    input.disabled=true;
+    input.style.background='#f1f5f3';
+    if(btn){btn.textContent='✏️ Edit';btn.onclick=()=>editItem(i);}
+    return;
+  }
+
+  try{
+    const r=await db.from("cash_book_items").update({item_name:v}).eq("item_name",old);
+    if(r.error)throw r.error;
+
+    // Existing year data is also renamed so historical data remains connected.
+    const [j,k,o]=await Promise.all([
+      db.from("cash_book_entries").update({item_name:v})
+        .eq("academic_year",selectedYear).eq("entry_type","jama").eq("item_name",old),
+      db.from("cash_book_entries").update({item_name:v})
+        .eq("academic_year",selectedYear).eq("entry_type","kharchu").eq("item_name",old),
+      db.from("cash_book_opening_balances").update({item_name:v})
+        .eq("academic_year",selectedYear).eq("item_name",old)
+    ]);
+    if(j.error||k.error||o.error){
+      console.warn('Item historical rename warning',j.error,k.error,o.error);
+    }
+
+    state.items[i]=v;
+    if(state.openingBalance){
+      state.openingBalance[v]=state.openingBalance[old]||0;
+      delete state.openingBalance[old];
+    }
+    state.jama.forEach(x=>{if(x.item===old)x.item=v});
+    state.kharchu.forEach(x=>{if(x.item===old)x.item=v});
+
+    fillItems();
+    renderAll();
+  }catch(e){
+    alert('Item update failed: '+e.message);
+  }
 }
+
+// Backward-compatible wrapper.
+async function renameItem(i,v){
+  const input=document.getElementById(`master_input_${i}`);
+  if(input){
+    input.value=v;
+    await saveItem(i);
+  }
+}
+
 async function removeItem(i){
   if(i<DEFAULT_ITEMS.length)return;
   const item=state.items[i];
@@ -565,6 +610,7 @@ async function removeItem(i){
   state.kharchu=state.kharchu.filter(x=>x.item!==item);
   fillItems();renderAll();
 }
+
 function renderBulkEntry(type){
   const box=document.getElementById(type==='jama'?'jamaEntryItems':'khEntryItems');
   if(!box)return;
