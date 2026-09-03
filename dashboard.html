@@ -7,12 +7,10 @@
   
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
   <style>
     :root {
       --primary: #126b38;
-      --primary-dark: #0d4e28;
       --sidebar-bg: #0f172a;
       --bg: #f3f6f4;
       --border: #dbe2ea;
@@ -34,7 +32,7 @@
     }
 
     .brand {
-      padding: 20px;
+      padding: 18px 20px;
       border-bottom: 1px solid rgba(255, 255, 255, 0.1);
       display: flex;
       align-items: center;
@@ -86,7 +84,7 @@
       align-items: center;
       flex-shrink: 0;
     }
-    .header-info h1 { font-size: 18px; color: var(--primary); font-weight: 700; }
+    .header-info h1 { font-size: 17px; color: var(--primary); font-weight: 700; }
     .header-info p { font-size: 12px; color: #64748b; }
     .pill {
       background: #e8f5ed;
@@ -146,7 +144,7 @@
     #appFrame { width: 100%; height: 100%; border: 0; }
 
     @media (max-width: 900px) {
-      aside { width: 70px; }
+      aside { width: 68px; }
       .brand-title, .nav-label, .nav-btn span { display: none; }
       .nav-btn { justify-content: center; padding: 12px; }
     }
@@ -171,14 +169,13 @@
       </button>
 
       <div class="nav-label">ದೈನಂದಿನ ಕಾರ್ಯಗಳು</div>
-      <!-- ಇಲ್ಲಿ ನಿಮ್ಮ ಮೂಲ HTML ಫೈಲ್ ಹೆಸರುಗಳನ್ನು ಸೇರಿಸಲಾಗಿದೆ -->
-      <button class="nav-btn" onclick="openPage('daily-food-distribution (1).html', this)">
+      <button class="nav-btn" onclick="openPage('daily-food.html', this)">
         <i>🍲</i> <span>ದಿನವಹಿ ಆಹಾರ ವಿತರಣೆ</span>
       </button>
-      <button class="nav-btn" onclick="openPage('daily-items-food-calculation-final-correct.html', this)">
+      <button class="nav-btn" onclick="openPage('daily-calc.html', this)">
         <i>⚖️</i> <span>Daily Food Calculation</span>
       </button>
-      <button class="nav-btn" onclick="openPage('cash-book (2).html', this)">
+      <button class="nav-btn" onclick="openPage('cash-book.html', this)">
         <i>💰</i> <span>Cash Book</span>
       </button>
 
@@ -189,7 +186,7 @@
       <button class="nav-btn" onclick="openPage('calculation-settings.html', this)">
         <i>⚙️</i> <span>Calculation Settings</span>
       </button>
-      <button class="nav-btn" onclick="openPage('monthly-items-student-summary.html', this)">
+      <button class="nav-btn" onclick="openPage('monthly-summary.html', this)">
         <i>📑</i> <span>Monthly Summary</span>
       </button>
       <button class="nav-btn" onclick="openPage('school-settings.html', this)">
@@ -236,7 +233,7 @@
 
         <!-- Quick Access Cards -->
         <div class="quick-grid">
-          <div class="card-btn" onclick="openPage('daily-food-distribution (1).html')">
+          <div class="card-btn" onclick="openPage('daily-food.html')">
             <div>
               <h3>🍲 ದಿನವಹಿ ಆಹಾರ ವಿತರಣೆ</h3>
               <p>ದಿನನಿತ್ಯ ಹಾಜರಾತಿ, ಮೊಟ್ಟೆ, ಬಾಳೆಹಣ್ಣು ಮತ್ತು ಬಿಸಿಯೂಟ ನಮೂದು.</p>
@@ -244,7 +241,7 @@
             <div class="btn-text">ತೆರೆಯಿರಿ ➔</div>
           </div>
 
-          <div class="card-btn" onclick="openPage('daily-items-food-calculation-final-correct.html')">
+          <div class="card-btn" onclick="openPage('daily-calc.html')">
             <div>
               <h3>⚖️ Daily Items & Food Calculation</h3>
               <p>ಪ್ರತಿದಿನದ ಆಹಾರ ದಾಸ್ತಾನು, ಖರ್ಚು ಮತ್ತು ಉಳಿಕೆ ಲೆಕ್ಕಾಚಾರ.</p>
@@ -252,7 +249,7 @@
             <div class="btn-text">ತೆರೆಯಿರಿ ➔</div>
           </div>
 
-          <div class="card-btn" onclick="openPage('cash-book (2).html')">
+          <div class="card-btn" onclick="openPage('cash-book.html')">
             <div>
               <h3>💰 Cash Book</h3>
               <p>ಜಮಾ-ಖರ್ಚು ನಮೂದು ಮತ್ತು ಬ್ಯಾಂಕ್ ಲೆಕ್ಕಪತ್ರದ ವಿವರಗಳು.</p>
@@ -276,7 +273,7 @@
             <div class="btn-text">ತೆರೆಯಿರಿ ➔</div>
           </div>
 
-          <div class="card-btn" onclick="openPage('monthly-items-student-summary.html')">
+          <div class="card-btn" onclick="openPage('monthly-summary.html')">
             <div>
               <h3>📑 Monthly Summary</h3>
               <p>ಮಾಸಿಕ ಒಟ್ಟು ಆಹಾರ ಬಳಕೆ ಮತ್ತು ವಿದ್ಯಾರ್ಥಿಗಳ ಸಾರಾಂಶ ವರದಿ.</p>
@@ -294,7 +291,7 @@
         </div>
       </div>
 
-      <!-- 2. Iframe View (Loads other files directly inside) -->
+      <!-- 2. Iframe View -->
       <div id="frameContainer">
         <iframe id="appFrame" src="about:blank"></iframe>
       </div>
@@ -306,14 +303,14 @@
     const SUPABASE_KEY = "sb_publishable__FYyH6NQaqgARaq2dvuovQ_rKmus0js";
     const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-    // Page Switching Logic
     function openPage(fileName, btnElement) {
       document.getElementById('dashboardView').style.display = 'none';
       const frameContainer = document.getElementById('frameContainer');
       const appFrame = document.getElementById('appFrame');
       
       frameContainer.style.display = 'block';
-      appFrame.src = fileName;
+      // GitHub Pages ನ direct relative link
+      appFrame.src = './' + fileName;
 
       if (btnElement) {
         document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
@@ -332,31 +329,24 @@
       }
     }
 
-    // Live Stats Loading from Supabase
     async function loadStats() {
       try {
-        // School Info
         const { data: school } = await db.from("school_settings").select("*").limit(1).maybeSingle();
         if (school) {
           document.getElementById("topSchoolName").textContent = `${school.department_name || "ಅಕ್ಷರ ದಾಸೋಹ"} - ${school.school_name || ""}`;
-          document.getElementById("topSchoolAddress").textContent = school.school_address || "";
+          document.getElementById("topSchoolAddress").textContent = `${school.village || ""} ${school.taluk ? "| " + school.taluk : ""}`;
         }
 
-        // Active Academic Year
         const { data: year } = await db.from("academic_years").select("id, year_name").eq("is_active", true).limit(1).maybeSingle();
         if (year) {
-          document.getElementById("topAcademicYear").textContent = `📅 Academic Year: ${year.year_name}`;
-
+          document.getElementById("topAcademicYear").textContent = `Academic Year: ${year.year_name}`;
           const curMonth = new Date().getMonth() + 1;
 
-          // Students Count
           const { data: students } = await db.from("student_numbers").select("total_students").eq("academic_year_id", year.id).eq("month_number", curMonth).eq("division_name", "ALL");
           if (students) {
-            const tot = students.reduce((s, r) => s + Number(r.total_students || 0), 0);
-            document.getElementById("kpiStudents").textContent = tot;
+            document.getElementById("kpiStudents").textContent = students.reduce((s, r) => s + Number(r.total_students || 0), 0);
           }
 
-          // Meals Count
           const { data: meals } = await db.from("daily_food_distribution").select("students_count, total_quantity, item_name").eq("academic_year_id", year.id);
           if (meals) {
             let mealCount = 0;
@@ -368,7 +358,6 @@
             document.getElementById("kpiMeals").textContent = mealCount;
           }
 
-          // Items Count
           const [it1, it2, it3] = await Promise.all([
             db.from("calculation_settings").select("id").eq("academic_year_id", year.id).eq("is_enabled", true),
             db.from("kitchen_ingredients").select("id").eq("academic_year_id", year.id).eq("is_enabled", true),
@@ -376,7 +365,6 @@
           ]);
           document.getElementById("kpiItems").textContent = (it1.data?.length || 0) + (it2.data?.length || 0) + (it3.data?.length || 0);
 
-          // Cash Balance
           const [jama, kharchu, open] = await Promise.all([
             db.from("cash_book_entries").select("amount").eq("academic_year", year.year_name).eq("entry_type", "jama"),
             db.from("cash_book_entries").select("amount").eq("academic_year", year.year_name).eq("entry_type", "kharchu"),
@@ -385,11 +373,10 @@
           const oTotal = (open.data || []).reduce((s, r) => s + Number(r.amount || 0), 0);
           const jTotal = (jama.data || []).reduce((s, r) => s + Number(r.amount || 0), 0);
           const kTotal = (kharchu.data || []).reduce((s, r) => s + Number(r.amount || 0), 0);
-          const balance = oTotal + jTotal - kTotal;
-          document.getElementById("kpiCash").textContent = "₹" + balance.toLocaleString('en-IN', { minimumFractionDigits: 2 });
+          document.getElementById("kpiCash").textContent = "₹" + (oTotal + jTotal - kTotal).toLocaleString('en-IN', { minimumFractionDigits: 2 });
         }
       } catch (err) {
-        console.warn("Dashboard stats load error:", err);
+        console.warn("Dashboard stats error:", err);
       }
     }
 
