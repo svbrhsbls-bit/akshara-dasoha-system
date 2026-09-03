@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ಅಕ್ಷರ ದಾಸೋಹ - Dashboard</title>
   
-  <!-- Fonts & Libraries -->
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -14,37 +13,28 @@
     :root {
       --primary: #126b38;
       --primary-dark: #0d4e28;
-      --primary-light: #e8f5ed;
       --sidebar-bg: #0f172a;
       --bg: #f3f6f4;
-      --card-bg: #ffffff;
-      --text: #17202a;
-      --text-muted: #64748b;
       --border: #dbe2ea;
-      --success: #10b981;
-      --warning: #f59e0b;
-      --danger: #b42318;
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', Arial, "Noto Sans Kannada", sans-serif; }
-    body { background: var(--bg); color: var(--text); display: flex; min-height: 100vh; }
+    body { background: var(--bg); color: #17202a; display: flex; height: 100vh; overflow: hidden; }
 
-    /* Sidebar Navigation */
+    /* Sidebar */
     aside {
-      width: 280px;
+      width: 270px;
       background: var(--sidebar-bg);
       color: #fff;
       display: flex;
       flex-direction: column;
       flex-shrink: 0;
-      position: sticky;
-      top: 0;
       height: 100vh;
-      overflow-y: auto;
+      border-right: 1px solid #1e293b;
     }
 
     .brand {
-      padding: 24px 20px;
+      padding: 20px;
       border-bottom: 1px solid rgba(255, 255, 255, 0.1);
       display: flex;
       align-items: center;
@@ -52,170 +42,113 @@
     }
     .brand-icon {
       background: var(--primary);
-      width: 42px;
-      height: 42px;
-      border-radius: 10px;
+      width: 38px;
+      height: 38px;
+      border-radius: 8px;
       display: grid;
       place-items: center;
-      font-size: 22px;
+      font-size: 20px;
     }
-    .brand-title h2 { font-size: 17px; font-weight: 700; color: #fff; }
-    .brand-title p { font-size: 12px; color: #94a3b8; }
+    .brand-title h2 { font-size: 16px; font-weight: 700; color: #fff; }
+    .brand-title p { font-size: 11px; color: #94a3b8; }
 
-    nav { padding: 16px 12px; display: flex; flex-direction: column; gap: 6px; }
-    .nav-label { font-size: 11px; text-transform: uppercase; color: #64748b; font-weight: 700; padding: 10px 12px 4px; }
-    nav a {
+    nav { padding: 12px 8px; display: flex; flex-direction: column; gap: 4px; overflow-y: auto; flex: 1; }
+    .nav-label { font-size: 11px; text-transform: uppercase; color: #64748b; font-weight: 700; padding: 10px 10px 4px; }
+    
+    .nav-btn {
+      background: transparent;
+      border: 0;
       color: #cbd5e1;
-      text-decoration: none;
-      padding: 11px 14px;
+      text-align: left;
+      padding: 10px 12px;
       border-radius: 8px;
-      font-size: 14px;
+      font-size: 13.5px;
       font-weight: 500;
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 10px;
+      cursor: pointer;
+      width: 100%;
       transition: all 0.2s;
     }
-    nav a:hover, nav a.active {
-      background: rgba(255, 255, 255, 0.1);
-      color: #fff;
-    }
-    nav a.active {
-      background: var(--primary);
-      color: #fff;
-      font-weight: 600;
-    }
+    .nav-btn:hover { background: rgba(255, 255, 255, 0.08); color: #fff; }
+    .nav-btn.active { background: var(--primary); color: #fff; font-weight: 600; }
 
-    /* Main Container */
-    main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+    /* Main Area */
+    main { flex: 1; display: flex; flex-direction: column; height: 100vh; min-width: 0; }
+    
     header {
       background: #fff;
       border-bottom: 1px solid var(--border);
-      padding: 16px 32px;
+      padding: 12px 24px;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      flex-wrap: wrap;
-      gap: 16px;
-    }
-    .header-info h1 { font-size: 22px; color: var(--primary); font-weight: 700; }
-    .header-info p { font-size: 13px; color: var(--text-muted); margin-top: 2px; }
-    .meta-badge {
-      display: flex;
-      gap: 10px;
-      align-items: center;
-    }
-    .pill {
-      background: var(--primary-light);
-      color: var(--primary);
-      border: 1px solid #c3e2cd;
-      padding: 6px 14px;
-      border-radius: 20px;
-      font-size: 13px;
-      font-weight: 600;
-    }
-
-    .container { padding: 28px 32px; display: flex; flex-direction: column; gap: 24px; }
-
-    /* Summary Stat Cards */
-    .stats-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-      gap: 18px;
-    }
-    .stat-card {
-      background: var(--card-bg);
-      padding: 20px;
-      border-radius: 12px;
-      border: 1px solid var(--border);
-      box-shadow: 0 2px 6px rgba(0,0,0,0.03);
-      display: flex;
-      flex-direction: column;
-      justify-content: space-between;
-    }
-    .stat-card .label { font-size: 13px; font-weight: 600; color: var(--text-muted); }
-    .stat-card .num { font-size: 26px; font-weight: 700; color: var(--text); margin: 8px 0; }
-    .stat-card .desc { font-size: 12px; color: var(--primary); font-weight: 500; }
-
-    /* Quick Links / Grid */
-    .quick-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-      gap: 18px;
-    }
-    .module-card {
-      background: var(--card-bg);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 20px;
-      display: flex;
-      flex-direction: column;
-      justify-content: space-between;
-      transition: transform 0.2s, box-shadow 0.2s;
-      text-decoration: none;
-      color: inherit;
-    }
-    .module-card:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 6px 16px rgba(0,0,0,0.06);
-      border-color: var(--primary);
-    }
-    .module-card .head { display: flex; align-items: center; gap: 14px; margin-bottom: 10px; }
-    .module-card .icon {
-      width: 44px;
-      height: 44px;
-      border-radius: 10px;
-      background: var(--primary-light);
-      color: var(--primary);
-      display: grid;
-      place-items: center;
-      font-size: 22px;
       flex-shrink: 0;
     }
-    .module-card h3 { font-size: 16px; font-weight: 700; }
-    .module-card p { font-size: 13px; color: var(--text-muted); line-height: 1.5; }
-    .module-card .btn-link {
-      margin-top: 14px;
-      font-size: 13px;
-      font-weight: 600;
+    .header-info h1 { font-size: 18px; color: var(--primary); font-weight: 700; }
+    .header-info p { font-size: 12px; color: #64748b; }
+    .pill {
+      background: #e8f5ed;
       color: var(--primary);
-      display: flex;
-      align-items: center;
-      gap: 6px;
+      border: 1px solid #c3e2cd;
+      padding: 5px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
     }
 
-    /* Chart & Recent Box */
-    .split-grid {
-      display: grid;
-      grid-template-columns: 2fr 1fr;
-      gap: 20px;
-    }
-    .panel {
-      background: var(--card-bg);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 22px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.03);
-    }
-    .panel h3 { font-size: 16px; font-weight: 700; margin-bottom: 16px; display: flex; justify-content: space-between; }
+    .content-area { flex: 1; position: relative; overflow-y: auto; }
     
-    /* Table inside panel */
-    table { width: 100%; border-collapse: collapse; font-size: 13px; }
-    th, td { padding: 10px; text-align: left; border-bottom: 1px solid var(--border); }
-    th { color: var(--text-muted); font-weight: 600; }
-    .badge {
-      display: inline-block;
-      padding: 3px 8px;
-      border-radius: 12px;
-      font-size: 11px;
-      font-weight: 700;
-    }
-    .badge-success { background: #dcfce7; color: #166534; }
+    /* Overview Tab Container */
+    #dashboardView { padding: 24px; display: flex; flex-direction: column; gap: 20px; }
 
-    @media (max-width: 950px) {
-      aside { display: none; }
-      .split-grid { grid-template-columns: 1fr; }
-      .container { padding: 20px; }
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; }
+    .stat-card {
+      background: #fff;
+      padding: 18px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    }
+    .stat-card .label { font-size: 12px; font-weight: 600; color: #64748b; }
+    .stat-card .num { font-size: 24px; font-weight: 700; color: #17202a; margin: 6px 0; }
+    .stat-card .desc { font-size: 11px; color: var(--primary); }
+
+    .quick-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
+    .card-btn {
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px;
+      text-align: left;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      transition: transform 0.15s, border-color 0.15s;
+    }
+    .card-btn:hover { transform: translateY(-2px); border-color: var(--primary); }
+    .card-btn h3 { font-size: 15px; font-weight: 700; margin-bottom: 4px; }
+    .card-btn p { font-size: 12px; color: #64748b; }
+    .card-btn .btn-text { margin-top: 10px; font-size: 12px; font-weight: 600; color: var(--primary); }
+
+    /* Iframe Container */
+    #frameContainer {
+      display: none;
+      width: 100%;
+      height: 100%;
+      position: absolute;
+      top: 0;
+      left: 0;
+      background: #fff;
+    }
+    #appFrame { width: 100%; height: 100%; border: 0; }
+
+    @media (max-width: 900px) {
+      aside { width: 70px; }
+      .brand-title, .nav-label, .nav-btn span { display: none; }
+      .nav-btn { justify-content: center; padding: 12px; }
     }
   </style>
 </head>
@@ -227,345 +160,240 @@
       <div class="brand-icon">🍛</div>
       <div class="brand-title">
         <h2>ಅಕ್ಷರ ದಾಸೋಹ</h2>
-        <p>MDM Management Core</p>
+        <p>MDM Management</p>
       </div>
     </div>
 
     <nav>
       <div class="nav-label">ಮುಖ್ಯ ನಿಯಂತ್ರಣ</div>
-      <a href="#" class="active">📊 ನಿಯಂತ್ರಣ ಫಲಕ (Dashboard)</a>
+      <button class="nav-btn active" onclick="showDashboard(this)">
+        <i>📊</i> <span>ಡ್ಯಾಶ್‌ಬೋರ್ಡ್ (Home)</span>
+      </button>
 
-      <div class="nav-label">ದೈನಂದಿನ ನಮೂದುಗಳು</div>
-      <a href="daily-food.html">🍛 ದಿನವಹಿ ಆಹಾರ ವಿತರಣೆ</a>
-      <a href="daily-calculation.html">⚖️ Daily Items & Food Calc</a>
-      <a href="cashbook.html">💰 Cash Book (ನಗದು ಪುಸ್ತಕ)</a>
+      <div class="nav-label">ದೈನಂದಿನ ಕಾರ್ಯಗಳು</div>
+      <!-- ಇಲ್ಲಿ ನಿಮ್ಮ ಮೂಲ HTML ಫೈಲ್ ಹೆಸರುಗಳನ್ನು ಸೇರಿಸಲಾಗಿದೆ -->
+      <button class="nav-btn" onclick="openPage('daily-food-distribution (1).html', this)">
+        <i>🍲</i> <span>ದಿನವಹಿ ಆಹಾರ ವಿತರಣೆ</span>
+      </button>
+      <button class="nav-btn" onclick="openPage('daily-items-food-calculation-final-correct.html', this)">
+        <i>⚖️</i> <span>Daily Food Calculation</span>
+      </button>
+      <button class="nav-btn" onclick="openPage('cash-book (2).html', this)">
+        <i>💰</i> <span>Cash Book</span>
+      </button>
 
-      <div class="nav-label">ಮಾಸ್ಟರ್ & ವರದಿಗಳು</div>
-      <a href="students-number.html">👥 Students Number</a>
-      <a href="calculation-settings.html">⚙️ Calculation Settings</a>
-      <a href="monthly-summary.html">📅 Monthly Summary</a>
-      <a href="school-settings.html">🏫 ಶಾಲಾ ಸೆಟ್ಟಿಂಗ್ಸ್</a>
+      <div class="nav-label">ಸೆಟ್ಟಿಂಗ್ಸ್ & ಸಾರಾಂಶ</div>
+      <button class="nav-btn" onclick="openPage('students-number.html', this)">
+        <i>👨‍🎓</i> <span>Students Number</span>
+      </button>
+      <button class="nav-btn" onclick="openPage('calculation-settings.html', this)">
+        <i>⚙️</i> <span>Calculation Settings</span>
+      </button>
+      <button class="nav-btn" onclick="openPage('monthly-items-student-summary.html', this)">
+        <i>📑</i> <span>Monthly Summary</span>
+      </button>
+      <button class="nav-btn" onclick="openPage('school-settings.html', this)">
+        <i>🏫</i> <span>ಶಾಲಾ ಸೆಟ್ಟಿಂಗ್ಸ್</span>
+      </button>
     </nav>
   </aside>
 
-  <!-- Main Area -->
+  <!-- Main View -->
   <main>
     <header>
       <div class="header-info">
-        <h1 id="deptSchoolDisplay">ಅಕ್ಷರ ದಾಸೋಹ ಕಾರ್ಯಕ್ರಮ</h1>
-        <p id="schoolAddressDisplay">ಶಾಲೆಯ ಹೆಸರು ಮತ್ತು ವಿಳಾಸ ಲೋಡ್ ಆಗುತ್ತಿದೆ...</p>
+        <h1 id="topSchoolName">ಅಕ್ಷರ ದಾಸೋಹ ಕಾರ್ಯಕ್ರಮ</h1>
+        <p id="topSchoolAddress">ಶಾಲೆಯ ಮಾಹಿತಿ ಲೋಡ್ ಆಗುತ್ತಿದೆ...</p>
       </div>
-      <div class="meta-badge">
-        <div class="pill" id="academicYearDisplay">📅 Academic Year: Loading...</div>
-      </div>
+      <div class="pill" id="topAcademicYear">Academic Year: Loading...</div>
     </header>
 
-    <div class="container">
-
-      <!-- Live KPI Cards -->
-      <div class="stats-grid">
-        <div class="stat-card">
-          <div class="label">ಒಟ್ಟು ದಾಖಲಾತಿ (Students)</div>
-          <div class="num" id="kpiStudents">0</div>
-          <div class="desc">ಈ ತಿಂಗಳ ದಾಖಲಾತಿ ಸಂಖ್ಯೆ</div>
-        </div>
-        <div class="stat-card">
-          <div class="label">ಈ ತಿಂಗಳು ವಿತರಿಸಿದ ಊಟ</div>
-          <div class="num" id="kpiMeals">0</div>
-          <div class="desc">Daily Food Distribution</div>
-        </div>
-        <div class="stat-card">
-          <div class="label">ಸಕ್ರಿಯ Items & ಪದಾರ್ಥಗಳು</div>
-          <div class="num" id="kpiItems">0</div>
-          <div class="desc">Calculation Settings ನಲ್ಲಿವೆ</div>
-        </div>
-        <div class="stat-card">
-          <div class="label">Cash Book ಶಿಲ್ಕು (Closing)</div>
-          <div class="num" id="kpiCash">₹0.00</div>
-          <div class="desc">ಜಮಾ & ಖರ್ಚಿನ ಅಂತಿಮ ಉಳಿಕೆ</div>
-        </div>
-      </div>
-
-      <!-- Quick Navigation to All 7 Files -->
-      <div class="quick-grid">
-
-        <a href="daily-food.html" class="module-card">
-          <div>
-            <div class="head">
-              <div class="icon">🍲</div>
-              <div>
-                <h3>ದಿನವಹಿ ಆಹಾರ ವಿತರಣೆ</h3>
-                <small style="color:var(--text-muted)">daily-food.html</small>
-              </div>
-            </div>
-            <p>ಪ್ರತಿನಿತ್ಯ ಬಿಸಿ ಊಟ, ಹಾಜರಾತಿ, ಮೊಟ್ಟೆ ಹಾಗೂ ಬಾಳೆಹಣ್ಣು ವಿತರಿಸಿದ ಮಕ್ಕಳ ಸಂಖ್ಯೆ ಮತ್ತು ರಜೆಗಳ ನಮೂದು.</p>
+    <div class="content-area">
+      <!-- 1. Dashboard View -->
+      <div id="dashboardView">
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="label">ದಾಖಲಾತಿ (Students)</div>
+            <div class="num" id="kpiStudents">0</div>
+            <div class="desc">ಪ್ರಸ್ತುತ ತಿಂಗಳ ದಾಖಲಾತಿ</div>
           </div>
-          <div class="btn-link">ತೆರೆಯಿರಿ ➔</div>
-        </a>
-
-        <a href="daily-calculation.html" class="module-card">
-          <div>
-            <div class="head">
-              <div class="icon">📊</div>
-              <div>
-                <h3>Daily Items & Food Calc</h3>
-                <small style="color:var(--text-muted)">daily-calc.html</small>
-              </div>
-            </div>
-            <p>ಆಹಾರ, ಅಡುಗೆ ಪದಾರ್ಥ ಹಾಗೂ ಪೌಷ್ಠಿಕ ಆಹಾರದ ದಿನವಹಿ ದಾಸ್ತಾನು, ಖರ್ಚು, ಉಳಿಕೆ ಹಾಗೂ Opening Balance ನಿರ್ವಹಣೆ.</p>
+          <div class="stat-card">
+            <div class="label">ವಿತರಿಸಿದ ಬಿಸಿಯೂಟ</div>
+            <div class="num" id="kpiMeals">0</div>
+            <div class="desc">Daily Food Distribution</div>
           </div>
-          <div class="btn-link">ತೆರೆಯಿರಿ ➔</div>
-        </a>
-
-        <a href="cashbook.html" class="module-card">
-          <div>
-            <div class="head">
-              <div class="icon">💵</div>
-              <div>
-                <h3>Cash Book</h3>
-                <small style="color:var(--text-muted)">cashbook.html</small>
-              </div>
-            </div>
-            <p>ಅಕ್ಷರ ದಾಸೋಹದ ಎಲ್ಲಾ ಮದವಾರು ಜಮಾ, ಖರ್ಚು ನಮೂದು ಮತ್ತು ಬ್ಯಾಂಕ್/ನಗದು ಲೆಕ್ಕಪತ್ರ ಹಾಗೂ ವರದಿಗಳು.</p>
+          <div class="stat-card">
+            <div class="label">ಪದಾರ್ಥಗಳ ಸಂಖ್ಯೆ</div>
+            <div class="num" id="kpiItems">0</div>
+            <div class="desc">Calculation Settings</div>
           </div>
-          <div class="btn-link">ತೆರೆಯಿರಿ ➔</div>
-        </a>
-
-        <a href="students-number.html" class="module-card">
-          <div>
-            <div class="head">
-              <div class="icon">👨‍🎓</div>
-              <div>
-                <h3>Students Number</h3>
-                <small style="color:var(--text-muted)">students-number.html</small>
-              </div>
-            </div>
-            <p>ಪ್ರತಿ ತಿಂಗಳ ತರಗತಿವಾರು ಹುಡುಗರು ಮತ್ತು ಹುಡುಗಿಯರ ಒಟ್ಟು ದಾಖಲಾತಿ ಸಂಖ್ಯೆ ದಾಖಲಿಸುವ ಪುಟ.</p>
+          <div class="stat-card">
+            <div class="label">Cash Book ಉಳಿಕೆ</div>
+            <div class="num" id="kpiCash">₹0.00</div>
+            <div class="desc">ಅಂತಿಮ ನಗದು ಶಿಲ್ಕು</div>
           </div>
-          <div class="btn-link">ತೆರೆಯಿರಿ ➔</div>
-        </a>
-
-        <a href="calculation-settings.html" class="module-card">
-          <div>
-            <div class="head">
-              <div class="icon">⚙️</div>
-              <div>
-                <h3>Calculation Settings</h3>
-                <small style="color:var(--text-muted)">calculation-settings.html</small>
-              </div>
-            </div>
-            <p>ಸರ್ಕಾರದ ನಿಯಮಾನುಸಾರ ಪ್ರತಿ ವಿದ್ಯಾರ್ಥಿಗೆ ನಿಗದಿಪಡಿಸಿದ ಅಕ್ಕಿ, ಗೋಧಿ, ಬೇಳೆ ಪ್ರಮಾಣ ಹಾಗೂ ಮೊತ್ತದ ಮಾಸ್ಟರ್ ಸೆಟ್ಟಿಂಗ್ಸ್.</p>
-          </div>
-          <div class="btn-link">ತೆರೆಯಿರಿ ➔</div>
-        </a>
-
-        <a href="monthly-summary.html" class="module-card">
-          <div>
-            <div class="head">
-              <div class="icon">📑</div>
-              <div>
-                <h3>Monthly Summary</h3>
-                <small style="color:var(--text-muted)">monthly-summary.html</small>
-              </div>
-            </div>
-            <p>ತಿಂಗಳ ಒಟ್ಟು ಬಳಸಿದ ಆಹಾರ ಪದಾರ್ಥಗಳು, ವಿದ್ಯಾರ್ಥಿಗಳ ಸಂಖ್ಯೆ ಮತ್ತು ಮಾಸಿಕ ದಾಸ್ತಾನು ವರದಿ.</p>
-          </div>
-          <div class="btn-link">ತೆರೆಯಿರಿ ➔</div>
-        </a>
-
-        <a href="school-settings.html" class="module-card">
-          <div>
-            <div class="head">
-              <div class="icon">🏫</div>
-              <div>
-                <h3>ಶಾಲಾ ಸೆಟ್ಟಿಂಗ್ಸ್</h3>
-                <small style="color:var(--text-muted)">school-settings.html</small>
-              </div>
-            </div>
-            <p>ಶಾಲೆಯ ಹೆಸರು, UDISE ಕೋಡ್, ವಿಳಾಸ ಮತ್ತು ಸಕ್ರಿಯ ಶೈಕ್ಷಣಿಕ ವರ್ಷ (Active Academic Year) ನಿರ್ವಹಣೆ.</p>
-          </div>
-          <div class="btn-link">ತೆರೆಯಿರಿ ➔</div>
-        </a>
-
-      </div>
-
-      <!-- Charts & System Info Split -->
-      <div class="split-grid">
-        <div class="panel">
-          <h3>📈 ಇತ್ತೀಚಿನ ಹಾಜರಾತಿ & ಬಿಸಿಯೂಟ ಟ್ರೆಂಡ್ (Recent Distribution Trend)</h3>
-          <canvas id="trendChart" height="120"></canvas>
         </div>
 
-        <div class="panel">
-          <h3>⚡ ಸಿಸ್ಟಮ್ ಸ್ಥಿತಿ & ಇತ್ತೀಚಿನ ಚಟುವಟಿಕೆಗಳು</h3>
-          <table>
-            <thead>
-              <tr>
-                <th>ಘಟಕ</th>
-                <th>ಸ್ಥಿತಿ</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td>Supabase Database</td>
-                <td><span class="badge badge-success">ಸಂಪರ್ಕಿತಗೊಂಡಿದೆ (Live)</span></td>
-              </tr>
-              <tr>
-                <td>Active Academic Year</td>
-                <td><span class="badge badge-success" id="tableYearStatus">Active</span></td>
-              </tr>
-              <tr>
-                <td>Daily Food Records</td>
-                <td><span class="badge badge-success" id="tableDailyRecords">Sync ಆಗಿದೆ</span></td>
-              </tr>
-              <tr>
-                <td>Cash Book Integration</td>
-                <td><span class="badge badge-success">ಸಕ್ರಿಯವಾಗಿದೆ</span></td>
-              </tr>
-            </tbody>
-          </table>
+        <!-- Quick Access Cards -->
+        <div class="quick-grid">
+          <div class="card-btn" onclick="openPage('daily-food-distribution (1).html')">
+            <div>
+              <h3>🍲 ದಿನವಹಿ ಆಹಾರ ವಿತರಣೆ</h3>
+              <p>ದಿನನಿತ್ಯ ಹಾಜರಾತಿ, ಮೊಟ್ಟೆ, ಬಾಳೆಹಣ್ಣು ಮತ್ತು ಬಿಸಿಯೂಟ ನಮೂದು.</p>
+            </div>
+            <div class="btn-text">ತೆರೆಯಿರಿ ➔</div>
+          </div>
+
+          <div class="card-btn" onclick="openPage('daily-items-food-calculation-final-correct.html')">
+            <div>
+              <h3>⚖️ Daily Items & Food Calculation</h3>
+              <p>ಪ್ರತಿದಿನದ ಆಹಾರ ದಾಸ್ತಾನು, ಖರ್ಚು ಮತ್ತು ಉಳಿಕೆ ಲೆಕ್ಕಾಚಾರ.</p>
+            </div>
+            <div class="btn-text">ತೆರೆಯಿರಿ ➔</div>
+          </div>
+
+          <div class="card-btn" onclick="openPage('cash-book (2).html')">
+            <div>
+              <h3>💰 Cash Book</h3>
+              <p>ಜಮಾ-ಖರ್ಚು ನಮೂದು ಮತ್ತು ಬ್ಯಾಂಕ್ ಲೆಕ್ಕಪತ್ರದ ವಿವರಗಳು.</p>
+            </div>
+            <div class="btn-text">ತೆರೆಯಿರಿ ➔</div>
+          </div>
+
+          <div class="card-btn" onclick="openPage('students-number.html')">
+            <div>
+              <h3>👨‍🎓 Students Number</h3>
+              <p>ತಿಂಗಳ ತರಗತಿವಾರು ಹುಡುಗರು ಮತ್ತು ಹುಡುಗಿಯರ ದಾಖಲಾತಿ ಸಂಖ್ಯೆ.</p>
+            </div>
+            <div class="btn-text">ತೆರೆಯಿರಿ ➔</div>
+          </div>
+
+          <div class="card-btn" onclick="openPage('calculation-settings.html')">
+            <div>
+              <h3>⚙️ Calculation Settings</h3>
+              <p>ವಿದ್ಯಾರ್ಥಿಗಳಿಗೆ ನಿಗದಿಪಡಿಸಿದ ದಿನದ ಅಳತೆ ಪ್ರಮಾಣ ಮತ್ತು ರೇಟ್.</p>
+            </div>
+            <div class="btn-text">ತೆರೆಯಿರಿ ➔</div>
+          </div>
+
+          <div class="card-btn" onclick="openPage('monthly-items-student-summary.html')">
+            <div>
+              <h3>📑 Monthly Summary</h3>
+              <p>ಮಾಸಿಕ ಒಟ್ಟು ಆಹಾರ ಬಳಕೆ ಮತ್ತು ವಿದ್ಯಾರ್ಥಿಗಳ ಸಾರಾಂಶ ವರದಿ.</p>
+            </div>
+            <div class="btn-text">ತೆರೆಯಿರಿ ➔</div>
+          </div>
+
+          <div class="card-btn" onclick="openPage('school-settings.html')">
+            <div>
+              <h3>🏫 ಶಾಲಾ ಸೆಟ್ಟಿಂಗ್ಸ್</h3>
+              <p>ಶಾಲೆಯ ವಿವರ ಮತ್ತು Active Academic Year ನಿರ್ವಹಣೆ.</p>
+            </div>
+            <div class="btn-text">ತೆರೆಯಿರಿ ➔</div>
+          </div>
         </div>
       </div>
 
+      <!-- 2. Iframe View (Loads other files directly inside) -->
+      <div id="frameContainer">
+        <iframe id="appFrame" src="about:blank"></iframe>
+      </div>
     </div>
   </main>
 
   <script>
-    // Supabase Credentials
     const SUPABASE_URL = "https://ezmudfrpcvjsgnjibvoq.supabase.co";
     const SUPABASE_KEY = "sb_publishable__FYyH6NQaqgARaq2dvuovQ_rKmus0js";
     const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-    let activeYear = null;
-    let school = null;
+    // Page Switching Logic
+    function openPage(fileName, btnElement) {
+      document.getElementById('dashboardView').style.display = 'none';
+      const frameContainer = document.getElementById('frameContainer');
+      const appFrame = document.getElementById('appFrame');
+      
+      frameContainer.style.display = 'block';
+      appFrame.src = fileName;
 
-    function formatRupee(amount) {
-      return "₹" + Number(amount || 0).toLocaleString("en-IN", {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2
-      });
-    }
-
-    async function initDashboard() {
-      try {
-        // 1. ಶಾಲೆಯ ವಿವರಗಳು
-        const { data: schoolData } = await db.from("school_settings").select("*").order("created_at", { ascending: true }).limit(1).maybeSingle();
-        if (schoolData) {
-          school = schoolData;
-          document.getElementById("deptSchoolDisplay").textContent = `${schoolData.department_name || "ಅಕ್ಷರ ದಾಸೋಹ ಕಾರ್ಯಕ್ರಮ"} — ${schoolData.school_name || ""}`;
-          document.getElementById("schoolAddressDisplay").textContent = `${schoolData.school_address || ""} ${schoolData.taluk ? "| ತಾ: " + schoolData.taluk : ""} ${schoolData.district ? "| ಜಿ: " + schoolData.district : ""}`;
-        }
-
-        // 2. ಸಕ್ರಿಯ ಶೈಕ್ಷಣಿಕ ವರ್ಷ (Active Academic Year)
-        const { data: yearData } = await db.from("academic_years").select("id, year_name, is_active").eq("is_active", true).order("created_at", { ascending: false }).limit(1).maybeSingle();
-        if (yearData) {
-          activeYear = yearData;
-          document.getElementById("academicYearDisplay").textContent = `📅 Academic Year: ${yearData.year_name}`;
-          document.getElementById("tableYearStatus").textContent = yearData.year_name;
-        }
-
-        if (activeYear) {
-          const curMonth = new Date().getMonth() + 1;
-
-          // 3. Students Enrolled (ವಿದ್ಯಾರ್ಥಿಗಳ ಸಂಖ್ಯೆ)
-          const { data: studentRows } = await db.from("student_numbers").select("total_students").eq("academic_year_id", activeYear.id).eq("month_number", curMonth).eq("division_name", "ALL");
-          if (studentRows && studentRows.length) {
-            const totalStudents = studentRows.reduce((sum, r) => sum + Number(r.total_students || 0), 0);
-            document.getElementById("kpiStudents").textContent = totalStudents;
-          }
-
-          // 4. ಈ ತಿಂಗಳ ಒಟ್ಟು ಊಟ (Total Meals Distributed)
-          const curYear = new Date().getFullYear();
-          const startIso = `${curYear}-${String(curMonth).padStart(2, '0')}-01`;
-          const endIso = `${curYear}-${String(curMonth).padStart(2, '0')}-31`;
-
-          const { data: foodRows } = await db.from("daily_food_distribution")
-            .select("distribution_date, students_count, total_quantity, item_name")
-            .eq("academic_year_id", activeYear.id)
-            .gte("distribution_date", startIso)
-            .lte("distribution_date", endIso);
-
-          if (foodRows && foodRows.length) {
-            let totalMeals = 0;
-            const dailyCounts = {};
-
-            foodRows.forEach(r => {
-              const name = String(r.item_name || "");
-              const val = Number(r.students_count || r.total_quantity || 0);
-
-              if (name.startsWith("ಬಿಸಿಊಟ||") || name.startsWith("ಮೊಟ್ಟೆ||") || name.startsWith("ಬಾಳೆಹಣ್ಣು||")) {
-                if (name.startsWith("ಬಿಸಿಊಟ||")) totalMeals += val;
-              }
-
-              // ಚಾರ್ಟ್‌ಗಾಗಿ ದಿನಾಂಕವಾರು ಹಾಜರಾತಿ ಸಂಗ್ರಹ
-              if (name === "ಹಾಜರಾತಿ||ALL") {
-                dailyCounts[r.distribution_date] = (dailyCounts[r.distribution_date] || 0) + val;
-              }
-            });
-
-            document.getElementById("kpiMeals").textContent = totalMeals > 0 ? totalMeals : foodRows.length;
-            renderChart(dailyCounts);
-          } else {
-            renderChart({});
-          }
-
-          // 5. ಸಕ್ರಿಯ Items & Ingredients (ಪದಾರ್ಥಗಳ ಸಂಖ್ಯೆ)
-          const [itemsRes, ingRes, nutRes] = await Promise.all([
-            db.from("calculation_settings").select("id").eq("academic_year_id", activeYear.id).eq("is_enabled", true),
-            db.from("kitchen_ingredients").select("id").eq("academic_year_id", activeYear.id).eq("is_enabled", true),
-            db.from("nutritional_foods").select("id").eq("academic_year_id", activeYear.id).eq("is_enabled", true)
-          ]);
-          const totalItemsCount = (itemsRes.data?.length || 0) + (ingRes.data?.length || 0) + (nutRes.data?.length || 0);
-          document.getElementById("kpiItems").textContent = totalItemsCount;
-
-          // 6. Cash Book ಅಂತಿಮ ಉಳಿಕೆ (Closing Balance)
-          const [jamaRes, kharchuRes, openRes] = await Promise.all([
-            db.from("cash_book_entries").select("amount").eq("academic_year", activeYear.year_name).eq("entry_type", "jama"),
-            db.from("cash_book_entries").select("amount").eq("academic_year", activeYear.year_name).eq("entry_type", "kharchu"),
-            db.from("cash_book_opening_balances").select("amount").eq("academic_year", activeYear.year_name)
-          ]);
-
-          const totalOpening = (openRes.data || []).reduce((s, r) => s + Number(r.amount || 0), 0);
-          const totalJama = (jamaRes.data || []).reduce((s, r) => s + Number(r.amount || 0), 0);
-          const totalKharchu = (kharchuRes.data || []).reduce((s, r) => s + Number(r.amount || 0), 0);
-          const closingBalance = totalOpening + totalJama - totalKharchu;
-
-          document.getElementById("kpiCash").textContent = formatRupee(closingBalance);
-        }
-      } catch (err) {
-        console.error("Dashboard Load Error:", err);
+      if (btnElement) {
+        document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+        btnElement.classList.add('active');
       }
     }
 
-    function renderChart(dailyData) {
-      const ctx = document.getElementById('trendChart').getContext('2d');
-      const dates = Object.keys(dailyData).sort().slice(-10); // ಇತ್ತೀಚಿನ 10 ದಿನಗಳು
-      const counts = dates.map(d => dailyData[d]);
+    function showDashboard(btnElement) {
+      document.getElementById('frameContainer').style.display = 'none';
+      document.getElementById('appFrame').src = 'about:blank';
+      document.getElementById('dashboardView').style.display = 'flex';
 
-      new Chart(ctx, {
-        type: 'bar',
-        data: {
-          labels: dates.length ? dates.map(d => d.slice(5)) : ['ದಿನಾಂಕ 1', 'ದಿನಾಂಕ 2', 'ದಿನಾಂಕ 3', 'ದಿನಾಂಕ 4', 'ದಿನಾಂಕ 5'],
-          datasets: [{
-            label: 'ದೈನಂದಿನ ಹಾಜರಾತಿ (Attendance)',
-            data: counts.length ? counts : [45, 52, 48, 50, 53],
-            backgroundColor: '#126b38',
-            borderRadius: 6
-          }]
-        },
-        options: {
-          responsive: true,
-          scales: {
-            y: { beginAtZero: true }
-          },
-          plugins: {
-            legend: { display: false }
-          }
-        }
-      });
+      if (btnElement) {
+        document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+        btnElement.classList.add('active');
+      }
     }
 
-    document.addEventListener("DOMContentLoaded", initDashboard);
+    // Live Stats Loading from Supabase
+    async function loadStats() {
+      try {
+        // School Info
+        const { data: school } = await db.from("school_settings").select("*").limit(1).maybeSingle();
+        if (school) {
+          document.getElementById("topSchoolName").textContent = `${school.department_name || "ಅಕ್ಷರ ದಾಸೋಹ"} - ${school.school_name || ""}`;
+          document.getElementById("topSchoolAddress").textContent = school.school_address || "";
+        }
+
+        // Active Academic Year
+        const { data: year } = await db.from("academic_years").select("id, year_name").eq("is_active", true).limit(1).maybeSingle();
+        if (year) {
+          document.getElementById("topAcademicYear").textContent = `📅 Academic Year: ${year.year_name}`;
+
+          const curMonth = new Date().getMonth() + 1;
+
+          // Students Count
+          const { data: students } = await db.from("student_numbers").select("total_students").eq("academic_year_id", year.id).eq("month_number", curMonth).eq("division_name", "ALL");
+          if (students) {
+            const tot = students.reduce((s, r) => s + Number(r.total_students || 0), 0);
+            document.getElementById("kpiStudents").textContent = tot;
+          }
+
+          // Meals Count
+          const { data: meals } = await db.from("daily_food_distribution").select("students_count, total_quantity, item_name").eq("academic_year_id", year.id);
+          if (meals) {
+            let mealCount = 0;
+            meals.forEach(m => {
+              if (String(m.item_name).startsWith("ಬಿಸಿಊಟ||")) {
+                mealCount += Number(m.students_count || m.total_quantity || 0);
+              }
+            });
+            document.getElementById("kpiMeals").textContent = mealCount;
+          }
+
+          // Items Count
+          const [it1, it2, it3] = await Promise.all([
+            db.from("calculation_settings").select("id").eq("academic_year_id", year.id).eq("is_enabled", true),
+            db.from("kitchen_ingredients").select("id").eq("academic_year_id", year.id).eq("is_enabled", true),
+            db.from("nutritional_foods").select("id").eq("academic_year_id", year.id).eq("is_enabled", true)
+          ]);
+          document.getElementById("kpiItems").textContent = (it1.data?.length || 0) + (it2.data?.length || 0) + (it3.data?.length || 0);
+
+          // Cash Balance
+          const [jama, kharchu, open] = await Promise.all([
+            db.from("cash_book_entries").select("amount").eq("academic_year", year.year_name).eq("entry_type", "jama"),
+            db.from("cash_book_entries").select("amount").eq("academic_year", year.year_name).eq("entry_type", "kharchu"),
+            db.from("cash_book_opening_balances").select("amount").eq("academic_year", year.year_name)
+          ]);
+          const oTotal = (open.data || []).reduce((s, r) => s + Number(r.amount || 0), 0);
+          const jTotal = (jama.data || []).reduce((s, r) => s + Number(r.amount || 0), 0);
+          const kTotal = (kharchu.data || []).reduce((s, r) => s + Number(r.amount || 0), 0);
+          const balance = oTotal + jTotal - kTotal;
+          document.getElementById("kpiCash").textContent = "₹" + balance.toLocaleString('en-IN', { minimumFractionDigits: 2 });
+        }
+      } catch (err) {
+        console.warn("Dashboard stats load error:", err);
+      }
+    }
+
+    document.addEventListener("DOMContentLoaded", loadStats);
   </script>
 </body>
 </html>
