@@ -80,7 +80,8 @@ document.getElementById("loginForm").addEventListener("submit",async function(e)
          */
         let authEmail;
 
-        if(username==="ADMIN"){
+        if(username==="29130501906" || username==="ADMIN"){
+            // Existing Admin Auth account. Email must remain unchanged.
             authEmail="svbrhsbls@gmail.com";
         }else{
             authEmail=username.toLowerCase()+"@login.aksharadasoha.local";
