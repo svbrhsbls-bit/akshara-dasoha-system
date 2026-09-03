@@ -33,6 +33,8 @@ body{overflow:hidden}
 .top-title h2{margin:0;color:#126b38;font-size:21px;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .top-title p{margin:4px 0 0;color:#8993a0;font-size:13px}
 .year-badge{background:#eef7f1;color:#126b38;border:1px solid #cfe4d6;border-radius:22px;padding:9px 15px;font-weight:700;font-size:13px;white-space:nowrap}
+.top-right-info{display:flex;align-items:center;gap:9px;flex-wrap:wrap;justify-content:flex-end}
+.date-badge{background:#fff7e8;color:#7a5310;border:1px solid #ead7ad;border-radius:22px;padding:9px 15px;font-weight:700;font-size:13px;white-space:nowrap}
 .content{flex:1;overflow:auto;padding:20px 24px 28px}
 
 /* HOME */
@@ -60,6 +62,30 @@ body{overflow:hidden}
 iframe{display:block;width:100%;height:calc(100% - 47px);border:0;background:#fff}
 
 /* RESPONSIVE */
+
+.items-balance-box{background:#fff;border:1px solid #dfe5e9;border-radius:11px;box-shadow:0 2px 7px #00000009;overflow:hidden}
+.items-balance-head,.daily-food-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px 16px;background:#f7faf8;border-bottom:1px solid #dfe5e9}
+.items-balance-head b,.daily-food-head b{font-size:16px}.items-balance-note{font-size:12px;color:#64748b;margin-top:3px}
+.refresh-items{border:0;border-radius:7px;padding:7px 11px;background:#e5ece7;color:#126b38;font-weight:700;cursor:pointer}
+.item-cards{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;padding:14px}
+.item-card{background:#fff;border:1px solid #dfe5e9;border-radius:10px;padding:15px;min-height:112px;box-shadow:0 2px 6px #00000008}
+.item-card:hover{box-shadow:0 5px 14px #0002}
+.item-card-name{font-size:16px;font-weight:800;line-height:1.35}
+.item-card-unit{font-size:11px;color:#7b8794;margin-top:3px}
+.item-card-label{font-size:12px;color:#687585;margin-top:14px}
+.item-card-balance{font-size:21px;font-weight:800;color:#126b38;margin-top:2px}
+.item-card-empty{grid-column:1/-1;padding:25px;text-align:center;color:#64748b}
+.items-status{padding:8px 15px;font-size:12px;color:#64748b}
+.daily-title{margin-top:22px}
+.daily-food-box{background:#fff;border:1px solid #dfe5e9;border-radius:11px;box-shadow:0 2px 7px #00000009;overflow:hidden}
+.daily-food-table-wrap{max-height:520px;overflow:auto}
+.daily-food-table{width:100%;border-collapse:collapse}
+.daily-food-table th,.daily-food-table td{border:1px solid #d8e0db;padding:10px 12px;text-align:center}
+.daily-food-table th{position:sticky;top:0;background:#eef4ef;z-index:1;font-size:13px}
+.daily-food-table td:first-child{font-weight:700}
+.daily-food-table td:nth-child(3){font-weight:800;color:#126b38;font-size:16px}
+.daily-food-table tr.today-row{background:#f0f8f3}
+.daily-food-table tr.today-row td{font-weight:800}
 @media(max-width:1050px){
  .sidebar{width:235px;min-width:235px}
  .summary{grid-template-columns:repeat(2,1fr)}
@@ -149,7 +175,10 @@ iframe{display:block;width:100%;height:calc(100% - 47px);border:0;background:#ff
         <h2 id="topDepartment">ಅಕ್ಷರ ದಾಸೋಹ ಕಾರ್ಯಕ್ರಮ</h2>
         <p id="topSchool">ಶಾಲೆಯ ಹೆಸರು</p>
       </div>
-      <div class="year-badge">Academic Year: <span id="academicYear">Loading...</span></div>
+      <div class="top-right-info">
+        <div class="year-badge">Academic Year: <span id="academicYear">Loading...</span></div>
+        <div class="date-badge" id="todayDate">Loading...</div>
+      </div>
     </header>
 
     <section class="content" id="content">
@@ -167,7 +196,7 @@ iframe{display:block;width:100%;height:calc(100% - 47px);border:0;background:#ff
           <div class="stat">
             <div class="stat-label">ವಿತರಿಸಿದ ಬಿಸಿಊಟ</div>
             <div class="stat-value" id="foodTotal">0</div>
-            <div class="stat-note">Daily Food Distribution</div>
+            <div class="stat-note" id="foodTodayNote">ಇಂದಿನ ಹಾಜರಾತಿ ಮಕ್ಕಳು</div>
           </div>
 
           <div class="stat">
@@ -183,58 +212,48 @@ iframe{display:block;width:100%;height:calc(100% - 47px);border:0;background:#ff
           </div>
         </div>
 
-        <h2 class="modules-title">📋 ಎಲ್ಲಾ ವಿಭಾಗಗಳು</h2>
-
-        <div class="modules">
-          <div class="module" onclick="openByFile('daily-food-distribution.html','ದಿನವಹಿ ಆಹಾರ ವಿತರಣೆ')">
-            <div class="icon">🍚</div>
-            <h3>ದಿನವಹಿ ಆಹಾರ ವಿತರಣೆ</h3>
-            <p>ದಿನನಿತ್ಯದ ಹಾಜರಾತಿ, ಮೊಟ್ಟೆ, ಬಾಳೆಹಣ್ಣು ಮತ್ತು ಬಿಸಿಯೂಟದ ದಾಖಲೆ.</p>
-            <span class="open-link">ತೆರೆಯಿರಿ →</span>
+        <!-- ಆಹಾರ ಪದಾರ್ಥಗಳು ಮಾತ್ರ -->
+        <h2 class="modules-title">📦 ಆಹಾರ ಪದಾರ್ಥಗಳ ಉಳಿಕೆ</h2>
+        <div class="items-balance-box">
+          <div class="items-balance-head">
+            <div>
+              <b>Items (ಆಹಾರ ಪದಾರ್ಥಗಳು)</b>
+              <div class="items-balance-note" id="itemsBalanceMonth">ಪ್ರಸ್ತುತ ತಿಂಗಳ ಉಳಿಕೆ</div>
+            </div>
+            <button class="refresh-items" onclick="loadItemClosings()">↻ Refresh</button>
           </div>
-
-          <div class="module" onclick="openByFile('daily-items-food-calculation.html','Daily Items & Food Calculation')">
-            <div class="icon">⚖️</div>
-            <h3>Daily Items & Food Calculation</h3>
-            <p>ಪ್ರಮಾಣದ ಆಹಾರ ದಾಸ್ತಾನು, ಖರ್ಚು ಮತ್ತು ಉಳಿಕೆ ಲೆಕ್ಕಾಚಾರ.</p>
-            <span class="open-link">ತೆರೆಯಿರಿ →</span>
+          <div class="item-cards" id="itemClosingCards">
+            <div class="item-card-empty">ಆಹಾರ ಪದಾರ್ಥಗಳ ಉಳಿಕೆ Loading...</div>
           </div>
+          <div id="itemClosingStatus" class="items-status"></div>
+        </div>
 
-          <div class="module" onclick="openByFile('cash-book.html','Cash Book')">
-            <div class="icon">💰</div>
-            <h3>Cash Book</h3>
-            <p>ಜಮಾ-ಖರ್ಚು ನಮೂದು ಮತ್ತು Cash Book Reports.</p>
-            <span class="open-link">ತೆರೆಯಿರಿ →</span>
+        <!-- ಪ್ರತಿ ದಿನದ ಬಿಸಿಊಟ ಮಕ್ಕಳ ಸಂಖ್ಯೆ -->
+        <h2 class="modules-title daily-title">🍚 ಪ್ರತಿ ದಿನದ ಬಿಸಿಊಟ ಮಕ್ಕಳ ಸಂಖ್ಯೆ</h2>
+        <div class="daily-food-box">
+          <div class="daily-food-head">
+            <div>
+              <b>ದಿನಾಂಕ — ವಾರ — ಬಿಸಿಊಟ ಪಡೆದ ಮಕ್ಕಳ ಸಂಖ್ಯೆ</b>
+              <div class="items-balance-note" id="dailyFoodMonth">Loading...</div>
+            </div>
+            <button class="refresh-items" onclick="loadDailyFoodCounts()">↻ Refresh</button>
           </div>
-
-          <div class="module" onclick="openByFile('students-number.html','Students Number')">
-            <div class="icon">🎓</div>
-            <h3>Students Number</h3>
-            <p>ತರಗತಿವಾರು ಹುಡುಗರು, ಹುಡುಗಿಯರು ಮತ್ತು ಒಟ್ಟು ವಿದ್ಯಾರ್ಥಿಗಳ ಸಂಖ್ಯೆ.</p>
-            <span class="open-link">ತೆರೆಯಿರಿ →</span>
-          </div>
-
-          <div class="module" onclick="openByFile('calculation-settings.html','Calculation Settings')">
-            <div class="icon">⚙️</div>
-            <h3>Calculation Settings</h3>
-            <p>ವಿದ್ಯಾರ್ಥಿಗಳಿಗೆ ಬೇಕಾದ ಪದಾರ್ಥಗಳ ಪ್ರಮಾಣ ಮತ್ತು Rate settings.</p>
-            <span class="open-link">ತೆರೆಯಿರಿ →</span>
-          </div>
-
-          <div class="module" onclick="openByFile('monthly-items-student-summary.html','Monthly Summary')">
-            <div class="icon">📑</div>
-            <h3>Monthly Summary</h3>
-            <p>ಮಾಸಿಕವಾಗಿ ಆಹಾರ ಪದಾರ್ಥ ಮತ್ತು ವಿದ್ಯಾರ್ಥಿಗಳ ಸಾರಾಂಶ ವರದಿ.</p>
-            <span class="open-link">ತೆರೆಯಿರಿ →</span>
-          </div>
-
-          <div class="module" onclick="openByFile('school-settings.html','ಶಾಲಾ ಸೆಟ್ಟಿಂಗ್ಸ್')">
-            <div class="icon">🏫</div>
-            <h3>ಶಾಲಾ ಸೆಟ್ಟಿಂಗ್ಸ್</h3>
-            <p>ಶಾಲೆಯ ಹೆಸರು ಮತ್ತು Active Academic Year ನಿರ್ವಹಣೆ.</p>
-            <span class="open-link">ತೆರೆಯಿರಿ →</span>
+          <div class="daily-food-table-wrap">
+            <table class="daily-food-table">
+              <thead>
+                <tr>
+                  <th>ದಿನಾಂಕ</th>
+                  <th>ವಾರ</th>
+                  <th>ಬಿಸಿಊಟ ಮಕ್ಕಳ ಸಂಖ್ಯೆ</th>
+                </tr>
+              </thead>
+              <tbody id="dailyFoodBody">
+                <tr><td colspan="3" class="items-empty">Daily Food data Loading...</td></tr>
+              </tbody>
+            </table>
           </div>
         </div>
+
       </div>
 
       <!-- ALL HTML PAGES OPEN HERE, WITHOUT LEAVING DASHBOARD -->
@@ -301,6 +320,15 @@ function reloadFrame(){
   }
 }
 
+function updateTodayDate(){
+  const now=new Date();
+  const dd=String(now.getDate()).padStart(2,"0");
+  const mm=String(now.getMonth()+1).padStart(2,"0");
+  const yyyy=now.getFullYear();
+  const weekdays=["ಭಾನುವಾರ","ಸೋಮವಾರ","ಮಂಗಳವಾರ","ಬುಧವಾರ","ಗುರುವಾರ","ಶುಕ್ರವಾರ","ಶನಿವಾರ"];
+  $("todayDate").textContent=`${dd}-${mm}-${yyyy} ${weekdays[now.getDay()]}`;
+}
+
 async function loadSchool(){
   try{
     const {data}=await db.from("school_settings").select("*").order("created_at",{ascending:false}).limit(1).maybeSingle();
@@ -347,12 +375,25 @@ async function loadStudents(year){
 
 async function loadFood(year){
   if(!year)return;
+  const today=new Date();
+  const todayKey=`${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,"0")}-${String(today.getDate()).padStart(2,"0")}`;
   try{
-    const {count,error}=await db.from("daily_food_distribution")
-      .select("*",{count:"exact",head:true})
-      .eq("academic_year_id",year.id);
-    if(!error)$("foodTotal").textContent=count||0;
-  }catch(e){console.log(e)}
+    const {data,error}=await db.from("daily_food_distribution")
+      .select("distribution_date,item_name,students_count,total_quantity")
+      .eq("academic_year_id",year.id)
+      .eq("distribution_date",todayKey)
+      .eq("item_name","ಹಾಜರಾತಿ||ALL")
+      .maybeSingle();
+
+    if(error)throw error;
+    const count=Number(data?.students_count ?? data?.total_quantity ?? 0);
+    $("foodTotal").textContent=count;
+    $("foodTodayNote").textContent=`${todayKey.split("-").reverse().join("-")} — ಇಂದಿನ ಹಾಜರಾತಿ`;
+  }catch(e){
+    console.log(e);
+    $("foodTotal").textContent="0";
+    $("foodTodayNote").textContent="ಇಂದಿನ ಹಾಜರಾತಿ";
+  }
 }
 
 async function loadItems(year){
@@ -378,10 +419,190 @@ async function loadCash(year){
   }catch(e){console.log(e)}
 }
 
+
+function academicStartYear(name){
+  const m=String(name||"").match(/\d{4}/);
+  return m?Number(m[0]):new Date().getFullYear();
+}
+
+function currentReportYear(month,yearName){
+  const start=academicStartYear(yearName);
+  return Number(month)>=6?start:start+1;
+}
+
+function escapeHtml(v){
+  return String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
+}
+
+function academicStartYear(name){
+  const m=String(name||"").match(/\d{4}/);
+  return m?Number(m[0]):new Date().getFullYear();
+}
+
+function currentReportYear(month,yearName){
+  const start=academicStartYear(yearName);
+  return Number(month)>=6?start:start+1;
+}
+
+async function getActiveYear(){
+  const {data,error}=await db.from("academic_years")
+    .select("id,year_name,is_active,created_at")
+    .order("created_at",{ascending:true});
+  if(error)throw error;
+  return (data||[]).find(x=>x.is_active)||(data||[]).at(-1)||null;
+}
+
+async function loadItemClosings(){
+  const box=$("itemClosingCards"),note=$("itemsBalanceMonth"),status=$("itemClosingStatus");
+  box.innerHTML='<div class="item-card-empty">ಆಹಾರ ಪದಾರ್ಥಗಳ ಉಳಿಕೆ Loading...</div>';
+  status.textContent="";
+  try{
+    const year=await getActiveYear();
+    if(!year){
+      box.innerHTML='<div class="item-card-empty">Active Academic Year ಇಲ್ಲ.</div>';
+      return;
+    }
+
+    const month=new Date().getMonth()+1;
+    const reportYear=currentReportYear(month,year.year_name);
+    const monthNames=["ಜನವರಿ","ಫೆಬ್ರವರಿ","ಮಾರ್ಚ್","ಏಪ್ರಿಲ್","ಮೇ","ಜೂನ್","ಜುಲೈ","ಆಗಸ್ಟ್","ಸೆಪ್ಟೆಂಬರ್","ಅಕ್ಟೋಬರ್","ನವೆಂಬರ್","ಡಿಸೆಂಬರ್"];
+    note.textContent=`${monthNames[month-1]}-${reportYear} | Active Academic Year: ${year.year_name}`;
+
+    // Calculation Settingsನಲ್ಲಿ ಇರುವ Items ಹೆಸರುಗಳೇ Dashboardನ ಆಹಾರ ಪದಾರ್ಥಗಳ ಮೂಲ.
+    // Ingredients / Nutrition ಅನ್ನು ಇಲ್ಲಿ ಬಳಸುವುದಿಲ್ಲ.
+    const {data:settings,error:settingsError}=await db.from("calculation_settings")
+      .select("item_name,is_enabled,class_group")
+      .eq("academic_year_id",year.id);
+    if(settingsError)throw settingsError;
+
+    const itemNames=new Set(
+      (settings||[])
+        .filter(r=>r.is_enabled!==false && String(r.item_name||"").trim())
+        .map(r=>String(r.item_name||"").trim())
+    );
+
+    const {data:closings,error}=await db.from("food_stock_monthly_closing")
+      .select("item_name,closing_balance,unit,month_number,item_type")
+      .eq("academic_year_id",year.id)
+      .eq("month_number",month);
+    if(error)throw error;
+
+    // Nutrition closing rows are stored with item_type='item' but have the
+    // private __NUTRITION_CLOSING__| prefix. Match only real Items from
+    // Calculation Settings, so Nutrition can never appear here.
+    const latest=new Map();
+    (closings||[]).forEach(r=>{
+      const raw=String(r.item_name||"").trim();
+      if(!raw || raw.startsWith("__NUTRITION_CLOSING__|"))return;
+      if(!itemNames.has(raw))return;
+      latest.set(raw,r);
+    });
+
+    const rows=[...latest.values()].sort((a,b)=>String(a.item_name).localeCompare(String(b.item_name),"kn"));
+    if(!rows.length){
+      box.innerHTML='<div class="item-card-empty">ಈ ತಿಂಗಳಿಗೆ ಆಹಾರ ಪದಾರ್ಥಗಳ ಉಳಿಕೆ ದಾಖಲೆ ಇಲ್ಲ.</div>';
+      status.textContent="Daily Items & Food Calculationನಲ್ಲಿ Save ಮಾಡಿದ ನಂತರ ಉಳಿಕೆ ಇಲ್ಲಿ ಕಾಣಿಸುತ್ತದೆ.";
+      return;
+    }
+
+    box.innerHTML=rows.map(r=>{
+      const value=Number(r.closing_balance||0);
+      const unit=r.unit||"KG";
+      const display=value.toLocaleString("en-IN",{minimumFractionDigits:3,maximumFractionDigits:3});
+      return `<div class="item-card">
+        <div class="item-card-name">${escapeHtml(r.item_name)}</div>
+        <div class="item-card-unit">${escapeHtml(unit)}</div>
+        <div class="item-card-label">ಉಳಿಕೆ</div>
+        <div class="item-card-balance">${display} ${escapeHtml(unit)}</div>
+      </div>`;
+    }).join("");
+    status.textContent=`ಒಟ್ಟು ${rows.length} ಆಹಾರ ಪದಾರ್ಥಗಳು`;
+  }catch(e){
+    console.error(e);
+    box.innerHTML='<div class="item-card-empty">ಆಹಾರ ಪದಾರ್ಥಗಳ ಉಳಿಕೆ ಪಡೆಯಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ.</div>';
+    status.textContent="Items data load failed.";
+  }
+}
+
+const kannadaWeekdays=["ಭಾನುವಾರ","ಸೋಮವಾರ","ಮಂಗಳವಾರ","ಬುಧವಾರ","ಗುರುವಾರ","ಶುಕ್ರವಾರ","ಶನಿವಾರ"];
+
+async function loadDailyFoodCounts(){
+  const body=$("dailyFoodBody"),note=$("dailyFoodMonth");
+  body.innerHTML='<tr><td colspan="3" class="items-empty">Daily Food data Loading...</td></tr>';
+  try{
+    const year=await getActiveYear();
+    if(!year){
+      body.innerHTML='<tr><td colspan="3" class="items-empty">Active Academic Year ಇಲ್ಲ.</td></tr>';
+      return;
+    }
+
+    const now=new Date();
+    const month=now.getMonth()+1;
+    const reportYear=currentReportYear(month,year.year_name);
+    const days=new Date(reportYear,month,0).getDate();
+    const start=`${reportYear}-${String(month).padStart(2,"0")}-01`;
+    const end=`${reportYear}-${String(month).padStart(2,"0")}-${String(days).padStart(2,"0")}`;
+
+    note.textContent=`${monthNamesForDashboard[month-1]}-${reportYear} | ಪ್ರತಿದಿನದ ಬಿಸಿಊಟ ಮಕ್ಕಳ ಸಂಖ್ಯೆ`;
+
+    const {data,error}=await db.from("daily_food_distribution")
+      .select("distribution_date,students_count,total_quantity")
+      .eq("academic_year_id",year.id)
+      .gte("distribution_date",start)
+      .lte("distribution_date",end)
+      .order("distribution_date",{ascending:true});
+    if(error)throw error;
+
+    const totals={};
+    (data||[]).forEach(r=>{
+      const d=String(r.distribution_date||"").slice(0,10);
+      if(!d)return;
+      // Multiple item rows on one date are combined; count is kept at the date level.
+      const n=Number(r.students_count||0);
+      totals[d]=Math.max(Number(totals[d]||0),n);
+    });
+
+    const today=new Date();
+    const todayKey=`${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,"0")}-${String(today.getDate()).padStart(2,"0")}`;
+
+    body.innerHTML=Array.from({length:days},(_,i)=>{
+      const d=i+1;
+      const key=`${reportYear}-${String(month).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
+      const dt=new Date(reportYear,month-1,d);
+      const dateText=`${String(d).padStart(2,"0")}-${String(month).padStart(2,"0")}-${reportYear}`;
+      const count=Number(totals[key]||0);
+      return `<tr class="${key===todayKey?"today-row":""}">
+        <td>${dateText}</td>
+        <td>${kannadaWeekdays[dt.getDay()]}</td>
+        <td>${count}</td>
+      </tr>`;
+    }).join("");
+  }catch(e){
+    console.error(e);
+    body.innerHTML='<tr><td colspan="3" class="items-empty">Daily Food Distribution data ಪಡೆಯಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ.</td></tr>';
+  }
+}
+
+const monthNamesForDashboard=["ಜನವರಿ","ಫೆಬ್ರವರಿ","ಮಾರ್ಚ್","ಏಪ್ರಿಲ್","ಮೇ","ಜೂನ್","ಜುಲೈ","ಆಗಸ್ಟ್","ಸೆಪ್ಟೆಂಬರ್","ಅಕ್ಟೋಬರ್","ನವೆಂಬರ್","ಡಿಸೆಂಬರ್"];
+
 async function init(){
+  updateTodayDate();
+  setInterval(updateTodayDate,60000);
   await loadSchool();
   const year=await loadYear();
-  await Promise.all([loadStudents(year),loadFood(year),loadItems(year),loadCash(year)]);
+  await Promise.all([loadStudents(year),loadFood(year),loadItems(year),loadCash(year),loadItemClosings(),loadDailyFoodCounts()]);
+
+  // Attendance card updates automatically after a Save in Daily Food Distribution.
+  if(year){
+    setInterval(()=>loadFood(year),5000);
+    try{
+      db.channel("dashboard-daily-food")
+        .on("postgres_changes",
+          {event:"*",schema:"public",table:"daily_food_distribution",filter:`academic_year_id=eq.${year.id}`},
+          ()=>loadFood(year)
+        ).subscribe();
+    }catch(e){console.log(e)}
+  }
 }
 init();
 </script>
