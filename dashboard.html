@@ -1,386 +1,210 @@
 <!DOCTYPE html>
 <html lang="kn">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ಅಕ್ಷರ ದಾಸೋಹ - Dashboard</title>
-  
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
-  <style>
-    :root {
-      --primary: #126b38;
-      --sidebar-bg: #0f172a;
-      --bg: #f3f6f4;
-      --border: #dbe2ea;
-    }
-
-    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', Arial, "Noto Sans Kannada", sans-serif; }
-    body { background: var(--bg); color: #17202a; display: flex; height: 100vh; overflow: hidden; }
-
-    /* Sidebar */
-    aside {
-      width: 270px;
-      background: var(--sidebar-bg);
-      color: #fff;
-      display: flex;
-      flex-direction: column;
-      flex-shrink: 0;
-      height: 100vh;
-      border-right: 1px solid #1e293b;
-    }
-
-    .brand {
-      padding: 18px 20px;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-    .brand-icon {
-      background: var(--primary);
-      width: 38px;
-      height: 38px;
-      border-radius: 8px;
-      display: grid;
-      place-items: center;
-      font-size: 20px;
-    }
-    .brand-title h2 { font-size: 16px; font-weight: 700; color: #fff; }
-    .brand-title p { font-size: 11px; color: #94a3b8; }
-
-    nav { padding: 12px 8px; display: flex; flex-direction: column; gap: 4px; overflow-y: auto; flex: 1; }
-    .nav-label { font-size: 11px; text-transform: uppercase; color: #64748b; font-weight: 700; padding: 10px 10px 4px; }
-    
-    .nav-btn {
-      background: transparent;
-      border: 0;
-      color: #cbd5e1;
-      text-align: left;
-      padding: 10px 12px;
-      border-radius: 8px;
-      font-size: 13.5px;
-      font-weight: 500;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      cursor: pointer;
-      width: 100%;
-      transition: all 0.2s;
-    }
-    .nav-btn:hover { background: rgba(255, 255, 255, 0.08); color: #fff; }
-    .nav-btn.active { background: var(--primary); color: #fff; font-weight: 600; }
-
-    /* Main Area */
-    main { flex: 1; display: flex; flex-direction: column; height: 100vh; min-width: 0; }
-    
-    header {
-      background: #fff;
-      border-bottom: 1px solid var(--border);
-      padding: 12px 24px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      flex-shrink: 0;
-    }
-    .header-info h1 { font-size: 17px; color: var(--primary); font-weight: 700; }
-    .header-info p { font-size: 12px; color: #64748b; }
-    .pill {
-      background: #e8f5ed;
-      color: var(--primary);
-      border: 1px solid #c3e2cd;
-      padding: 5px 12px;
-      border-radius: 20px;
-      font-size: 12px;
-      font-weight: 600;
-    }
-
-    .content-area { flex: 1; position: relative; overflow-y: auto; }
-    
-    /* Overview Tab Container */
-    #dashboardView { padding: 24px; display: flex; flex-direction: column; gap: 20px; }
-
-    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; }
-    .stat-card {
-      background: #fff;
-      padding: 18px;
-      border-radius: 10px;
-      border: 1px solid var(--border);
-      box-shadow: 0 1px 3px rgba(0,0,0,0.04);
-    }
-    .stat-card .label { font-size: 12px; font-weight: 600; color: #64748b; }
-    .stat-card .num { font-size: 24px; font-weight: 700; color: #17202a; margin: 6px 0; }
-    .stat-card .desc { font-size: 11px; color: var(--primary); }
-
-    .quick-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
-    .card-btn {
-      background: #fff;
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 16px;
-      text-align: left;
-      cursor: pointer;
-      display: flex;
-      flex-direction: column;
-      justify-content: space-between;
-      transition: transform 0.15s, border-color 0.15s;
-    }
-    .card-btn:hover { transform: translateY(-2px); border-color: var(--primary); }
-    .card-btn h3 { font-size: 15px; font-weight: 700; margin-bottom: 4px; }
-    .card-btn p { font-size: 12px; color: #64748b; }
-    .card-btn .btn-text { margin-top: 10px; font-size: 12px; font-weight: 600; color: var(--primary); }
-
-    /* Iframe Container */
-    #frameContainer {
-      display: none;
-      width: 100%;
-      height: 100%;
-      position: absolute;
-      top: 0;
-      left: 0;
-      background: #fff;
-    }
-    #appFrame { width: 100%; height: 100%; border: 0; }
-
-    @media (max-width: 900px) {
-      aside { width: 68px; }
-      .brand-title, .nav-label, .nav-btn span { display: none; }
-      .nav-btn { justify-content: center; padding: 12px; }
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ಅಕ್ಷರ ದಾಸೋಹ - Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#f3f6f4;color:#17202a;font-family:Arial,"Noto Sans Kannada","Nirmala UI",sans-serif}
+.top{background:#126b38;color:#fff;padding:18px 28px;box-shadow:0 2px 8px #0002}
+.top h1{margin:0;font-size:28px}.top p{margin:5px 0 0}
+.wrap{max-width:1600px;margin:18px auto;padding:0 14px}
+.card{background:#fff;border-radius:12px;padding:18px;margin-bottom:16px;box-shadow:0 2px 10px #0001}
+.school{text-align:center}.school .dept{font-size:19px;font-weight:800}.school .name{font-size:24px;font-weight:800;margin-top:3px}.school .year{font-size:16px;font-weight:700;margin-top:5px}
+.stats{display:grid;grid-template-columns:repeat(5,1fr);gap:12px}
+.stat{background:#f8fbf9;border:1px solid #d7e2da;border-radius:10px;padding:15px;text-align:center}
+.stat .label{font-size:13px;color:#64748b;font-weight:700}.stat .value{font-size:24px;font-weight:800;margin-top:5px}
+.section-title{margin:0 0 13px;font-size:20px}
+.modules{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.module{border:1px solid #d7e2da;border-radius:11px;background:#fff;padding:16px;cursor:pointer;transition:.15s}
+.module:hover{box-shadow:0 5px 16px #0002;transform:translateY(-1px)}
+.module .icon{font-size:28px}.module h3{margin:8px 0 5px;font-size:17px}.module p{margin:0;color:#64748b;font-size:13px;line-height:1.45}
+.status{margin-top:10px;padding:9px;border-radius:8px;background:#eef7f1;color:#126b38;font-size:13px}
+.frame-card{padding:0;overflow:hidden}
+.frame-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 15px;background:#eef4ef;border-bottom:1px solid #d7e2da}
+.frame-head b{font-size:15px}.frame-actions{display:flex;gap:7px}
+button{border:0;border-radius:7px;padding:8px 12px;font:inherit;font-weight:700;cursor:pointer}
+.secondary{background:#e1e9e4;color:#17202a}.primary{background:#126b38;color:#fff}
+iframe{display:block;width:100%;height:calc(100vh - 265px);min-height:650px;border:0;background:#fff}
+.note{font-size:12px;color:#64748b;margin-top:8px}
+@media(max-width:1100px){.stats{grid-template-columns:repeat(3,1fr)}.modules{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:650px){.stats,.modules{grid-template-columns:1fr}.top{padding:15px}.top h1{font-size:23px}.school .name{font-size:19px}iframe{height:700px;min-height:700px}}
+</style>
 </head>
 <body>
 
-  <!-- Sidebar -->
-  <aside>
-    <div class="brand">
-      <div class="brand-icon">🍛</div>
-      <div class="brand-title">
-        <h2>ಅಕ್ಷರ ದಾಸೋಹ</h2>
-        <p>MDM Management</p>
+<header class="top">
+  <h1 id="topTitle">ಅಕ್ಷರ ದಾಸೋಹ ಕಾರ್ಯಕ್ರಮ</h1>
+  <p id="topSchool">Dashboard / ಮುಖ್ಯ ಪುಟ</p>
+</header>
+
+<main class="wrap">
+  <section class="card school">
+    <div class="dept" id="departmentName">ಇಲಾಖೆಯ ಹೆಸರು</div>
+    <div class="name" id="schoolName">ಶಾಲೆಯ ಹೆಸರು</div>
+    <div class="year">ಸಕ್ರಿಯ ಶೈಕ್ಷಣಿಕ ವರ್ಷ: <span id="academicYear">Loading...</span></div>
+  </section>
+
+  <section class="stats">
+    <div class="stat"><div class="label">ವಿದ್ಯಾರ್ಥಿಗಳು</div><div class="value" id="studentTotal">0</div></div>
+    <div class="stat"><div class="label">ಹುಡುಗರು</div><div class="value" id="boysTotal">0</div></div>
+    <div class="stat"><div class="label">ಹುಡುಗಿಯರು</div><div class="value" id="girlsTotal">0</div></div>
+    <div class="stat"><div class="label">ಇಂದಿನ ಆಹಾರ ದಾಖಲೆ</div><div class="value" id="todayFood">0</div></div>
+    <div class="stat"><div class="label">Cash Balance</div><div class="value" id="cashBalance">₹0.00</div></div>
+  </section>
+
+  <section class="card">
+    <h2 class="section-title">📋 ಎಲ್ಲಾ ವಿಭಾಗಗಳು</h2>
+    <div class="modules">
+      <div class="module" onclick="openPage('school-settings.html','🏫 ಶಾಲಾ ಸೆಟ್ಟಿಂಗ್ಸ್')">
+        <div class="icon">🏫</div><h3>ಶಾಲಾ ಸೆಟ್ಟಿಂಗ್ಸ್</h3><p>ಶಾಲೆಯ ವಿವರಗಳು ಮತ್ತು Academic Year</p>
+      </div>
+      <div class="module" onclick="openPage('students-number.html','👨‍🎓 Students Number')">
+        <div class="icon">👨‍🎓</div><h3>ವಿದ್ಯಾರ್ಥಿಗಳ ಸಂಖ್ಯೆ</h3><p>ತರಗತಿವಾರು Boys, Girls ಮತ್ತು Total</p>
+      </div>
+      <div class="module" onclick="openPage('calculation-settings.html','⚙️ Calculation Settings')">
+        <div class="icon">⚙️</div><h3>Calculation Settings</h3><p>Items, ಅಡುಗೆ ಪದಾರ್ಥ, ಪೌಷ್ಠಿಕ ಆಹಾರ ಮತ್ತು Rate</p>
+      </div>
+      <div class="module" onclick="openPage('daily-food-distribution.html','🍚 Daily Food Distribution')">
+        <div class="icon">🍚</div><h3>ದಿನವಹಿ ಆಹಾರ ವಿತರಣೆ</h3><p>ದಿನದ ವಿದ್ಯಾರ್ಥಿಗಳ ಸಂಖ್ಯೆ, ಆಹಾರ ಮತ್ತು ರಜೆ ದಾಖಲೆ</p>
+      </div>
+      <div class="module" onclick="openPage('daily-items-food-calculation.html','🧮 Daily Items & Food Calculation')">
+        <div class="icon">🧮</div><h3>Daily Items & Food Calculation</h3><p>ದಾಸ್ತಾನು, ಖರ್ಚು, ಉಳಿಕೆ ಮತ್ತು Wheat Day calculation</p>
+      </div>
+      <div class="module" onclick="openPage('monthly-items-student-summary.html','📊 Monthly Summary')">
+        <div class="icon">📊</div><h3>Monthly Items & Student Summary</h3><p>ತಿಂಗಳ Item / Ingredient / Nutrition ವರದಿ</p>
+      </div>
+      <div class="module" onclick="openPage('cash-book.html','💰 Cash Book')">
+        <div class="icon">💰</div><h3>Cash Book</h3><p>Opening, ಜಮಾ, ಖರ್ಚು, Item Master ಮತ್ತು Reports</p>
       </div>
     </div>
+    <div class="status" id="loadStatus">Dashboard data loading...</div>
+  </section>
 
-    <nav>
-      <div class="nav-label">ಮುಖ್ಯ ನಿಯಂತ್ರಣ</div>
-      <button class="nav-btn active" onclick="showDashboard(this)">
-        <i>📊</i> <span>ಡ್ಯಾಶ್‌ಬೋರ್ಡ್ (Home)</span>
-      </button>
-
-      <div class="nav-label">ದೈನಂದಿನ ಕಾರ್ಯಗಳು</div>
-      <button class="nav-btn" onclick="openPage('daily-food.html', this)">
-        <i>🍲</i> <span>ದಿನವಹಿ ಆಹಾರ ವಿತರಣೆ</span>
-      </button>
-      <button class="nav-btn" onclick="openPage('daily-calc.html', this)">
-        <i>⚖️</i> <span>Daily Food Calculation</span>
-      </button>
-      <button class="nav-btn" onclick="openPage('cash-book.html', this)">
-        <i>💰</i> <span>Cash Book</span>
-      </button>
-
-      <div class="nav-label">ಸೆಟ್ಟಿಂಗ್ಸ್ & ಸಾರಾಂಶ</div>
-      <button class="nav-btn" onclick="openPage('students-number.html', this)">
-        <i>👨‍🎓</i> <span>Students Number</span>
-      </button>
-      <button class="nav-btn" onclick="openPage('calculation-settings.html', this)">
-        <i>⚙️</i> <span>Calculation Settings</span>
-      </button>
-      <button class="nav-btn" onclick="openPage('monthly-summary.html', this)">
-        <i>📑</i> <span>Monthly Summary</span>
-      </button>
-      <button class="nav-btn" onclick="openPage('school-settings.html', this)">
-        <i>🏫</i> <span>ಶಾಲಾ ಸೆಟ್ಟಿಂಗ್ಸ್</span>
-      </button>
-    </nav>
-  </aside>
-
-  <!-- Main View -->
-  <main>
-    <header>
-      <div class="header-info">
-        <h1 id="topSchoolName">ಅಕ್ಷರ ದಾಸೋಹ ಕಾರ್ಯಕ್ರಮ</h1>
-        <p id="topSchoolAddress">ಶಾಲೆಯ ಮಾಹಿತಿ ಲೋಡ್ ಆಗುತ್ತಿದೆ...</p>
-      </div>
-      <div class="pill" id="topAcademicYear">Academic Year: Loading...</div>
-    </header>
-
-    <div class="content-area">
-      <!-- 1. Dashboard View -->
-      <div id="dashboardView">
-        <div class="stats-grid">
-          <div class="stat-card">
-            <div class="label">ದಾಖಲಾತಿ (Students)</div>
-            <div class="num" id="kpiStudents">0</div>
-            <div class="desc">ಪ್ರಸ್ತುತ ತಿಂಗಳ ದಾಖಲಾತಿ</div>
-          </div>
-          <div class="stat-card">
-            <div class="label">ವಿತರಿಸಿದ ಬಿಸಿಯೂಟ</div>
-            <div class="num" id="kpiMeals">0</div>
-            <div class="desc">Daily Food Distribution</div>
-          </div>
-          <div class="stat-card">
-            <div class="label">ಪದಾರ್ಥಗಳ ಸಂಖ್ಯೆ</div>
-            <div class="num" id="kpiItems">0</div>
-            <div class="desc">Calculation Settings</div>
-          </div>
-          <div class="stat-card">
-            <div class="label">Cash Book ಉಳಿಕೆ</div>
-            <div class="num" id="kpiCash">₹0.00</div>
-            <div class="desc">ಅಂತಿಮ ನಗದು ಶಿಲ್ಕು</div>
-          </div>
-        </div>
-
-        <!-- Quick Access Cards -->
-        <div class="quick-grid">
-          <div class="card-btn" onclick="openPage('daily-food.html')">
-            <div>
-              <h3>🍲 ದಿನವಹಿ ಆಹಾರ ವಿತರಣೆ</h3>
-              <p>ದಿನನಿತ್ಯ ಹಾಜರಾತಿ, ಮೊಟ್ಟೆ, ಬಾಳೆಹಣ್ಣು ಮತ್ತು ಬಿಸಿಯೂಟ ನಮೂದು.</p>
-            </div>
-            <div class="btn-text">ತೆರೆಯಿರಿ ➔</div>
-          </div>
-
-          <div class="card-btn" onclick="openPage('daily-calc.html')">
-            <div>
-              <h3>⚖️ Daily Items & Food Calculation</h3>
-              <p>ಪ್ರತಿದಿನದ ಆಹಾರ ದಾಸ್ತಾನು, ಖರ್ಚು ಮತ್ತು ಉಳಿಕೆ ಲೆಕ್ಕಾಚಾರ.</p>
-            </div>
-            <div class="btn-text">ತೆರೆಯಿರಿ ➔</div>
-          </div>
-
-          <div class="card-btn" onclick="openPage('cash-book.html')">
-            <div>
-              <h3>💰 Cash Book</h3>
-              <p>ಜಮಾ-ಖರ್ಚು ನಮೂದು ಮತ್ತು ಬ್ಯಾಂಕ್ ಲೆಕ್ಕಪತ್ರದ ವಿವರಗಳು.</p>
-            </div>
-            <div class="btn-text">ತೆರೆಯಿರಿ ➔</div>
-          </div>
-
-          <div class="card-btn" onclick="openPage('students-number.html')">
-            <div>
-              <h3>👨‍🎓 Students Number</h3>
-              <p>ತಿಂಗಳ ತರಗತಿವಾರು ಹುಡುಗರು ಮತ್ತು ಹುಡುಗಿಯರ ದಾಖಲಾತಿ ಸಂಖ್ಯೆ.</p>
-            </div>
-            <div class="btn-text">ತೆರೆಯಿರಿ ➔</div>
-          </div>
-
-          <div class="card-btn" onclick="openPage('calculation-settings.html')">
-            <div>
-              <h3>⚙️ Calculation Settings</h3>
-              <p>ವಿದ್ಯಾರ್ಥಿಗಳಿಗೆ ನಿಗದಿಪಡಿಸಿದ ದಿನದ ಅಳತೆ ಪ್ರಮಾಣ ಮತ್ತು ರೇಟ್.</p>
-            </div>
-            <div class="btn-text">ತೆರೆಯಿರಿ ➔</div>
-          </div>
-
-          <div class="card-btn" onclick="openPage('monthly-summary.html')">
-            <div>
-              <h3>📑 Monthly Summary</h3>
-              <p>ಮಾಸಿಕ ಒಟ್ಟು ಆಹಾರ ಬಳಕೆ ಮತ್ತು ವಿದ್ಯಾರ್ಥಿಗಳ ಸಾರಾಂಶ ವರದಿ.</p>
-            </div>
-            <div class="btn-text">ತೆರೆಯಿರಿ ➔</div>
-          </div>
-
-          <div class="card-btn" onclick="openPage('school-settings.html')">
-            <div>
-              <h3>🏫 ಶಾಲಾ ಸೆಟ್ಟಿಂಗ್ಸ್</h3>
-              <p>ಶಾಲೆಯ ವಿವರ ಮತ್ತು Active Academic Year ನಿರ್ವಹಣೆ.</p>
-            </div>
-            <div class="btn-text">ತೆರೆಯಿರಿ ➔</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- 2. Iframe View -->
-      <div id="frameContainer">
-        <iframe id="appFrame" src="about:blank"></iframe>
+  <section class="card frame-card">
+    <div class="frame-head">
+      <b id="frameTitle">Dashboardನಲ್ಲಿ ವಿಭಾಗ ಆಯ್ಕೆ ಮಾಡಿ</b>
+      <div class="frame-actions">
+        <button class="secondary" onclick="closePage()">✕ Close</button>
+        <button class="primary" onclick="reloadFrame()">↻ Reload</button>
       </div>
     </div>
-  </main>
+    <iframe id="pageFrame" title="Dashboard module"></iframe>
+    <div class="note" style="padding:0 15px 12px">ಗಮನಿಸಿ: ಮೇಲಿನ ವಿಭಾಗಗಳು ಈ Dashboard ಒಳಗಿನ frameನಲ್ಲಿ ತೆರೆಯುತ್ತವೆ. Dashboard page ಸ್ವತಃ ಬದಲಾಗುವುದಿಲ್ಲ.</div>
+  </section>
+</main>
 
-  <script>
-    const SUPABASE_URL = "https://ezmudfrpcvjsgnjibvoq.supabase.co";
-    const SUPABASE_KEY = "sb_publishable__FYyH6NQaqgARaq2dvuovQ_rKmus0js";
-    const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+<script>
+const SUPABASE_URL="https://ezmudfrpcvjsgnjibvoq.supabase.co";
+const SUPABASE_KEY="sb_publishable__FYyH6NQaqgARaq2dvuovQ_rKmus0js";
+const db=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
 
-    function openPage(fileName, btnElement) {
-      document.getElementById('dashboardView').style.display = 'none';
-      const frameContainer = document.getElementById('frameContainer');
-      const appFrame = document.getElementById('appFrame');
-      
-      frameContainer.style.display = 'block';
-      // GitHub Pages ನ direct relative link
-      appFrame.src = './' + fileName;
+let activeYear=null, selectedFile="";
 
-      if (btnElement) {
-        document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-        btnElement.classList.add('active');
-      }
-    }
+function $(id){return document.getElementById(id)}
+function money(v){return "₹"+Number(v||0).toLocaleString("en-IN",{minimumFractionDigits:2,maximumFractionDigits:2})}
+function dateISO(d){return d.toISOString().slice(0,10)}
 
-    function showDashboard(btnElement) {
-      document.getElementById('frameContainer').style.display = 'none';
-      document.getElementById('appFrame').src = 'about:blank';
-      document.getElementById('dashboardView').style.display = 'flex';
+async function loadSchool(){
+  const {data,error}=await db.from("school_settings").select("*").order("created_at",{ascending:false}).limit(1).maybeSingle();
+  if(error) throw error;
+  if(data){
+    $("departmentName").textContent=data.department_name||"ಅಕ್ಷರ ದಾಸೋಹ ಕಾರ್ಯಕ್ರಮ";
+    $("schoolName").textContent=data.school_name||"ಶಾಲೆಯ ಹೆಸರು";
+    $("topTitle").textContent=data.department_name||"ಅಕ್ಷರ ದಾಸೋಹ ಕಾರ್ಯಕ್ರಮ";
+    $("topSchool").textContent=data.school_name||"Dashboard / ಮುಖ್ಯ ಪುಟ";
+  }
+}
 
-      if (btnElement) {
-        document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-        btnElement.classList.add('active');
-      }
-    }
+async function loadYear(){
+  const {data,error}=await db.from("academic_years").select("id,year_name,is_active,created_at").order("created_at",{ascending:true});
+  if(error) throw error;
+  activeYear=(data||[]).find(x=>x.is_active) || (data||[]).at(-1) || null;
+  $("academicYear").textContent=activeYear?.year_name||"ಯಾವುದೇ Active Year ಇಲ್ಲ";
+  return activeYear;
+}
 
-    async function loadStats() {
-      try {
-        const { data: school } = await db.from("school_settings").select("*").limit(1).maybeSingle();
-        if (school) {
-          document.getElementById("topSchoolName").textContent = `${school.department_name || "ಅಕ್ಷರ ದಾಸೋಹ"} - ${school.school_name || ""}`;
-          document.getElementById("topSchoolAddress").textContent = `${school.village || ""} ${school.taluk ? "| " + school.taluk : ""}`;
-        }
+async function loadStudents(){
+  if(!activeYear) return;
+  const month=new Date().getMonth()+1;
+  const {data,error}=await db.from("student_numbers")
+    .select("class_number,total_students,boys,girls,month_number,division_name")
+    .eq("academic_year_id",activeYear.id)
+    .eq("month_number",month)
+    .eq("division_name","ALL");
+  if(error) throw error;
+  let boys=0,girls=0;
+  const seen=new Set();
+  (data||[]).forEach(r=>{
+    const c=Number(r.class_number);
+    if(seen.has(c)) return;
+    seen.add(c);
+    boys+=Number(r.boys||0); girls+=Number(r.girls||0);
+  });
+  $("boysTotal").textContent=boys;
+  $("girlsTotal").textContent=girls;
+  $("studentTotal").textContent=boys+girls;
+}
 
-        const { data: year } = await db.from("academic_years").select("id, year_name").eq("is_active", true).limit(1).maybeSingle();
-        if (year) {
-          document.getElementById("topAcademicYear").textContent = `Academic Year: ${year.year_name}`;
-          const curMonth = new Date().getMonth() + 1;
+async function loadTodayFood(){
+  if(!activeYear) return;
+  const today=dateISO(new Date());
+  const {data,error}=await db.from("daily_food_distribution")
+    .select("id,distribution_date,item_name")
+    .eq("academic_year_id",activeYear.id)
+    .eq("distribution_date",today);
+  if(error) throw error;
+  $("todayFood").textContent=(data||[]).length;
+}
 
-          const { data: students } = await db.from("student_numbers").select("total_students").eq("academic_year_id", year.id).eq("month_number", curMonth).eq("division_name", "ALL");
-          if (students) {
-            document.getElementById("kpiStudents").textContent = students.reduce((s, r) => s + Number(r.total_students || 0), 0);
-          }
+async function loadCash(){
+  if(!activeYear) return;
+  const [j,k,o]=await Promise.all([
+    db.from("cash_book_entries").select("amount").eq("academic_year",activeYear.year_name).eq("entry_type","jama"),
+    db.from("cash_book_entries").select("amount").eq("academic_year",activeYear.year_name).eq("entry_type","kharchu"),
+    db.from("cash_book_opening_balances").select("amount").eq("academic_year",activeYear.year_name)
+  ]);
+  if(j.error) throw j.error;if(k.error) throw k.error;if(o.error) throw o.error;
+  const opening=(o.data||[]).reduce((s,r)=>s+Number(r.amount||0),0);
+  const jama=(j.data||[]).reduce((s,r)=>s+Number(r.amount||0),0);
+  const kharchu=(k.data||[]).reduce((s,r)=>s+Number(r.amount||0),0);
+  $("cashBalance").textContent=money(opening+jama-kharchu);
+}
 
-          const { data: meals } = await db.from("daily_food_distribution").select("students_count, total_quantity, item_name").eq("academic_year_id", year.id);
-          if (meals) {
-            let mealCount = 0;
-            meals.forEach(m => {
-              if (String(m.item_name).startsWith("ಬಿಸಿಊಟ||")) {
-                mealCount += Number(m.students_count || m.total_quantity || 0);
-              }
-            });
-            document.getElementById("kpiMeals").textContent = mealCount;
-          }
+async function loadDashboard(){
+  $("loadStatus").textContent="Dashboard data loading...";
+  try{
+    await loadSchool();
+    await loadYear();
+    await Promise.all([loadStudents(),loadTodayFood(),loadCash()]);
+    $("loadStatus").textContent="✅ Dashboard data updated.";
+  }catch(e){
+    console.error(e);
+    $("loadStatus").textContent="Dashboard summary load failed. ವಿಭಾಗಗಳನ್ನು ಕೆಳಗಿನಿಂದ ನೇರವಾಗಿ ತೆರೆಯಬಹುದು.";
+  }
+}
 
-          const [it1, it2, it3] = await Promise.all([
-            db.from("calculation_settings").select("id").eq("academic_year_id", year.id).eq("is_enabled", true),
-            db.from("kitchen_ingredients").select("id").eq("academic_year_id", year.id).eq("is_enabled", true),
-            db.from("nutritional_foods").select("id").eq("academic_year_id", year.id).eq("is_enabled", true)
-          ]);
-          document.getElementById("kpiItems").textContent = (it1.data?.length || 0) + (it2.data?.length || 0) + (it3.data?.length || 0);
+function openPage(file,title){
+  selectedFile=file;
+  $("frameTitle").textContent=title;
+  const frame=$("pageFrame");
+  frame.src=file;
+  frame.scrollIntoView({behavior:"smooth",block:"start"});
+}
 
-          const [jama, kharchu, open] = await Promise.all([
-            db.from("cash_book_entries").select("amount").eq("academic_year", year.year_name).eq("entry_type", "jama"),
-            db.from("cash_book_entries").select("amount").eq("academic_year", year.year_name).eq("entry_type", "kharchu"),
-            db.from("cash_book_opening_balances").select("amount").eq("academic_year", year.year_name)
-          ]);
-          const oTotal = (open.data || []).reduce((s, r) => s + Number(r.amount || 0), 0);
-          const jTotal = (jama.data || []).reduce((s, r) => s + Number(r.amount || 0), 0);
-          const kTotal = (kharchu.data || []).reduce((s, r) => s + Number(r.amount || 0), 0);
-          document.getElementById("kpiCash").textContent = "₹" + (oTotal + jTotal - kTotal).toLocaleString('en-IN', { minimumFractionDigits: 2 });
-        }
-      } catch (err) {
-        console.warn("Dashboard stats error:", err);
-      }
-    }
+function closePage(){
+  $("pageFrame").src="about:blank";
+  $("frameTitle").textContent="Dashboardನಲ್ಲಿ ವಿಭಾಗ ಆಯ್ಕೆ ಮಾಡಿ";
+}
 
-    document.addEventListener("DOMContentLoaded", loadStats);
-  </script>
+function reloadFrame(){
+  const frame=$("pageFrame");
+  if(selectedFile) frame.src=selectedFile;
+}
+
+loadDashboard();
+</script>
 </body>
 </html>
