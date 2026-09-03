@@ -220,6 +220,12 @@ function nutritionRate(name,bucket){
  if(!row && current.group==="8-10") row=settings.nutrition.find(x=>["8-10","8","9","10"].includes(String(x.class_group||"").trim()) && String(x.food_name||"").trim()===clean && x.is_enabled!==false);
  return num(row?.quantity_per_student);
 }
+function roundRupee(v){
+ const n=num(v);
+ // ₹ ಮೊತ್ತ: .50 ಅಥವಾ ಹೆಚ್ಚು ಇದ್ದರೆ ಮುಂದಿನ ರೂಪಾಯಿ;
+ // .49 ಅಥವಾ ಕಡಿಮೆ ಇದ್ದರೆ ಹಿಂದಿನ ರೂಪಾಯಿ. Negative ಮೊತ್ತಕ್ಕೂ ಇದೇ ನಿಯಮ.
+ return n<0 ? -Math.round(-n) : Math.round(n);
+}
 function fmt(v,unit){
  const n=num(v);
  if(unit==="₹" || String(unit||"").toLowerCase()==="amount")return n.toFixed(2);
@@ -527,10 +533,30 @@ function expense(type,name,date){
   });
   return total;
 }
+function findPreviousClosing(type,name,month){
+ const direct=closingMap.get(`${month}|${type}|${name}`);
+ if(direct)return direct;
+ const target=normalizeItemName(name);
+ for(const [key,row] of closingMap.entries()){
+   if(!String(key).startsWith(`${month}|${type}|`))continue;
+   if(normalizeItemName(row?.item_name)===target)return row;
+ }
+ return null;
+}
 function openingFor(type,name){
  const m=current.month,prev=m===1?12:m-1;
- const p=closingMap.get(`${prev}|${type}|${name}`);
- if(p)return num(p.closing_balance);
+ const p=findPreviousClosing(type,name,prev);
+ if(p){
+   const v=num(p.closing_balance);
+   // ಹಿಂದಿನ ತಿಂಗಳ TOTAL ಉಳಿಕೆ ಹೇಗೆ round ಆಗಿ ತೋರಿಸುತ್ತದೆಯೋ
+   // ಅದೇ ಮೊತ್ತವನ್ನು ಮುಂದಿನ ತಿಂಗಳ ಪ್ರಾರಂಭಿಕ ಶಿಲ್ಕಾಗಿ ಬಳಸಬೇಕು.
+   // ಅಡುಗೆ ಪದಾರ್ಥಗಳ (ಹಣದ) Closing ಅನ್ನು ಮುಂದಿನ ತಿಂಗಳ Openingಗೆ
+   // TOTALನಲ್ಲಿ ತೋರಿಸುವ ಪೂರ್ಣ ರೂಪಾಯಿಯಲ್ಲೇ ತೆಗೆದುಕೊಳ್ಳಬೇಕು.
+   // unit "₹" / "Amount" ಆಗಿರಲಿ ಅಥವಾ DBಯಲ್ಲಿ unit ಬೇರೆ ಬಂದಿರಲಿ,
+   // ingredient type ಎಂದರೆ ಇದು ಹಣದ ಲೆಕ್ಕವೇ ಆಗಿರುತ್ತದೆ.
+   const moneyUnit = type==="ingredient" || String(p.unit||"").trim()==="₹" || String(p.unit||"").toLowerCase()==="amount";
+   return moneyUnit ? roundRupee(v) : v;
+ }
  const o=openingMap.get(`${type}|${name}`);
  return num(o?.opening_balance);
 }
@@ -579,6 +605,10 @@ async function saveCurrentMonthClosings(){
     dbName=`__NUTRITION_CLOSING__|${x.name}`;
   }else{
     closing=ledger(x.type,x.name).closing;
+    // For money-based cooking ingredients, persist exactly the rounded
+    // monthly TOTAL closing amount so the next month Opening is identical
+    // to the previous month's displayed TOTAL.
+    if(x.type==="ingredient") closing=roundRupee(closing);
   }
   const z=await db.from("food_stock_monthly_closing").upsert({
     academic_year_id:activeYear.id,
@@ -600,16 +630,18 @@ function renderOpening(){
  if(!all.length)h+=`<tr><td colspan="6">Calculation Settingsನಲ್ಲಿ ಯಾವುದೇ Item / ಅಡುಗೆ ಪದಾರ್ಥ / ಪೌಷ್ಠಿಕ ಆಹಾರ ಇಲ್ಲ.</td></tr>`;
  all.forEach(x=>{
   const key=`${x.type}|${x.name}`;
-  const prev=current.month===1?12:current.month-1,p=closingMap.get(`${prev}|${x.type}|${x.name}`),o=openingMap.get(key),val=p?num(p.closing_balance):num(o?.opening_balance);
+  const prev=current.month===1?12:current.month-1,p=findPreviousClosing(x.type,x.name,prev),o=openingMap.get(key),val=p?num(p.closing_balance):num(o?.opening_balance);
   const canEdit=true;
   const unlocked=editingOpeningBalances.has(key);
   const itemArg=JSON.stringify({type:x.type,name:x.name,unit:x.unit}).replace(/'/g,"&#39;");
   const balanceArg=JSON.stringify({type:x.type,name:x.name}).replace(/'/g,"&#39;");
   const action=`${canEdit?`<button class="edit no-print" type="button" onclick='editOpeningBalance(${balanceArg})'>✏️ Edit Opening</button>`:""} <button class="edit no-print" type="button" onclick='editOpeningItem(${itemArg})'>⚙️ Edit Item</button> <button class="danger no-print" type="button" onclick='deleteOpeningItem(${balanceArg})'>🗑️ Delete</button>`;
   const label=x.type==="item"?"ಆಹಾರ ಪದಾರ್ಥ":x.type==="ingredient"?"ಅಡುಗೆ ಪದಾರ್ಥ":"ಪೌಷ್ಠಿಕ ಆಹಾರ";
-  const openingDisplay = (x.type === "item" && String(x.unit || "").toLowerCase() === "gram")
-    ? (Math.trunc((val + Number.EPSILON) * 1000) / 1000).toFixed(3)
-    : val;
+  const openingDisplay = String(x.unit || "") === "₹"
+    ? roundRupee(val)
+    : (x.type === "item" && String(x.unit || "").toLowerCase() === "gram")
+      ? (Math.trunc((val + Number.EPSILON) * 1000) / 1000).toFixed(3)
+      : val;
   const locked=!unlocked && (!!p || !!o);
   const status=unlocked?'<span class="badge">Editing</span>':(p?'<span class="badge">ಹಿಂದಿನ Closing</span>':(o?'<span class="badge">Locked</span>':'<span class="badge">Initial Opening</span>'));
   h+=`<tr><td>${label}</td><td>${esc(x.name)}</td><td>${esc(x.unit)}</td><td><input class="opening-input" data-open-type="${x.type}" data-open-name="${esc(x.name)}" type="number" min="0" step="0.001" value="${openingDisplay}" ${locked?"disabled":""}></td><td>${status}</td><td class="no-print">${action}</td></tr>`;
@@ -1020,17 +1052,28 @@ function renderReport(){
   }
 
   h+=`</tbody><tfoot><tr><td colspan="${2+bs.length+1}">TOTAL</td>`;
+  // TOTAL row:
+  // ಖರ್ಚಿನ ಮೊತ್ತವನ್ನು ಪೂರ್ಣ ರೂಪಾಯಿಗೆ round ಮಾಡಬೇಕು:
+  // .50 ಅಥವಾ ಅದಕ್ಕಿಂತ ಹೆಚ್ಚು => ಮುಂದಿನ ರೂಪಾಯಿ,
+  // .49 ಅಥವಾ ಅದಕ್ಕಿಂತ ಕಡಿಮೆ => ಹಿಂದಿನ ಪೂರ್ಣ ರೂಪಾಯಿ.
+  // TOTAL ಉಳಿಕೆ = ಮೇಲಿನ ಪ್ರಾರಂಭಿಕ ಶಿಲ್ಕು - rounded TOTAL ಖರ್ಚು.
   led.forEach(z=>{
     const stock=z.l.rows.reduce((sum,r)=>sum+r.stock,0);
-    const exp=z.l.rows.reduce((sum,r)=>sum+r.expense,0);
-    h+=`<td>${fmt(stock,z.x.unit)}</td><td>${fmt(exp,z.x.unit)}</td>
-        <td class="total">${fmt(z.l.closing,z.x.unit)}</td>`;
+    const expRaw=z.l.rows.reduce((sum,r)=>sum+r.expense,0);
+    const expTotal=Math.round((expRaw + Number.EPSILON) * 100) / 100;
+    const roundedExpense=Math.round(expTotal);
+    const totalClosing=num(z.l.opening)-roundedExpense;
+    h+=`<td>${fmt(stock,z.x.unit)}</td><td>${fmt(roundedExpense,z.x.unit)}</td>
+        <td class="total">${fmt(totalClosing,z.x.unit)}</td>`;
   });
   if(wheatName){
     const stock=wheatLed.rows.reduce((sum,r)=>sum+r.stock,0);
-    const exp=wheatLed.rows.reduce((sum,r)=>sum+r.expense,0);
-    h+=`<td>${fmt(stock,"₹")}</td><td>${fmt(exp,"₹")}</td>
-        <td class="total">${fmt(wheatLed.closing,"₹")}</td>`;
+    const expRaw=wheatLed.rows.reduce((sum,r)=>sum+r.expense,0);
+    const expTotal=Math.round((expRaw + Number.EPSILON) * 100) / 100;
+    const roundedExpense=Math.round(expTotal);
+    const totalClosing=num(wheatLed.opening)-roundedExpense;
+    h+=`<td>${fmt(stock,"₹")}</td><td>${fmt(roundedExpense,"₹")}</td>
+        <td class="total">${fmt(totalClosing,"₹")}</td>`;
   }
   h+=`</tr></tfoot></table></div>`;
   $("tableHost").innerHTML=h;
