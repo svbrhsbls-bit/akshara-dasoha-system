@@ -15,6 +15,9 @@ h1{text-align:center;margin:0;color:#173b6c;font-size:27px}
 label{display:block;font-weight:700;margin:15px 0 7px}
 input{width:100%;padding:13px 14px;border:1px solid #cbd5e1;border-radius:9px;font-size:16px;outline:none}
 input:focus{border-color:#1769aa;box-shadow:0 0 0 3px rgba(23,105,170,.10)}
+.password-wrap{position:relative;width:100%}
+.password-wrap input{padding-right:52px}
+.password-toggle{position:absolute;right:8px;top:50%;transform:translateY(-50%);border:0;background:transparent;padding:6px 8px;font-size:20px;cursor:pointer;line-height:1}
 .login-btn{width:100%;margin-top:24px;padding:14px;border:0;border-radius:9px;background:#1769aa;color:#fff;font-size:17px;font-weight:700;cursor:pointer}
 .login-btn:disabled{opacity:.65;cursor:not-allowed}
 .message{display:none;margin-top:16px;padding:12px;border-radius:8px;text-align:center;font-size:14px}
@@ -33,7 +36,10 @@ input:focus{border-color:#1769aa;box-shadow:0 0 0 3px rgba(23,105,170,.10)}
 <input id="username" type="text" placeholder="Username ನಮೂದಿಸಿ" autocomplete="username" required autofocus>
 
 <label for="password">Password</label>
+<div class="password-wrap">
 <input id="password" type="password" placeholder="Password ನಮೂದಿಸಿ" autocomplete="current-password" required>
+<button type="button" id="togglePassword" class="password-toggle" aria-label="Password ತೋರಿಸಿ">👁️</button>
+</div>
 
 <button id="loginBtn" class="login-btn" type="submit">LOGIN</button>
 <div id="message" class="message"></div>
@@ -52,6 +58,19 @@ function showError(text){
     el.textContent=text;
     el.className="message error";
 }
+
+document.getElementById("togglePassword").addEventListener("click",function(){
+    const passwordInput=document.getElementById("password");
+    if(passwordInput.type==="password"){
+        passwordInput.type="text";
+        this.textContent="🙈";
+        this.setAttribute("aria-label","Password ಮರೆಮಾಡಿ");
+    }else{
+        passwordInput.type="password";
+        this.textContent="👁️";
+        this.setAttribute("aria-label","Password ತೋರಿಸಿ");
+    }
+});
 
 document.getElementById("loginForm").addEventListener("submit",async function(e){
     e.preventDefault();
@@ -80,10 +99,11 @@ document.getElementById("loginForm").addEventListener("submit",async function(e)
          */
         let authEmail;
 
-        if(username==="29130501906" || username==="ADMIN"){
+        if(username==="ADMIN"){
             // Existing Admin Auth account. Email must remain unchanged.
             authEmail="svbrhsbls@gmail.com";
         }else{
+            // Every school logs in using its own username (normally DISE code).
             authEmail=username.toLowerCase()+"@login.aksharadasoha.local";
         }
 
