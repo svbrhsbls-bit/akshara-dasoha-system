@@ -17,11 +17,13 @@ input{width:100%;padding:13px 14px;border:1px solid #cbd5e1;border-radius:9px;fo
 input:focus{border-color:#1769aa;box-shadow:0 0 0 3px rgba(23,105,170,.10)}
 .password-wrap{position:relative;width:100%}
 .password-wrap input{padding-right:52px}
-.password-toggle{position:absolute;right:8px;top:50%;transform:translateY(-50%);border:0;background:transparent;padding:6px 8px;font-size:20px;cursor:pointer;line-height:1}
+.password-toggle{position:absolute;right:8px;top:50%;transform:translateY(-50%);border:0;background:transparent;padding:6px 8px;font-size:20px;cursor:pointer}
 .login-btn{width:100%;margin-top:24px;padding:14px;border:0;border-radius:9px;background:#1769aa;color:#fff;font-size:17px;font-weight:700;cursor:pointer}
 .login-btn:disabled{opacity:.65;cursor:not-allowed}
-.message{display:none;margin-top:16px;padding:12px;border-radius:8px;text-align:center;font-size:14px}
+.message{margin-top:16px;padding:12px;border-radius:8px;text-align:center;font-size:14px;display:none}
 .error{display:block;background:#fdecec;color:#a61b1b}
+.info{display:block;background:#eef6ff;color:#174a78}
+.success{display:block;background:#e8f7ee;color:#126b36}
 .footer{text-align:center;margin-top:22px;color:#94a3b8;font-size:12px}
 </style>
 </head>
@@ -38,7 +40,7 @@ input:focus{border-color:#1769aa;box-shadow:0 0 0 3px rgba(23,105,170,.10)}
 <label for="password">Password</label>
 <div class="password-wrap">
 <input id="password" type="password" placeholder="Password ನಮೂದಿಸಿ" autocomplete="current-password" required>
-<button type="button" id="togglePassword" class="password-toggle" aria-label="Password ತೋರಿಸಿ">👁️</button>
+<button type="button" id="togglePassword" class="password-toggle">👁️</button>
 </div>
 
 <button id="loginBtn" class="login-btn" type="submit">LOGIN</button>
@@ -51,141 +53,120 @@ input:focus{border-color:#1769aa;box-shadow:0 0 0 3px rgba(23,105,170,.10)}
 <script>
 const SUPABASE_URL="https://ezmudfrpcvjsgnjibvoq.supabase.co";
 const SUPABASE_KEY="sb_publishable__FYyH6NQaqgARaq2dvuovQ_rKmus0js";
-const supabaseClient=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
 
-function showError(text){
+let supabaseClient=null;
+
+function showMessage(text,type="error"){
     const el=document.getElementById("message");
     el.textContent=text;
-    el.className="message error";
+    el.className="message "+type;
 }
 
-document.getElementById("togglePassword").addEventListener("click",function(){
-    const passwordInput=document.getElementById("password");
-    if(passwordInput.type==="password"){
-        passwordInput.type="text";
+document.getElementById("togglePassword").onclick=function(){
+    const p=document.getElementById("password");
+    if(p.type==="password"){
+        p.type="text";
         this.textContent="🙈";
-        this.setAttribute("aria-label","Password ಮರೆಮಾಡಿ");
     }else{
-        passwordInput.type="password";
+        p.type="password";
         this.textContent="👁️";
-        this.setAttribute("aria-label","Password ತೋರಿಸಿ");
     }
-});
+};
 
-document.getElementById("loginForm").addEventListener("submit",async function(e){
-    e.preventDefault();
+async function doLogin(e){
+    if(e) e.preventDefault();
 
     const username=document.getElementById("username").value.trim().toUpperCase();
     const password=document.getElementById("password").value;
     const button=document.getElementById("loginBtn");
 
-    if(!username||!password){
-        showError("Username ಮತ್ತು Password ನಮೂದಿಸಿ.");
+    if(!username || !password){
+        showMessage("Username ಮತ್ತು Password ನಮೂದಿಸಿ.");
         return;
     }
 
     button.disabled=true;
-    button.textContent="Logging in...";
-    document.getElementById("message").style.display="none";
+    button.textContent="LOGIN ಆಗುತ್ತಿದೆ...";
+    showMessage("Login ಪರಿಶೀಲಿಸಲಾಗುತ್ತಿದೆ...","info");
 
     try{
-        /*
-         * IMPORTANT:
-         * Admin account already exists with the real email
-         * svbrhsbls@gmail.com. We DO NOT change that email.
-         *
-         * School accounts created by create-school use the
-         * internal synthetic email based on their username.
-         */
-        let authEmail;
-
-        if(username==="ADMIN"){
-            // Existing Admin Auth account. Email must remain unchanged.
-            authEmail="svbrhsbls@gmail.com";
-        }else{
-            // Every school logs in using its own username (normally DISE code).
-            authEmail=username.toLowerCase()+"@login.aksharadasoha.local";
+        if(!window.supabase){
+            throw new Error("Supabase library load ಆಗಿಲ್ಲ. Internet connection ಪರಿಶೀಲಿಸಿ.");
         }
 
-        const {data,error}=await supabaseClient.auth.signInWithPassword({
+        if(!supabaseClient){
+            supabaseClient=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+        }
+
+        // Existing Admin account.
+        // School accounts use their DISE-code username as the login name.
+        const authEmail = username==="ADMIN"
+            ? "svbrhsbls@gmail.com"
+            : username.toLowerCase()+"@login.aksharadasoha.local";
+
+        const result=await supabaseClient.auth.signInWithPassword({
             email:authEmail,
             password:password
         });
 
-        if(error||!data.session||!data.user){
-            throw new Error("Username ಅಥವಾ Password ತಪ್ಪಾಗಿದೆ.");
+        if(result.error){
+            throw new Error(result.error.message || "Username ಅಥವಾ Password ತಪ್ಪಾಗಿದೆ.");
         }
 
-        /*
-         * First read only the logged-in user's school_users row.
-         * Do NOT depend on a nested schools() relation here because
-         * RLS on the related schools table can otherwise make a valid
-         * login look like it has no access.
-         */
-        const {data:userInfo,error:userError}=await supabaseClient
+        if(!result.data || !result.data.user){
+            throw new Error("Login session ಸೃಷ್ಟಿಯಾಗಲಿಲ್ಲ.");
+        }
+
+        const userId=result.data.user.id;
+
+        const access=await supabaseClient
             .from("school_users")
             .select("username,role,is_active,school_id")
-            .eq("user_id",data.user.id)
+            .eq("user_id",userId)
             .maybeSingle();
 
-        if(userError){
+        if(access.error){
             await supabaseClient.auth.signOut();
-            throw new Error("School access ಪರಿಶೀಲಿಸಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ: " + userError.message);
+            throw new Error("Account access ಪರಿಶೀಲನೆ ವಿಫಲವಾಗಿದೆ: "+access.error.message);
         }
 
-        if(!userInfo){
+        if(!access.data){
             await supabaseClient.auth.signOut();
-            throw new Error("ಈ accountಗೆ school access ಇಲ್ಲ.");
+            throw new Error("ಈ login accountಗೆ system access ನೀಡಲಾಗಿಲ್ಲ.");
         }
 
-        if(!userInfo.is_active){
+        if(!access.data.is_active){
             await supabaseClient.auth.signOut();
-            throw new Error("ಈ account ಈಗ Active ಇಲ್ಲ.");
+            throw new Error("ಈ account Active ಇಲ್ಲ.");
         }
 
-        if(userInfo.role==="school"){
-            if(!userInfo.school_id){
-                await supabaseClient.auth.signOut();
-                throw new Error("ಈ accountಗೆ school_id ಇಲ್ಲ.");
+        localStorage.setItem("akshara_username",access.data.username);
+        localStorage.setItem("akshara_role",access.data.role);
+
+        if(access.data.school_id){
+            localStorage.setItem("akshara_school_id",access.data.school_id);
+        }
+
+        showMessage("Login ಯಶಸ್ವಿಯಾಗಿದೆ...","success");
+
+        setTimeout(function(){
+            if(access.data.role==="admin"){
+                window.location.replace("admin.html");
+            }else{
+                window.location.replace("dashboard.html");
             }
+        },300);
 
-            const {data:schoolInfo,error:schoolError}=await supabaseClient
-                .from("schools")
-                .select("id,school_name,school_code,is_active")
-                .eq("id",userInfo.school_id)
-                .maybeSingle();
-
-            if(schoolError){
-                await supabaseClient.auth.signOut();
-                throw new Error("School ಪರಿಶೀಲನೆ ವಿಫಲವಾಗಿದೆ: " + schoolError.message);
-            }
-
-            if(!schoolInfo||!schoolInfo.is_active){
-                await supabaseClient.auth.signOut();
-                throw new Error("ಈ ಶಾಲೆಯ account Active ಇಲ್ಲ.");
-            }
-        }
-
-        localStorage.setItem("akshara_username",userInfo.username);
-        localStorage.setItem("akshara_role",userInfo.role);
-
-        if(userInfo.school_id){
-            localStorage.setItem("akshara_school_id",userInfo.school_id);
-        }
-
-        if(userInfo.role==="admin"){
-            window.location.href="admin.html";
-        }else{
-            window.location.href="dashboard.html";
-        }
-
-    }catch(error){
-        showError(error.message||"Login failed.");
+    }catch(err){
+        console.error("LOGIN ERROR:",err);
+        showMessage(err && err.message ? err.message : "Login failed.");
     }finally{
         button.disabled=false;
         button.textContent="LOGIN";
     }
-});
+}
+
+document.getElementById("loginForm").addEventListener("submit",doLogin);
 </script>
 </body>
 </html>
