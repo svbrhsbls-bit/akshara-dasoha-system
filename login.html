@@ -4,410 +4,167 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ಅಕ್ಷರ ದಾಸೋಹ ಕಾರ್ಯಕ್ರಮ - Login</title>
-
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
 <style>
 *{box-sizing:border-box}
-
-body{
-    margin:0;
-    min-height:100vh;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    font-family:Arial,"Noto Sans Kannada",sans-serif;
-    background:linear-gradient(135deg,#eef4fb,#dcecff);
-    color:#172033;
-}
-
-.login-box{
-    width:100%;
-    max-width:430px;
-    margin:20px;
-    background:#fff;
-    padding:34px;
-    border-radius:18px;
-    box-shadow:0 10px 35px rgba(0,0,0,.14);
-}
-
-.logo{
-    text-align:center;
-    font-size:48px;
-    margin-bottom:8px;
-}
-
-h1{
-    text-align:center;
-    margin:0;
-    color:#173b6c;
-    font-size:27px;
-}
-
-.subtitle{
-    text-align:center;
-    margin:8px 0 28px;
-    color:#64748b;
-    font-size:15px;
-}
-
-label{
-    display:block;
-    font-weight:700;
-    margin:15px 0 7px;
-}
-
-input{
-    width:100%;
-    padding:13px 14px;
-    border:1px solid #cbd5e1;
-    border-radius:9px;
-    font-size:16px;
-    outline:none;
-}
-
-input:focus{
-    border-color:#1769aa;
-    box-shadow:0 0 0 3px rgba(23,105,170,.10);
-}
-
-.login-btn{
-    width:100%;
-    margin-top:24px;
-    padding:14px;
-    border:0;
-    border-radius:9px;
-    background:#1769aa;
-    color:#fff;
-    font-size:17px;
-    font-weight:700;
-    cursor:pointer;
-}
-
-.login-btn:hover{
-    background:#12588e;
-}
-
-.login-btn:disabled{
-    opacity:.65;
-    cursor:not-allowed;
-}
-
-.message{
-    display:none;
-    margin-top:16px;
-    padding:12px;
-    border-radius:8px;
-    text-align:center;
-    font-size:14px;
-}
-
-.error{
-    display:block;
-    background:#fdecec;
-    color:#a61b1b;
-}
-
-.footer{
-    text-align:center;
-    margin-top:22px;
-    color:#94a3b8;
-    font-size:12px;
-}
+body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;font-family:Arial,"Noto Sans Kannada",sans-serif;background:linear-gradient(135deg,#eef4fb,#dcecff);color:#172033}
+.login-box{width:100%;max-width:430px;margin:20px;background:#fff;padding:34px;border-radius:18px;box-shadow:0 10px 35px rgba(0,0,0,.14)}
+.logo{text-align:center;font-size:48px;margin-bottom:8px}
+h1{text-align:center;margin:0;color:#173b6c;font-size:27px}
+.subtitle{text-align:center;margin:8px 0 28px;color:#64748b;font-size:15px}
+label{display:block;font-weight:700;margin:15px 0 7px}
+input{width:100%;padding:13px 14px;border:1px solid #cbd5e1;border-radius:9px;font-size:16px;outline:none}
+input:focus{border-color:#1769aa;box-shadow:0 0 0 3px rgba(23,105,170,.10)}
+.login-btn{width:100%;margin-top:24px;padding:14px;border:0;border-radius:9px;background:#1769aa;color:#fff;font-size:17px;font-weight:700;cursor:pointer}
+.login-btn:disabled{opacity:.65;cursor:not-allowed}
+.message{display:none;margin-top:16px;padding:12px;border-radius:8px;text-align:center;font-size:14px}
+.error{display:block;background:#fdecec;color:#a61b1b}
+.footer{text-align:center;margin-top:22px;color:#94a3b8;font-size:12px}
 </style>
 </head>
-
 <body>
-
 <div class="login-box">
+<div class="logo">🍚</div>
+<h1>ಅಕ್ಷರ ದಾಸೋಹ ಕಾರ್ಯಕ್ರಮ</h1>
+<div class="subtitle">Username ಮತ್ತು Password ಮೂಲಕ Login</div>
 
-    <div class="logo">🍚</div>
+<form id="loginForm">
+<label for="username">Username</label>
+<input id="username" type="text" placeholder="Username ನಮೂದಿಸಿ" autocomplete="username" required autofocus>
 
-    <h1>ಅಕ್ಷರ ದಾಸೋಹ ಕಾರ್ಯಕ್ರಮ</h1>
+<label for="password">Password</label>
+<input id="password" type="password" placeholder="Password ನಮೂದಿಸಿ" autocomplete="current-password" required>
 
-    <div class="subtitle">
-        Username ಮತ್ತು Password ಮೂಲಕ Login
-    </div>
+<button id="loginBtn" class="login-btn" type="submit">LOGIN</button>
+<div id="message" class="message"></div>
+</form>
 
-    <form id="loginForm">
-
-        <label for="username">Username</label>
-
-        <input
-            id="username"
-            type="text"
-            placeholder="Username ನಮೂದಿಸಿ"
-            autocomplete="username"
-            required
-            autofocus
-        >
-
-        <label for="password">Password</label>
-
-        <input
-            id="password"
-            type="password"
-            placeholder="Password ನಮೂದಿಸಿ"
-            autocomplete="current-password"
-            required
-        >
-
-        <button
-            id="loginBtn"
-            class="login-btn"
-            type="submit"
-        >
-            LOGIN
-        </button>
-
-        <div id="message" class="message"></div>
-
-    </form>
-
-    <div class="footer">
-        ಅಕ್ಷರ ದಾಸೋಹ ಕಾರ್ಯಕ್ರಮ
-    </div>
-
+<div class="footer">ಅಕ್ಷರ ದಾಸೋಹ ಕಾರ್ಯಕ್ರಮ</div>
 </div>
 
 <script>
+const SUPABASE_URL="https://ezmudfrpcvjsgnjibvoq.supabase.co";
+const SUPABASE_KEY="sb_publishable__FYyH6NQaqgARaq2dvuovQ_rKmus0js";
+const supabaseClient=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
 
-const SUPABASE_URL =
-    "https://ezmudfrpcvjsgnjibvoq.supabase.co";
-
-const SUPABASE_KEY =
-    "sb_publishable__FYyH6NQaqgARaq2dvuovQ_rKmus0js";
-
-const supabaseClient =
-    supabase.createClient(
-        SUPABASE_URL,
-        SUPABASE_KEY
-    );
-
-
-function showError(message){
-
-    const el =
-        document.getElementById("message");
-
-    el.textContent = message;
-
-    el.className =
-        "message error";
-
+function showError(text){
+    const el=document.getElementById("message");
+    el.textContent=text;
+    el.className="message error";
 }
 
-
-document
-.getElementById("loginForm")
-.addEventListener("submit", async function(e){
-
+document.getElementById("loginForm").addEventListener("submit",async function(e){
     e.preventDefault();
 
-    const username =
-        document
-        .getElementById("username")
-        .value
-        .trim()
-        .toUpperCase();
+    const username=document.getElementById("username").value.trim().toUpperCase();
+    const password=document.getElementById("password").value;
+    const button=document.getElementById("loginBtn");
 
-    const password =
-        document
-        .getElementById("password")
-        .value;
-
-    const button =
-        document.getElementById("loginBtn");
-
-    if(!username || !password){
-
-        showError(
-            "Username ಮತ್ತು Password ನಮೂದಿಸಿ."
-        );
-
+    if(!username||!password){
+        showError("Username ಮತ್ತು Password ನಮೂದಿಸಿ.");
         return;
     }
 
-    button.disabled = true;
-    button.textContent = "Logging in...";
-
-    document
-    .getElementById("message")
-    .style.display = "none";
-
+    button.disabled=true;
+    button.textContent="Logging in...";
+    document.getElementById("message").style.display="none";
 
     try{
-
         /*
-         * Supabase Auth internally uses the
-         * synthetic email created by the
-         * create-school Edge Function.
+         * IMPORTANT:
+         * Admin account already exists with the real email
+         * svbrhsbls@gmail.com. We DO NOT change that email.
+         *
+         * School accounts created by create-school use the
+         * internal synthetic email based on their username.
          */
+        let authEmail;
 
-        const authEmail =
-            username.toLowerCase() +
-            "@login.aksharadasoha.local";
+        if(username==="ADMIN"){
+            authEmail="svbrhsbls@gmail.com";
+        }else{
+            authEmail=username.toLowerCase()+"@login.aksharadasoha.local";
+        }
 
-
-        const {
-            data,
-            error
-        } =
-        await supabaseClient.auth.signInWithPassword({
-
-            email: authEmail,
-
-            password: password
-
+        const {data,error}=await supabaseClient.auth.signInWithPassword({
+            email:authEmail,
+            password:password
         });
 
-
-        if(error){
-
-            throw new Error(
-                "Username ಅಥವಾ Password ತಪ್ಪಾಗಿದೆ."
-            );
-
+        if(error||!data.session||!data.user){
+            throw new Error("Username ಅಥವಾ Password ತಪ್ಪಾಗಿದೆ.");
         }
-
-
-        if(!data.session || !data.user){
-
-            throw new Error(
-                "Login session ಸಿಗಲಿಲ್ಲ."
-            );
-
-        }
-
 
         /*
-         * Find school/admin mapping.
+         * First read only the logged-in user's school_users row.
+         * Do NOT depend on a nested schools() relation here because
+         * RLS on the related schools table can otherwise make a valid
+         * login look like it has no access.
          */
+        const {data:userInfo,error:userError}=await supabaseClient
+            .from("school_users")
+            .select("username,role,is_active,school_id")
+            .eq("user_id",data.user.id)
+            .maybeSingle();
 
-        const {
-            data: userInfo,
-            error: userError
-        } =
-        await supabaseClient
-
-        .from("school_users")
-
-        .select(`
-            username,
-            role,
-            is_active,
-            school_id,
-            schools(
-                id,
-                school_name,
-                school_code,
-                is_active
-            )
-        `)
-
-        .eq(
-            "user_id",
-            data.user.id
-        )
-
-        .maybeSingle();
-
-
-        if(userError || !userInfo){
-
+        if(userError){
             await supabaseClient.auth.signOut();
-
-            throw new Error(
-                "ಈ accountಗೆ school access ಇಲ್ಲ."
-            );
-
+            throw new Error("School access ಪರಿಶೀಲಿಸಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ: " + userError.message);
         }
 
+        if(!userInfo){
+            await supabaseClient.auth.signOut();
+            throw new Error("ಈ accountಗೆ school access ಇಲ್ಲ.");
+        }
 
         if(!userInfo.is_active){
-
             await supabaseClient.auth.signOut();
-
-            throw new Error(
-                "ಈ account ಈಗ Active ಇಲ್ಲ."
-            );
-
+            throw new Error("ಈ account ಈಗ Active ಇಲ್ಲ.");
         }
 
+        if(userInfo.role==="school"){
+            if(!userInfo.school_id){
+                await supabaseClient.auth.signOut();
+                throw new Error("ಈ accountಗೆ school_id ಇಲ್ಲ.");
+            }
 
-        if(
-            userInfo.role === "school" &&
-            (!userInfo.schools ||
-             !userInfo.schools.is_active)
-        ){
+            const {data:schoolInfo,error:schoolError}=await supabaseClient
+                .from("schools")
+                .select("id,school_name,school_code,is_active")
+                .eq("id",userInfo.school_id)
+                .maybeSingle();
 
-            await supabaseClient.auth.signOut();
+            if(schoolError){
+                await supabaseClient.auth.signOut();
+                throw new Error("School ಪರಿಶೀಲನೆ ವಿಫಲವಾಗಿದೆ: " + schoolError.message);
+            }
 
-            throw new Error(
-                "ಈ ಶಾಲೆಯ account Active ಇಲ್ಲ."
-            );
-
+            if(!schoolInfo||!schoolInfo.is_active){
+                await supabaseClient.auth.signOut();
+                throw new Error("ಈ ಶಾಲೆಯ account Active ಇಲ್ಲ.");
+            }
         }
 
-
-        /*
-         * Save only non-sensitive session information.
-         */
-
-        localStorage.setItem(
-            "akshara_username",
-            userInfo.username
-        );
-
-        localStorage.setItem(
-            "akshara_role",
-            userInfo.role
-        );
+        localStorage.setItem("akshara_username",userInfo.username);
+        localStorage.setItem("akshara_role",userInfo.role);
 
         if(userInfo.school_id){
-
-            localStorage.setItem(
-                "akshara_school_id",
-                userInfo.school_id
-            );
-
+            localStorage.setItem("akshara_school_id",userInfo.school_id);
         }
 
-
-        /*
-         * Admin -> Admin Panel
-         * School -> Dashboard
-         */
-
-        if(userInfo.role === "admin"){
-
-            window.location.href =
-                "admin.html";
-
+        if(userInfo.role==="admin"){
+            window.location.href="admin.html";
         }else{
-
-            window.location.href =
-                "dashboard.html";
-
+            window.location.href="dashboard.html";
         }
 
     }catch(error){
-
-        showError(
-            error.message ||
-            "Login failed."
-        );
-
+        showError(error.message||"Login failed.");
     }finally{
-
-        button.disabled = false;
-        button.textContent = "LOGIN";
-
+        button.disabled=false;
+        button.textContent="LOGIN";
     }
-
 });
-
 </script>
-
 </body>
 </html>
