@@ -62,10 +62,11 @@ td input{height:34px;min-width:90px;text-align:right}
   .report-header .year{font-size:17px}
   .print-only{display:block}
   table{min-width:0;width:100%;table-layout:auto;border-collapse:collapse}
-  /* Print/PDF: keep borders on all data columns/rows, but not on headings. */
-  .print-report thead th{border:0!important}
-  .print-report tbody td{border:1px solid #222!important}
-  .print-report tbody .spacer-row td{border:0!important}
+  /* Print/PDF: table lines should match the on-screen Cash Book. */
+  .print-report table{border-collapse:collapse!important;border-spacing:0!important}
+  .print-report thead th,
+  .print-report tbody td{border:1px solid #cfd8d2!important}
+  .print-report tbody .spacer-row td{border:1px solid #cfd8d2!important}
   th,td{font-size:11px;padding:5px 4px;line-height:1.15}
   .report-title{font-size:20px;margin-bottom:8px}
   .balance-box{font-size:12px}
