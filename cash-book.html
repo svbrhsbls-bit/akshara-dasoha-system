@@ -61,12 +61,16 @@ td input{height:34px;min-width:90px;text-align:right}
   .report-header .school{font-size:18px}
   .report-header .year{font-size:17px}
   .print-only{display:block}
-  table{min-width:0;width:100%;table-layout:auto}
+  table{min-width:0;width:100%;table-layout:auto;border-collapse:collapse}
+  /* Print/PDF: keep borders on all data columns/rows, but not on headings. */
+  .print-report thead th{border:0!important}
+  .print-report tbody td{border:1px solid #222!important}
+  .print-report tbody .spacer-row td{border:0!important}
   th,td{font-size:11px;padding:5px 4px;line-height:1.15}
   .report-title{font-size:20px;margin-bottom:8px}
   .balance-box{font-size:12px}
-  .print-report{page-break-after:always}
-  .print-report:last-child{page-break-after:auto}
+  .print-report{page-break-after:always;break-after:page}
+  .print-report:last-child{page-break-after:auto;break-after:auto}
 }</style>
 </head>
 <body>
@@ -218,6 +222,7 @@ let selectedYear="";
 let selectedYearId=null;
 let firstAcademicYear="";
 let loading=false;
+let editMode={type:null,date:null};
 
 function money(n){
   return '₹'+Number(n||0).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2})
@@ -483,28 +488,45 @@ function ensureOpening(){
 function balanceRows(from,to){
   const ds=allDates(from,to);
   if(!ds.length)return [];
+
+  // Daily flow: Opening → JAMA → JAMA Total → KHARCHU Opening → KHARCHU → Final Closing.
   const firstAll=dates();
   const opening={};
   state.items.forEach(it=>opening[it]=openingValue(it));
+
   const rows=[];
   for(const d of firstAll){
-    const closing={};
+    const jama={},kharchu={},jamaClosing={},kharchuOpening={},kharchuClosing={};
+
     state.items.forEach(it=>{
-      const j=state.jama.filter(x=>x.date===d&&x.item===it).reduce((s,x)=>s+Number(x.amount||0),0);
-      const k=state.kharchu.filter(x=>x.date===d&&x.item===it).reduce((s,x)=>s+Number(x.amount||0),0);
-      closing[it]=opening[it]+j-k;
+      const j=state.jama.filter(x=>x.date===d&&x.item===it)
+        .reduce((s,x)=>s+Number(x.amount||0),0);
+      const k=state.kharchu.filter(x=>x.date===d&&x.item===it)
+        .reduce((s,x)=>s+Number(x.amount||0),0);
+
+      jama[it]=j;
+      kharchu[it]=k;
+      jamaClosing[it]=opening[it]+j;
+      kharchuOpening[it]=jamaClosing[it];
+      kharchuClosing[it]=kharchuOpening[it]-k;
     });
+
     if(ds.includes(d)){
       rows.push({
-        date:d,opening:{...opening},
-        jama:state.items.reduce((o,it)=>{o[it]=state.jama.filter(x=>x.date===d&&x.item===it).reduce((s,x)=>s+Number(x.amount||0),0);return o},{}),
-        kharchu:state.items.reduce((o,it)=>{o[it]=state.kharchu.filter(x=>x.date===d&&x.item===it).reduce((s,x)=>s+Number(x.amount||0),0);return o},{}),
-        closing:{...closing},
-        jamaTotal:state.items.reduce((s,it)=>s+(state.jama.filter(x=>x.date===d&&x.item===it).reduce((a,x)=>a+Number(x.amount||0),0)),0),
-        kharchuTotal:state.items.reduce((s,it)=>s+(state.kharchu.filter(x=>x.date===d&&x.item===it).reduce((a,x)=>a+Number(x.amount||0),0)),0)
+        date:d,
+        opening:{...opening},
+        jama:{...jama},
+        jamaClosing:{...jamaClosing},
+        kharchuOpening:{...kharchuOpening},
+        kharchu:{...kharchu},
+        kharchuClosing:{...kharchuClosing},
+        closing:{...kharchuClosing},
+        jamaTotal:Object.values(jama).reduce((s,n)=>s+Number(n||0),0),
+        kharchuTotal:Object.values(kharchu).reduce((s,n)=>s+Number(n||0),0)
       });
     }
-    state.items.forEach(it=>opening[it]=closing[it]);
+
+    state.items.forEach(it=>opening[it]=kharchuClosing[it]);
   }
   return rows;
 }
@@ -636,30 +658,122 @@ async function saveBulkEntry(type){
   const rows=inputs.map(el=>({item:el.dataset.item,amount:Number(el.value||0)})).filter(x=>x.amount>0);
   if(!rows.length)return alert('ಕನಿಷ್ಠ ಒಂದು Itemಗೆ Amount ನಮೂದಿಸಿ');
 
+  const isEditing=editMode.type===type && editMode.date===date;
+
   try{
+    // Edit mode: replace the selected day's entries completely.
+    // This also allows the user to remove an old Item by clearing its Amount.
+    if(isEditing){
+      const del=await db.from("cash_book_entries")
+        .delete()
+        .eq("academic_year",selectedYear)
+        .eq("entry_type",type)
+        .eq("entry_date",date);
+      if(del.error)throw del.error;
+    }
+
     for(const r of rows){
       const payload={
         academic_year:selectedYear,entry_type:type,entry_date:date,
         item_name:r.item,amount:r.amount,details:desc
       };
-      const existing=state[type].find(x=>x.date===date&&x.item===r.item);
-      let result;
-      if(existing){
-        result=await db.from("cash_book_entries").update(payload).eq("id",existing.id).select("id,entry_date,item_name,amount,details,created_at").single();
-      }else{
-        result=await db.from("cash_book_entries").upsert(payload,{onConflict:"academic_year,entry_type,entry_date,item_name"})
-          .select("id,entry_date,item_name,amount,details,created_at").single();
-      }
+
+      const result=await db.from("cash_book_entries")
+        .upsert(payload,{onConflict:"academic_year,entry_type,entry_date,item_name"})
+        .select("id,entry_date,item_name,amount,details,created_at").single();
+
       if(result.error)throw result.error;
     }
+
+    editMode={type:null,date:null};
     await loadYearData();
     clearBulkEntry(type);
+    updateEditButtonState(type);
     renderAll();
   }catch(e){
     console.error(e);
     alert('Save failed: '+e.message);
   }
 }
+
+function editDate(type,date){
+  const source=type==='jama'?state.jama:state.kharchu;
+  const entries=source.filter(x=>x.date===date);
+  if(!entries.length)return alert('ಈ ದಿನದ Entry ಕಂಡುಬಂದಿಲ್ಲ');
+
+  const dateId=type==='jama'?'jamaDate':'khDate';
+  const descId=type==='jama'?'jamaDesc':'khDesc';
+  const prefix=type==='jama'?'jamaBulk':'khBulk';
+
+  document.getElementById(dateId).value=date;
+  document.getElementById(descId).value=entries.map(x=>x.desc).find(x=>x)||'';
+
+  document.querySelectorAll(`[id^="${prefix}_"]`).forEach(el=>el.value='');
+  entries.forEach(entry=>{
+    const idx=state.items.indexOf(entry.item);
+    if(idx>=0){
+      const el=document.getElementById(`${prefix}_${idx}`);
+      if(el)el.value=Number(entry.amount||0);
+    }
+  });
+
+  editMode={type,date};
+  updateEditButtonState(type);
+
+  const tab=document.querySelector(`.tab[data-page="${type==='jama'?'jama':'kharchu'}"]`);
+  if(tab)tab.click();
+
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+async function deleteDate(type,date){
+  if(!confirm(`${displayDate(date)} ದಿನದ ಎಲ್ಲಾ ${type==='jama'?'ಜಮಾ':'ಖರ್ಚು'} entries ಅಳಿಸಬೇಕೇ?`))return;
+  const r=await db.from("cash_book_entries")
+    .delete()
+    .eq("academic_year",selectedYear)
+    .eq("entry_type",type)
+    .eq("entry_date",date);
+  if(r.error)return alert('Delete failed: '+r.error.message);
+
+  if(editMode.type===type && editMode.date===date){
+    editMode={type:null,date:null};
+  }
+
+  await loadYearData();
+  clearBulkEntry(type);
+  updateEditButtonState(type);
+  renderAll();
+}
+
+function cancelEdit(type){
+  editMode={type:null,date:null};
+  clearBulkEntry(type);
+  updateEditButtonState(type);
+}
+
+function updateEditButtonState(type){
+  const dateId=type==='jama'?'jamaDate':'khDate';
+  const descId=type==='jama'?'jamaDesc':'khDesc';
+  const saveBtn=document.querySelector(`#${type==='jama'?'jama':'kharchu'} .primary`);
+  if(saveBtn){
+    saveBtn.textContent=(editMode.type===type)?'💾 Update Save':`💾 ಈ ದಿನದ ${type==='jama'?'JAMA':'ಖರ್ಚು'} Save`;
+  }
+
+  let cancelBtn=document.getElementById(`${type}_cancel_edit`);
+  if(editMode.type===type){
+    if(!cancelBtn){
+      cancelBtn=document.createElement('button');
+      cancelBtn.id=`${type}_cancel_edit`;
+      cancelBtn.className='secondary';
+      cancelBtn.textContent='✖️ Edit Cancel';
+      cancelBtn.onclick=()=>cancelEdit(type);
+      saveBtn?.parentElement?.appendChild(cancelBtn);
+    }
+  }else if(cancelBtn){
+    cancelBtn.remove();
+  }
+}
+
 function clearBulkEntry(type){
   const prefix=type==='jama'?'jamaBulk':'khBulk';
   document.querySelectorAll(`[id^="${prefix}_"]`).forEach(el=>el.value='');
@@ -704,19 +818,36 @@ function renderTable(type){
   }
   let html='';
   rows.forEach((r,index)=>{
-    const movement=type==='jama'?r.jama:r.kharchu;
-    const movementTotal=type==='jama'?r.jamaTotal:r.kharchuTotal;
-    const details=(type==='jama'?state.jama:state.kharchu).filter(x=>x.date===r.date).map(x=>x.desc).find(x=>x)||'';
+    const isJama=type==='jama';
+    const movement=isJama?r.jama:r.kharchu;
+    const movementTotal=isJama?r.jamaTotal:r.kharchuTotal;
+
+    // If a date has KHARCHU but no JAMA, that date's final balance
+    // is the JAMA opening/final balance shown for the same date.
+    const jamaOnlyDisplay=isJama && r.jamaTotal===0 && r.kharchuTotal>0;
+    const opening=isJama
+      ? (jamaOnlyDisplay ? r.kharchuClosing : r.opening)
+      : r.kharchuOpening;
+    const closing=isJama
+      ? (jamaOnlyDisplay ? r.kharchuClosing : r.jamaClosing)
+      : r.kharchuClosing;
+    const details=(isJama?state.jama:state.kharchu).filter(x=>x.date===r.date).map(x=>x.desc).find(x=>x)||'';
+
     html+=`<tr><td>${esc(displayDate(r.date))}</td><td><b>ಪ್ರಾರಂಭಿಕ ಶಿಲ್ಕು</b></td>
-      ${state.items.map(it=>`<td>${money(r.opening[it])}</td>`).join('')}
-      <td><b>${money(state.items.reduce((s,it)=>s+r.opening[it],0))}</b></td><td></td></tr>`;
-    html+=`<tr><td></td><td>${movementTotal!==0?esc(details||(type==='jama'?'ಜಮಾ':'ಖರ್ಚು')):`ಯಾವುದೇ ${type==='jama'?'ಜಮಾ':'ಖರ್ಚು'} ಇರುವುದಿಲ್ಲ`}</td>
+      ${state.items.map(it=>`<td>${money(opening[it])}</td>`).join('')}
+      <td><b>${money(state.items.reduce((s,it)=>s+Number(opening[it]||0),0))}</b></td><td></td></tr>`;
+
+    html+=`<tr><td></td><td>${movementTotal!==0?esc(details||(isJama?'ಜಮಾ':'ಖರ್ಚು')):`ಯಾವುದೇ ${isJama?'ಜಮಾ':'ಖರ್ಚು'} ಇರುವುದಿಲ್ಲ`}</td>
       ${state.items.map(it=>movement[it]!==0?`<td>${money(movement[it])}</td>`:'<td>—</td>').join('')}
       <td><b>${money(movementTotal)}</b></td><td></td></tr>`;
-    html+=`<tr><td></td><td><b>${type==='jama'?'ಒಟ್ಟು':'ಅಂತಿಮ ಶಿಲ್ಕು'}</b></td>
-      ${state.items.map(it=>`<td><b>${money(r.closing[it])}</b></td>`).join('')}
-      <td><b>${money(state.items.reduce((s,it)=>s+r.closing[it],0))}</b></td>
-      <td class="no-print"><button class="danger" onclick="deleteDate('${type}','${r.date}')">Delete</button></td></tr>`;
+
+    html+=`<tr><td></td><td><b>${isJama?'ಒಟ್ಟು':'ಅಂತಿಮ ಶಿಲ್ಕು'}</b></td>
+      ${state.items.map(it=>`<td><b>${money(closing[it])}</b></td>`).join('')}
+      <td><b>${money(state.items.reduce((s,it)=>s+Number(closing[it]||0),0))}</b></td>
+      <td class="no-print">
+        <button class="secondary" onclick="editDate('${type}','${r.date}')">✏️ Edit</button>
+        <button class="danger" onclick="deleteDate('${type}','${r.date}')">Delete</button>
+      </td></tr>`;
     if(index<rows.length-1){
       html+=`<tr class="spacer-row"><td colspan="${state.items.length+4}" style="height:18px;border-left:0;border-right:0;background:#fff"></td></tr>`;
       html+=`<tr class="spacer-row"><td colspan="${state.items.length+4}" style="height:18px;border-left:0;border-right:0;background:#fff"></td></tr>`;
@@ -841,16 +972,24 @@ function reportPage(type,from,to){
     const source=type==='jama'?state.jama:state.kharchu;
     const entries=source.filter(x=>x.date===r.date);
     const details=entries.map(x=>x.desc).find(x=>x)||'';
-    const openingTotal=state.items.reduce((s,it)=>s+r.opening[it],0);
-    const closingTotal=state.items.reduce((s,it)=>s+r.closing[it],0);
+    const isJama=type==='jama';
+    const jamaOnlyDisplay=isJama && r.jamaTotal===0 && r.kharchuTotal>0;
+    const opening=isJama
+      ? (jamaOnlyDisplay ? r.kharchuClosing : r.opening)
+      : r.kharchuOpening;
+    const closing=isJama
+      ? (jamaOnlyDisplay ? r.kharchuClosing : r.jamaClosing)
+      : r.kharchuClosing;
+    const openingTotal=state.items.reduce((s,it)=>s+Number(opening[it]||0),0);
+    const closingTotal=state.items.reduce((s,it)=>s+Number(closing[it]||0),0);
     h+=`<tr><td>${esc(displayDate(r.date))}</td><td><b>ಪ್ರಾರಂಭಿಕ ಶಿಲ್ಕು</b></td>
-      ${state.items.map(it=>`<td>${money(r.opening[it])}</td>`).join('')}
+      ${state.items.map(it=>`<td>${money(opening[it])}</td>`).join('')}
       <td><b>${money(openingTotal)}</b></td><td></td></tr>`;
-    h+=`<tr><td></td><td>${entries.length?esc(details||(type==='jama'?'ಜಮಾ':'ಖರ್ಚು')):`ಯಾವುದೇ ${type==='jama'?'ಜಮಾ':'ಖರ್ಚು'} ಇರುವುದಿಲ್ಲ`}</td>
+    h+=`<tr><td></td><td>${entries.length?esc(details||(isJama?'ಜಮಾ':'ಖರ್ಚು')):`ಯಾವುದೇ ${isJama?'ಜಮಾ':'ಖರ್ಚು'} ಇರುವುದಿಲ್ಲ`}</td>
       ${state.items.map(it=>movement[it]!==0?`<td>${money(movement[it])}</td>`:'<td>—</td>').join('')}
       <td><b>${money(movementTotal)}</b></td><td></td></tr>`;
-    h+=`<tr><td></td><td><b>${type==='jama'?'ಒಟ್ಟು':'ಅಂತಿಮ ಶಿಲ್ಕು'}</b></td>
-      ${state.items.map(it=>`<td><b>${money(r.closing[it])}</b></td>`).join('')}
+    h+=`<tr><td></td><td><b>${isJama?'ಒಟ್ಟು':'ಅಂತಿಮ ಶಿಲ್ಕು'}</b></td>
+      ${state.items.map(it=>`<td><b>${money(closing[it])}</b></td>`).join('')}
       <td><b>${money(closingTotal)}</b></td><td></td></tr>`;
     if(index<rows.length-1){
       h+=`<tr class="spacer-row"><td colspan="${state.items.length+4}" style="height:18px;border-left:0;border-right:0;background:#fff"></td></tr>`;
@@ -858,12 +997,22 @@ function reportPage(type,from,to){
     }
   });
   h+=`</tbody></table>`;
-  const firstOpeningTotal=state.items.reduce((s,it)=>s+rows[0].opening[it],0);
-  const movementTotal=rows.reduce((s,r)=>s+(type==='jama'?r.jamaTotal:r.kharchuTotal),0);
-  const finalTotal=state.items.reduce((s,it)=>s+rows[rows.length-1].closing[it],0);
+  const isJama=type==='jama';
+  const firstR=rows[0], lastR=rows[rows.length-1];
+  const firstJamaOnly=isJama && firstR.jamaTotal===0 && firstR.kharchuTotal>0;
+  const lastJamaOnly=isJama && lastR.jamaTotal===0 && lastR.kharchuTotal>0;
+  const firstOpening=isJama
+    ? (firstJamaOnly ? firstR.kharchuClosing : firstR.opening)
+    : firstR.kharchuOpening;
+  const finalClosing=isJama
+    ? (lastJamaOnly ? lastR.kharchuClosing : lastR.jamaClosing)
+    : lastR.kharchuClosing;
+  const firstOpeningTotal=state.items.reduce((s,it)=>s+Number(firstOpening[it]||0),0);
+  const movementTotal=rows.reduce((s,r)=>s+(isJama?r.jamaTotal:r.kharchuTotal),0);
+  const finalTotal=state.items.reduce((s,it)=>s+Number(finalClosing[it]||0),0);
   h+=`<div class="balance-box"><div>ಪ್ರಾರಂಭಿಕ ಶಿಲ್ಕು — ಒಟ್ಟು<br><b>${money(firstOpeningTotal)}</b></div>
-    <div>${type==='jama'?'ಒಟ್ಟು ಜಮಾ':'ಒಟ್ಟು ಖರ್ಚು'}<br><b>${money(movementTotal)}</b></div>
-    <div>${type==='jama'?'ಜಮಾ ನಂತರದ ಶಿಲ್ಕು':'ಅಂತಿಮ ಶಿಲ್ಕು'} — ಒಟ್ಟು<br><b>${money(finalTotal)}</b></div></div></div>`;
+    <div>${isJama?'ಒಟ್ಟು ಜಮಾ':'ಒಟ್ಟು ಖರ್ಚು'}<br><b>${money(movementTotal)}</b></div>
+    <div>${isJama?'ಜಮಾ ನಂತರದ ಶಿಲ್ಕು':'ಅಂತಿಮ ಶಿಲ್ಕು'} — ಒಟ್ಟು<br><b>${money(finalTotal)}</b></div></div></div>`;
   return h;
 }
 function renderPreview(){
@@ -910,12 +1059,20 @@ function exportExcel(){
     const source=kind==='jama'?state.jama:state.kharchu;
 
     rows.forEach((r,i)=>{
-      const movement=kind==='jama'?r.jama:r.kharchu;
+      const isJama=kind==='jama';
+      const movement=isJama?r.jama:r.kharchu;
+      const jamaOnlyDisplay=isJama && r.jamaTotal===0 && r.kharchuTotal>0;
+      const opening=isJama
+        ? (jamaOnlyDisplay ? r.kharchuClosing : r.opening)
+        : r.kharchuOpening;
+      const closing=isJama
+        ? (jamaOnlyDisplay ? r.kharchuClosing : r.jamaClosing)
+        : r.kharchuClosing;
       const entries=source.filter(x=>x.date===r.date);
       const desc=entries.map(x=>x.desc).find(x=>x)||'';
-      aoa.push([displayDate(r.date),'ಪ್ರಾರಂಭಿಕ ಶಿಲ್ಕು',...state.items.map(it=>r.opening[it]),state.items.reduce((s,it)=>s+r.opening[it],0)]);
-      aoa.push(['',entries.length?desc:`ಯಾವುದೇ ${kind==='jama'?'ಜಮಾ':'ಖರ್ಚು'} ಇರುವುದಿಲ್ಲ`,...state.items.map(it=>movement[it]!==0?movement[it]:''),kind==='jama'?r.jamaTotal:r.kharchuTotal]);
-      aoa.push(['',kind==='jama'?'ಒಟ್ಟು':'ಅಂತಿಮ ಶಿಲ್ಕು',...state.items.map(it=>r.closing[it]),state.items.reduce((s,it)=>s+r.closing[it],0)]);
+      aoa.push([displayDate(r.date),'ಪ್ರಾರಂಭಿಕ ಶಿಲ್ಕು',...state.items.map(it=>opening[it]),state.items.reduce((s,it)=>s+Number(opening[it]||0),0)]);
+      aoa.push(['',entries.length?desc:`ಯಾವುದೇ ${isJama?'ಜಮಾ':'ಖರ್ಚು'} ಇರುವುದಿಲ್ಲ`,...state.items.map(it=>movement[it]!==0?movement[it]:''),isJama?r.jamaTotal:r.kharchuTotal]);
+      aoa.push(['',isJama?'ಒಟ್ಟು':'ಅಂತಿಮ ಶಿಲ್ಕು',...state.items.map(it=>closing[it]),state.items.reduce((s,it)=>s+Number(closing[it]||0),0)]);
       if(i<rows.length-1){aoa.push([]);aoa.push([]);}
     });
 
@@ -959,7 +1116,11 @@ function exportExcel(){
   const suffix=type==='both'?'CashBook':(type==='jama'?'JAMA':'KHARCHU');
   XLSX.writeFile(wb,`Cash-Book-${safeYear}-${suffix}.xlsx`);
 }
-function printReport(){renderPreview();window.print()}
+function printReport(){
+  renderPreview();
+  // Allow the report DOM to finish rendering before opening Print/PDF.
+  setTimeout(()=>window.print(),150);
+}
 
 document.querySelectorAll('.tab').forEach(btn=>btn.addEventListener('click',()=>{
   document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));btn.classList.add('active');
