@@ -7,204 +7,383 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 *{box-sizing:border-box}
-body{margin:0;background:#f3f6f4;color:#17202a;font-family:Arial,"Noto Sans Kannada","Nirmala UI",sans-serif}
-.top{background:#126b38;color:#fff;padding:18px 28px;box-shadow:0 2px 8px #0002}
-.top h1{margin:0;font-size:28px}.top p{margin:5px 0 0}
-.wrap{max-width:1600px;margin:18px auto;padding:0 14px}
-.card{background:#fff;border-radius:12px;padding:18px;margin-bottom:16px;box-shadow:0 2px 10px #0001}
-.school{text-align:center}.school .dept{font-size:19px;font-weight:800}.school .name{font-size:24px;font-weight:800;margin-top:3px}.school .year{font-size:16px;font-weight:700;margin-top:5px}
-.stats{display:grid;grid-template-columns:repeat(5,1fr);gap:12px}
-.stat{background:#f8fbf9;border:1px solid #d7e2da;border-radius:10px;padding:15px;text-align:center}
-.stat .label{font-size:13px;color:#64748b;font-weight:700}.stat .value{font-size:24px;font-weight:800;margin-top:5px}
-.section-title{margin:0 0 13px;font-size:20px}
-.modules{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
-.module{border:1px solid #d7e2da;border-radius:11px;background:#fff;padding:16px;cursor:pointer;transition:.15s}
+html,body{margin:0;width:100%;height:100%;font-family:Arial,"Noto Sans Kannada","Nirmala UI",sans-serif;background:#f4f6f8;color:#17202a}
+body{overflow:hidden}
+.app{display:flex;width:100%;height:100vh}
+
+/* LEFT SIDEBAR */
+.sidebar{width:285px;min-width:285px;height:100vh;background:#0d1729;color:#fff;display:flex;flex-direction:column;overflow-y:auto}
+.brand{padding:20px 18px 18px;border-bottom:1px solid #243047}
+.brand-row{display:flex;align-items:center;gap:12px}
+.logo{width:43px;height:43px;border-radius:9px;background:#087b43;display:flex;align-items:center;justify-content:center;font-size:24px}
+.brand h1{font-size:17px;margin:0;line-height:1.35}
+.brand p{font-size:11px;color:#aeb9cb;margin:2px 0 0}
+.nav{padding:16px 11px}
+.nav-title{font-size:12px;color:#8290a6;padding:8px 10px 6px;margin-top:2px}
+.nav-btn{width:100%;border:0;background:transparent;color:#e8edf5;text-align:left;border-radius:8px;padding:11px 12px;margin:2px 0;cursor:pointer;font:700 14px Arial,"Noto Sans Kannada","Nirmala UI",sans-serif;display:flex;align-items:center;gap:10px}
+.nav-btn:hover{background:#17253b}
+.nav-btn.active{background:#087b43;color:#fff}
+.nav-icon{width:22px;text-align:center;font-size:16px}
+.sidebar-bottom{margin-top:auto;padding:12px;border-top:1px solid #243047;color:#91a0b5;font-size:11px;line-height:1.5}
+
+/* MAIN */
+.main{flex:1;min-width:0;height:100vh;display:flex;flex-direction:column;overflow:hidden}
+.topbar{height:88px;min-height:88px;background:#fff;border-bottom:1px solid #dce2e7;display:flex;align-items:center;justify-content:space-between;padding:0 25px;gap:15px}
+.top-title{min-width:0}
+.top-title h2{margin:0;color:#126b38;font-size:21px;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.top-title p{margin:4px 0 0;color:#8993a0;font-size:13px}
+.year-badge{background:#eef7f1;color:#126b38;border:1px solid #cfe4d6;border-radius:22px;padding:9px 15px;font-weight:700;font-size:13px;white-space:nowrap}
+.content{flex:1;overflow:auto;padding:20px 24px 28px}
+
+/* HOME */
+.home{max-width:1450px;margin:auto}
+.summary{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:18px}
+.stat{background:#fff;border:1px solid #e0e5e9;border-radius:11px;padding:15px;box-shadow:0 2px 7px #00000009}
+.stat-label{font-size:13px;color:#687585;font-weight:700}
+.stat-value{font-size:25px;font-weight:800;margin-top:6px}
+.stat-note{font-size:11px;color:#38805d;margin-top:4px}
+.modules-title{font-size:19px;margin:8px 0 12px}
+.modules{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.module{background:#fff;border:1px solid #e0e5e9;border-radius:11px;padding:16px;cursor:pointer;box-shadow:0 2px 7px #00000009}
 .module:hover{box-shadow:0 5px 16px #0002;transform:translateY(-1px)}
-.module .icon{font-size:28px}.module h3{margin:8px 0 5px;font-size:17px}.module p{margin:0;color:#64748b;font-size:13px;line-height:1.45}
-.status{margin-top:10px;padding:9px;border-radius:8px;background:#eef7f1;color:#126b38;font-size:13px}
-.frame-card{padding:0;overflow:hidden}
-.frame-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 15px;background:#eef4ef;border-bottom:1px solid #d7e2da}
-.frame-head b{font-size:15px}.frame-actions{display:flex;gap:7px}
-button{border:0;border-radius:7px;padding:8px 12px;font:inherit;font-weight:700;cursor:pointer}
-.secondary{background:#e1e9e4;color:#17202a}.primary{background:#126b38;color:#fff}
-iframe{display:block;width:100%;height:calc(100vh - 265px);min-height:650px;border:0;background:#fff}
-.note{font-size:12px;color:#64748b;margin-top:8px}
-@media(max-width:1100px){.stats{grid-template-columns:repeat(3,1fr)}.modules{grid-template-columns:repeat(2,1fr)}}
-@media(max-width:650px){.stats,.modules{grid-template-columns:1fr}.top{padding:15px}.top h1{font-size:23px}.school .name{font-size:19px}iframe{height:700px;min-height:700px}}
+.module .icon{font-size:25px}
+.module h3{margin:8px 0 5px;font-size:16px}
+.module p{margin:0;color:#697586;font-size:12px;line-height:1.5}
+.open-link{display:block;color:#126b38;font-weight:800;font-size:13px;margin-top:10px}
+
+/* MODULE FRAME */
+.frame-wrap{height:100%;background:#fff;border:1px solid #dce2e7;border-radius:10px;overflow:hidden;box-shadow:0 2px 8px #00000008}
+.frame-head{height:47px;background:#f7faf8;border-bottom:1px solid #dce2e7;display:flex;align-items:center;justify-content:space-between;padding:0 12px 0 16px}
+.frame-head b{font-size:14px}
+.frame-actions{display:flex;gap:6px}
+.frame-actions button{border:0;border-radius:6px;padding:6px 10px;font-weight:700;cursor:pointer;background:#e6ece8}
+iframe{display:block;width:100%;height:calc(100% - 47px);border:0;background:#fff}
+
+/* RESPONSIVE */
+@media(max-width:1050px){
+ .sidebar{width:235px;min-width:235px}
+ .summary{grid-template-columns:repeat(2,1fr)}
+ .modules{grid-template-columns:repeat(2,1fr)}
+ .top-title h2{font-size:17px}
+}
+@media(max-width:700px){
+ body{overflow:auto}.app{height:auto;min-height:100vh;display:block}
+ .sidebar{width:100%;height:auto;min-width:0}
+ .nav{display:grid;grid-template-columns:1fr 1fr}
+ .nav-title{grid-column:1/-1}
+ .sidebar-bottom{display:none}
+ .main{height:auto;min-height:calc(100vh - 400px)}
+ .topbar{height:auto;min-height:76px;padding:12px 15px}
+ .content{padding:14px}
+ .summary,.modules{grid-template-columns:1fr}
+ .frame-wrap{height:750px}
+ iframe{height:calc(100% - 47px)}
+}
 </style>
 </head>
 <body>
 
-<header class="top">
-  <h1 id="topTitle">ಅಕ್ಷರ ದಾಸೋಹ ಕಾರ್ಯಕ್ರಮ</h1>
-  <p id="topSchool">Dashboard / ಮುಖ್ಯ ಪುಟ</p>
-</header>
+<div class="app">
 
-<main class="wrap">
-  <section class="card school">
-    <div class="dept" id="departmentName">ಇಲಾಖೆಯ ಹೆಸರು</div>
-    <div class="name" id="schoolName">ಶಾಲೆಯ ಹೆಸರು</div>
-    <div class="year">ಸಕ್ರಿಯ ಶೈಕ್ಷಣಿಕ ವರ್ಷ: <span id="academicYear">Loading...</span></div>
-  </section>
-
-  <section class="stats">
-    <div class="stat"><div class="label">ವಿದ್ಯಾರ್ಥಿಗಳು</div><div class="value" id="studentTotal">0</div></div>
-    <div class="stat"><div class="label">ಹುಡುಗರು</div><div class="value" id="boysTotal">0</div></div>
-    <div class="stat"><div class="label">ಹುಡುಗಿಯರು</div><div class="value" id="girlsTotal">0</div></div>
-    <div class="stat"><div class="label">ಇಂದಿನ ಆಹಾರ ದಾಖಲೆ</div><div class="value" id="todayFood">0</div></div>
-    <div class="stat"><div class="label">Cash Balance</div><div class="value" id="cashBalance">₹0.00</div></div>
-  </section>
-
-  <section class="card">
-    <h2 class="section-title">📋 ಎಲ್ಲಾ ವಿಭಾಗಗಳು</h2>
-    <div class="modules">
-      <div class="module" onclick="openPage('school-settings.html','🏫 ಶಾಲಾ ಸೆಟ್ಟಿಂಗ್ಸ್')">
-        <div class="icon">🏫</div><h3>ಶಾಲಾ ಸೆಟ್ಟಿಂಗ್ಸ್</h3><p>ಶಾಲೆಯ ವಿವರಗಳು ಮತ್ತು Academic Year</p>
-      </div>
-      <div class="module" onclick="openPage('students-number.html','👨‍🎓 Students Number')">
-        <div class="icon">👨‍🎓</div><h3>ವಿದ್ಯಾರ್ಥಿಗಳ ಸಂಖ್ಯೆ</h3><p>ತರಗತಿವಾರು Boys, Girls ಮತ್ತು Total</p>
-      </div>
-      <div class="module" onclick="openPage('calculation-settings.html','⚙️ Calculation Settings')">
-        <div class="icon">⚙️</div><h3>Calculation Settings</h3><p>Items, ಅಡುಗೆ ಪದಾರ್ಥ, ಪೌಷ್ಠಿಕ ಆಹಾರ ಮತ್ತು Rate</p>
-      </div>
-      <div class="module" onclick="openPage('daily-food-distribution.html','🍚 Daily Food Distribution')">
-        <div class="icon">🍚</div><h3>ದಿನವಹಿ ಆಹಾರ ವಿತರಣೆ</h3><p>ದಿನದ ವಿದ್ಯಾರ್ಥಿಗಳ ಸಂಖ್ಯೆ, ಆಹಾರ ಮತ್ತು ರಜೆ ದಾಖಲೆ</p>
-      </div>
-      <div class="module" onclick="openPage('daily-items-food-calculation.html','🧮 Daily Items & Food Calculation')">
-        <div class="icon">🧮</div><h3>Daily Items & Food Calculation</h3><p>ದಾಸ್ತಾನು, ಖರ್ಚು, ಉಳಿಕೆ ಮತ್ತು Wheat Day calculation</p>
-      </div>
-      <div class="module" onclick="openPage('monthly-items-student-summary.html','📊 Monthly Summary')">
-        <div class="icon">📊</div><h3>Monthly Items & Student Summary</h3><p>ತಿಂಗಳ Item / Ingredient / Nutrition ವರದಿ</p>
-      </div>
-      <div class="module" onclick="openPage('cash-book.html','💰 Cash Book')">
-        <div class="icon">💰</div><h3>Cash Book</h3><p>Opening, ಜಮಾ, ಖರ್ಚು, Item Master ಮತ್ತು Reports</p>
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-row">
+        <div class="logo">🍚</div>
+        <div>
+          <h1 id="sideDepartment">ಅಕ್ಷರ ದಾಸೋಹ</h1>
+          <p>MDM Management</p>
+        </div>
       </div>
     </div>
-    <div class="status" id="loadStatus">Dashboard data loading...</div>
-  </section>
 
-  <section class="card frame-card">
-    <div class="frame-head">
-      <b id="frameTitle">Dashboardನಲ್ಲಿ ವಿಭಾಗ ಆಯ್ಕೆ ಮಾಡಿ</b>
-      <div class="frame-actions">
-        <button class="secondary" onclick="closePage()">✕ Close</button>
-        <button class="primary" onclick="reloadFrame()">↻ Reload</button>
-      </div>
+    <nav class="nav">
+      <div class="nav-title">ಮುಖ್ಯ ನಿಯಂತ್ರಣ</div>
+
+      <button class="nav-btn active" data-file="" data-title="Dashboard (Home)" onclick="openModule(this)">
+        <span class="nav-icon">📊</span><span>ಡ್ಯಾಶ್‌ಬೋರ್ಡ್ (Home)</span>
+      </button>
+
+      <div class="nav-title">ದೈನಂದಿನ ಕಾರ್ಯಗಳು</div>
+
+      <button class="nav-btn" data-file="daily-food-distribution.html" data-title="ದಿನವಹಿ ಆಹಾರ ವಿತರಣೆ" onclick="openModule(this)">
+        <span class="nav-icon">🍚</span><span>ದಿನವಹಿ ಆಹಾರ ವಿತರಣೆ</span>
+      </button>
+
+      <button class="nav-btn" data-file="daily-items-food-calculation.html" data-title="Daily Items & Food Calculation" onclick="openModule(this)">
+        <span class="nav-icon">⚖️</span><span>Daily Food Calculation</span>
+      </button>
+
+      <button class="nav-btn" data-file="cash-book.html" data-title="Cash Book" onclick="openModule(this)">
+        <span class="nav-icon">💰</span><span>Cash Book</span>
+      </button>
+
+      <div class="nav-title">ಸೆಟ್ಟಿಂಗ್ಸ್ & ದಾಖಲೆ</div>
+
+      <button class="nav-btn" data-file="students-number.html" data-title="Students Number" onclick="openModule(this)">
+        <span class="nav-icon">🎓</span><span>Students Number</span>
+      </button>
+
+      <button class="nav-btn" data-file="calculation-settings.html" data-title="Calculation Settings" onclick="openModule(this)">
+        <span class="nav-icon">⚙️</span><span>Calculation Settings</span>
+      </button>
+
+      <button class="nav-btn" data-file="monthly-items-student-summary.html" data-title="Monthly Summary" onclick="openModule(this)">
+        <span class="nav-icon">📑</span><span>Monthly Summary</span>
+      </button>
+
+      <button class="nav-btn" data-file="school-settings.html" data-title="ಶಾಲಾ ಸೆಟ್ಟಿಂಗ್ಸ್" onclick="openModule(this)">
+        <span class="nav-icon">🏫</span><span>ಶಾಲಾ ಸೆಟ್ಟಿಂಗ್ಸ್</span>
+      </button>
+    </nav>
+
+    <div class="sidebar-bottom">
+      ಅಕ್ಷರ ದಾಸೋಹ ಕಾರ್ಯಕ್ರಮ<br>
+      Dashboard — ಎಲ್ಲಾ ವಿಭಾಗಗಳು
     </div>
-    <iframe id="pageFrame" title="Dashboard module"></iframe>
-    <div class="note" style="padding:0 15px 12px">ಗಮನಿಸಿ: ಮೇಲಿನ ವಿಭಾಗಗಳು ಈ Dashboard ಒಳಗಿನ frameನಲ್ಲಿ ತೆರೆಯುತ್ತವೆ. Dashboard page ಸ್ವತಃ ಬದಲಾಗುವುದಿಲ್ಲ.</div>
-  </section>
-</main>
+  </aside>
+
+  <main class="main">
+
+    <header class="topbar">
+      <div class="top-title">
+        <h2 id="topDepartment">ಅಕ್ಷರ ದಾಸೋಹ ಕಾರ್ಯಕ್ರಮ</h2>
+        <p id="topSchool">ಶಾಲೆಯ ಹೆಸರು</p>
+      </div>
+      <div class="year-badge">Academic Year: <span id="academicYear">Loading...</span></div>
+    </header>
+
+    <section class="content" id="content">
+
+      <!-- HOME -->
+      <div class="home" id="homePage">
+
+        <div class="summary">
+          <div class="stat">
+            <div class="stat-label">ವಿದ್ಯಾರ್ಥಿಗಳು (Students)</div>
+            <div class="stat-value" id="studentTotal">0</div>
+            <div class="stat-note">ವಿದ್ಯಾರ್ಥಿಗಳ ಒಟ್ಟು ಸಂಖ್ಯೆ</div>
+          </div>
+
+          <div class="stat">
+            <div class="stat-label">ವಿತರಿಸಿದ ಬಿಸಿಊಟ</div>
+            <div class="stat-value" id="foodTotal">0</div>
+            <div class="stat-note">Daily Food Distribution</div>
+          </div>
+
+          <div class="stat">
+            <div class="stat-label">ಪದಾರ್ಥಗಳ ಸಂಖ್ಯೆ</div>
+            <div class="stat-value" id="itemTotal">0</div>
+            <div class="stat-note">Calculation Settings</div>
+          </div>
+
+          <div class="stat">
+            <div class="stat-label">Cash Book ಶಿಲ್ಕು</div>
+            <div class="stat-value" id="cashBalance">₹0.00</div>
+            <div class="stat-note">ಅಂತಿಮ ನಗದು ಶಿಲ್ಕು</div>
+          </div>
+        </div>
+
+        <h2 class="modules-title">📋 ಎಲ್ಲಾ ವಿಭಾಗಗಳು</h2>
+
+        <div class="modules">
+          <div class="module" onclick="openByFile('daily-food-distribution.html','ದಿನವಹಿ ಆಹಾರ ವಿತರಣೆ')">
+            <div class="icon">🍚</div>
+            <h3>ದಿನವಹಿ ಆಹಾರ ವಿತರಣೆ</h3>
+            <p>ದಿನನಿತ್ಯದ ಹಾಜರಾತಿ, ಮೊಟ್ಟೆ, ಬಾಳೆಹಣ್ಣು ಮತ್ತು ಬಿಸಿಯೂಟದ ದಾಖಲೆ.</p>
+            <span class="open-link">ತೆರೆಯಿರಿ →</span>
+          </div>
+
+          <div class="module" onclick="openByFile('daily-items-food-calculation.html','Daily Items & Food Calculation')">
+            <div class="icon">⚖️</div>
+            <h3>Daily Items & Food Calculation</h3>
+            <p>ಪ್ರಮಾಣದ ಆಹಾರ ದಾಸ್ತಾನು, ಖರ್ಚು ಮತ್ತು ಉಳಿಕೆ ಲೆಕ್ಕಾಚಾರ.</p>
+            <span class="open-link">ತೆರೆಯಿರಿ →</span>
+          </div>
+
+          <div class="module" onclick="openByFile('cash-book.html','Cash Book')">
+            <div class="icon">💰</div>
+            <h3>Cash Book</h3>
+            <p>ಜಮಾ-ಖರ್ಚು ನಮೂದು ಮತ್ತು Cash Book Reports.</p>
+            <span class="open-link">ತೆರೆಯಿರಿ →</span>
+          </div>
+
+          <div class="module" onclick="openByFile('students-number.html','Students Number')">
+            <div class="icon">🎓</div>
+            <h3>Students Number</h3>
+            <p>ತರಗತಿವಾರು ಹುಡುಗರು, ಹುಡುಗಿಯರು ಮತ್ತು ಒಟ್ಟು ವಿದ್ಯಾರ್ಥಿಗಳ ಸಂಖ್ಯೆ.</p>
+            <span class="open-link">ತೆರೆಯಿರಿ →</span>
+          </div>
+
+          <div class="module" onclick="openByFile('calculation-settings.html','Calculation Settings')">
+            <div class="icon">⚙️</div>
+            <h3>Calculation Settings</h3>
+            <p>ವಿದ್ಯಾರ್ಥಿಗಳಿಗೆ ಬೇಕಾದ ಪದಾರ್ಥಗಳ ಪ್ರಮಾಣ ಮತ್ತು Rate settings.</p>
+            <span class="open-link">ತೆರೆಯಿರಿ →</span>
+          </div>
+
+          <div class="module" onclick="openByFile('monthly-items-student-summary.html','Monthly Summary')">
+            <div class="icon">📑</div>
+            <h3>Monthly Summary</h3>
+            <p>ಮಾಸಿಕವಾಗಿ ಆಹಾರ ಪದಾರ್ಥ ಮತ್ತು ವಿದ್ಯಾರ್ಥಿಗಳ ಸಾರಾಂಶ ವರದಿ.</p>
+            <span class="open-link">ತೆರೆಯಿರಿ →</span>
+          </div>
+
+          <div class="module" onclick="openByFile('school-settings.html','ಶಾಲಾ ಸೆಟ್ಟಿಂಗ್ಸ್')">
+            <div class="icon">🏫</div>
+            <h3>ಶಾಲಾ ಸೆಟ್ಟಿಂಗ್ಸ್</h3>
+            <p>ಶಾಲೆಯ ಹೆಸರು ಮತ್ತು Active Academic Year ನಿರ್ವಹಣೆ.</p>
+            <span class="open-link">ತೆರೆಯಿರಿ →</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ALL HTML PAGES OPEN HERE, WITHOUT LEAVING DASHBOARD -->
+      <div class="frame-wrap" id="frameWrap" style="display:none">
+        <div class="frame-head">
+          <b id="frameTitle">ವಿಭಾಗ</b>
+          <div class="frame-actions">
+            <button onclick="goHome()">⌂ Dashboard</button>
+            <button onclick="reloadFrame()">↻ Reload</button>
+          </div>
+        </div>
+        <iframe id="pageFrame" title="Dashboard Module"></iframe>
+      </div>
+
+    </section>
+  </main>
+</div>
 
 <script>
 const SUPABASE_URL="https://ezmudfrpcvjsgnjibvoq.supabase.co";
 const SUPABASE_KEY="sb_publishable__FYyH6NQaqgARaq2dvuovQ_rKmus0js";
 const db=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
 
-let activeYear=null, selectedFile="";
+let selectedFile="";
 
 function $(id){return document.getElementById(id)}
 function money(v){return "₹"+Number(v||0).toLocaleString("en-IN",{minimumFractionDigits:2,maximumFractionDigits:2})}
-function dateISO(d){return d.toISOString().slice(0,10)}
 
-async function loadSchool(){
-  const {data,error}=await db.from("school_settings").select("*").order("created_at",{ascending:false}).limit(1).maybeSingle();
-  if(error) throw error;
-  if(data){
-    $("departmentName").textContent=data.department_name||"ಅಕ್ಷರ ದಾಸೋಹ ಕಾರ್ಯಕ್ರಮ";
-    $("schoolName").textContent=data.school_name||"ಶಾಲೆಯ ಹೆಸರು";
-    $("topTitle").textContent=data.department_name||"ಅಕ್ಷರ ದಾಸೋಹ ಕಾರ್ಯಕ್ರಮ";
-    $("topSchool").textContent=data.school_name||"Dashboard / ಮುಖ್ಯ ಪುಟ";
-  }
+function setActive(button){
+  document.querySelectorAll(".nav-btn").forEach(x=>x.classList.remove("active"));
+  if(button) button.classList.add("active");
 }
 
-async function loadYear(){
-  const {data,error}=await db.from("academic_years").select("id,year_name,is_active,created_at").order("created_at",{ascending:true});
-  if(error) throw error;
-  activeYear=(data||[]).find(x=>x.is_active) || (data||[]).at(-1) || null;
-  $("academicYear").textContent=activeYear?.year_name||"ಯಾವುದೇ Active Year ಇಲ್ಲ";
-  return activeYear;
-}
-
-async function loadStudents(){
-  if(!activeYear) return;
-  const month=new Date().getMonth()+1;
-  const {data,error}=await db.from("student_numbers")
-    .select("class_number,total_students,boys,girls,month_number,division_name")
-    .eq("academic_year_id",activeYear.id)
-    .eq("month_number",month)
-    .eq("division_name","ALL");
-  if(error) throw error;
-  let boys=0,girls=0;
-  const seen=new Set();
-  (data||[]).forEach(r=>{
-    const c=Number(r.class_number);
-    if(seen.has(c)) return;
-    seen.add(c);
-    boys+=Number(r.boys||0); girls+=Number(r.girls||0);
-  });
-  $("boysTotal").textContent=boys;
-  $("girlsTotal").textContent=girls;
-  $("studentTotal").textContent=boys+girls;
-}
-
-async function loadTodayFood(){
-  if(!activeYear) return;
-  const today=dateISO(new Date());
-  const {data,error}=await db.from("daily_food_distribution")
-    .select("id,distribution_date,item_name")
-    .eq("academic_year_id",activeYear.id)
-    .eq("distribution_date",today);
-  if(error) throw error;
-  $("todayFood").textContent=(data||[]).length;
-}
-
-async function loadCash(){
-  if(!activeYear) return;
-  const [j,k,o]=await Promise.all([
-    db.from("cash_book_entries").select("amount").eq("academic_year",activeYear.year_name).eq("entry_type","jama"),
-    db.from("cash_book_entries").select("amount").eq("academic_year",activeYear.year_name).eq("entry_type","kharchu"),
-    db.from("cash_book_opening_balances").select("amount").eq("academic_year",activeYear.year_name)
-  ]);
-  if(j.error) throw j.error;if(k.error) throw k.error;if(o.error) throw o.error;
-  const opening=(o.data||[]).reduce((s,r)=>s+Number(r.amount||0),0);
-  const jama=(j.data||[]).reduce((s,r)=>s+Number(r.amount||0),0);
-  const kharchu=(k.data||[]).reduce((s,r)=>s+Number(r.amount||0),0);
-  $("cashBalance").textContent=money(opening+jama-kharchu);
-}
-
-async function loadDashboard(){
-  $("loadStatus").textContent="Dashboard data loading...";
-  try{
-    await loadSchool();
-    await loadYear();
-    await Promise.all([loadStudents(),loadTodayFood(),loadCash()]);
-    $("loadStatus").textContent="✅ Dashboard data updated.";
-  }catch(e){
-    console.error(e);
-    $("loadStatus").textContent="Dashboard summary load failed. ವಿಭಾಗಗಳನ್ನು ಕೆಳಗಿನಿಂದ ನೇರವಾಗಿ ತೆರೆಯಬಹುದು.";
-  }
-}
-
-function openPage(file,title){
+function openByFile(file,title){
+  const btn=[...document.querySelectorAll(".nav-btn")].find(x=>x.dataset.file===file);
+  if(btn) setActive(btn);
   selectedFile=file;
+  $("homePage").style.display="none";
+  $("frameWrap").style.display="block";
   $("frameTitle").textContent=title;
-  const frame=$("pageFrame");
-  frame.src=file;
-  frame.scrollIntoView({behavior:"smooth",block:"start"});
+  $("pageFrame").src=file;
 }
 
-function closePage(){
+function openModule(button){
+  const file=button.dataset.file;
+  setActive(button);
+  if(!file){goHome();return}
+  openByFile(file,button.dataset.title);
+}
+
+function goHome(){
+  selectedFile="";
   $("pageFrame").src="about:blank";
-  $("frameTitle").textContent="Dashboardನಲ್ಲಿ ವಿಭಾಗ ಆಯ್ಕೆ ಮಾಡಿ";
+  $("frameWrap").style.display="none";
+  $("homePage").style.display="block";
+  const home=document.querySelector('.nav-btn[data-file=""]');
+  setActive(home);
+  $("content").scrollTop=0;
 }
 
 function reloadFrame(){
-  const frame=$("pageFrame");
-  if(selectedFile) frame.src=selectedFile;
+  if(selectedFile){
+    $("pageFrame").src=selectedFile;
+  }
 }
 
-loadDashboard();
+async function loadSchool(){
+  try{
+    const {data}=await db.from("school_settings").select("*").order("created_at",{ascending:false}).limit(1).maybeSingle();
+    if(data){
+      $("topDepartment").textContent=data.department_name||"ಅಕ್ಷರ ದಾಸೋಹ ಕಾರ್ಯಕ್ರಮ";
+      $("topSchool").textContent=data.school_name||"ಶಾಲೆಯ ಹೆಸರು";
+      $("sideDepartment").textContent=data.department_name||"ಅಕ್ಷರ ದಾಸೋಹ";
+    }
+  }catch(e){console.log(e)}
+}
+
+async function loadYear(){
+  try{
+    const {data}=await db.from("academic_years").select("id,year_name,is_active,created_at").order("created_at",{ascending:true});
+    const active=(data||[]).find(x=>x.is_active)||(data||[]).at(-1);
+    $("academicYear").textContent=active?.year_name||"Active Year ಇಲ್ಲ";
+    return active;
+  }catch(e){
+    $("academicYear").textContent="Loading failed";
+    return null;
+  }
+}
+
+async function loadStudents(year){
+  if(!year)return;
+  try{
+    const month=new Date().getMonth()+1;
+    const {data}=await db.from("student_numbers")
+      .select("class_number,total_students,boys,girls,month_number,division_name")
+      .eq("academic_year_id",year.id)
+      .eq("month_number",month)
+      .eq("division_name","ALL");
+    let total=0;
+    const seen=new Set();
+    (data||[]).forEach(r=>{
+      const c=String(r.class_number);
+      if(seen.has(c))return;
+      seen.add(c);
+      total+=Number(r.total_students||Number(r.boys||0)+Number(r.girls||0));
+    });
+    $("studentTotal").textContent=total;
+  }catch(e){console.log(e)}
+}
+
+async function loadFood(year){
+  if(!year)return;
+  try{
+    const {count,error}=await db.from("daily_food_distribution")
+      .select("*",{count:"exact",head:true})
+      .eq("academic_year_id",year.id);
+    if(!error)$("foodTotal").textContent=count||0;
+  }catch(e){console.log(e)}
+}
+
+async function loadItems(year){
+  try{
+    const {data,error}=await db.from("calculation_settings").select("*");
+    if(!error)$("itemTotal").textContent=(data||[]).length;
+  }catch(e){console.log(e)}
+}
+
+async function loadCash(year){
+  if(!year)return;
+  try{
+    const [j,k,o]=await Promise.all([
+      db.from("cash_book_entries").select("amount").eq("academic_year",year.year_name).eq("entry_type","jama"),
+      db.from("cash_book_entries").select("amount").eq("academic_year",year.year_name).eq("entry_type","kharchu"),
+      db.from("cash_book_opening_balances").select("amount").eq("academic_year",year.year_name)
+    ]);
+    if(j.error||k.error||o.error)throw new Error("Cash tables");
+    const opening=(o.data||[]).reduce((s,r)=>s+Number(r.amount||0),0);
+    const jama=(j.data||[]).reduce((s,r)=>s+Number(r.amount||0),0);
+    const kharchu=(k.data||[]).reduce((s,r)=>s+Number(r.amount||0),0);
+    $("cashBalance").textContent=money(opening+jama-kharchu);
+  }catch(e){console.log(e)}
+}
+
+async function init(){
+  await loadSchool();
+  const year=await loadYear();
+  await Promise.all([loadStudents(year),loadFood(year),loadItems(year),loadCash(year)]);
+}
+init();
 </script>
 </body>
 </html>
