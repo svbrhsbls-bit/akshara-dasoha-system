@@ -566,6 +566,8 @@ const db =
 ========================================================= */
 
 let currentId = null;
+let currentSchoolId = null;
+let currentSchoolUserId = null;
 
 let savedRow = null;
 
@@ -1530,6 +1532,77 @@ async function setActiveAcademicYear(){
 
 
 /* =========================================================
+   LOAD CURRENT SCHOOL
+   Login ಮಾಡಿದ School ಅನ್ನು school_users ಮೂಲಕ ಗುರುತಿಸುವುದು
+========================================================= */
+
+async function loadCurrentSchool(){
+
+  const {
+    data: { user },
+    error: authError
+  } = await db.auth.getUser();
+
+  if(authError || !user){
+
+    window.location.href = "login.html";
+    return false;
+
+  }
+
+  const {
+    data,
+    error
+  } = await db
+
+    .from("school_users")
+
+    .select("id,user_id,school_id,username,role,is_active")
+    .eq("user_id", user.id)
+    .eq("is_active", true)
+    .maybeSingle();
+
+  if(error){
+
+    console.error(error);
+
+    showMessage(
+      "School Login load failed: " + error.message,
+      "error"
+    );
+
+    return false;
+
+  }
+
+  /* ADMIN school-settings ಬಳಸಬಾರದು */
+  if(data?.role === "admin"){
+
+    window.location.href = "admin.html";
+    return false;
+
+  }
+
+  if(!data?.school_id){
+
+    showMessage(
+      "ಈ Login ಗೆ School mapping ಕಂಡುಬಂದಿಲ್ಲ.",
+      "error"
+    );
+
+    return false;
+
+  }
+
+  currentSchoolId = data.school_id;
+  currentSchoolUserId = data.id;
+
+  return true;
+
+}
+
+
+/* =========================================================
    LOAD SCHOOL SETTINGS
 ========================================================= */
 
@@ -1543,6 +1616,8 @@ async function load(){
     .from("school_settings")
 
     .select("*")
+
+    .eq("school_id", currentSchoolId)
 
     .order(
       "created_at",
@@ -1718,7 +1793,9 @@ $("schoolForm")
         Make payload
       */
 
-      const payload = {};
+      const payload = {
+        school_id: currentSchoolId
+      };
 
 
       fields.forEach(id => {
@@ -1768,6 +1845,10 @@ $("schoolForm")
               .eq(
                 "id",
                 currentId
+              )
+              .eq(
+                "school_id",
+                currentSchoolId
               )
 
               .select()
@@ -2005,7 +2086,15 @@ $("academic_year_type")
    START
 ========================================================= */
 
-load();
+(async function(){
+
+  const ok = await loadCurrentSchool();
+
+  if(!ok) return;
+
+  await load();
+
+})();
 
 </script>
 
