@@ -48,7 +48,7 @@ async function authenticate(){
  if(!u?.is_active)throw new Error('School login inactive.'); if(u.role==='admin'){location.href='admin.html';return false} state.schoolId=u.school_id; return true;
 }
 async function loadSchool(){const {data,error}=await db.from('school_settings').select('*').eq('school_id',state.schoolId).maybeSingle();if(error)throw error;state.schoolSettings=data||{};$('schoolName').value=state.schoolSettings.school_name||''}
-async function loadYears(){const {data,error}=await db.from('academic_years').select('*').order('start_date',{ascending:false});if(error)throw error;$('academicYear').innerHTML='<option value="">ವರ್ಷ ಆಯ್ಕೆ ಮಾಡಿ</option>'+(data||[]).map(y=>`<option value="${esc(y.id)}">${esc(y.year_name||y.name||y.academic_year||y.id)}</option>`).join('');const a=(data||[]).find(y=>y.is_active)||(data||[])[0];if(a)$('academicYear').value=a.id}
+async function loadYears(){const {data,error}=await db.from('academic_years').select('*');if(error)throw error;$('academicYear').innerHTML='<option value="">ವರ್ಷ ಆಯ್ಕೆ ಮಾಡಿ</option>'+(data||[]).map(y=>`<option value="${esc(y.id)}">${esc(y.year_name||y.name||y.academic_year||y.id)}</option>`).join('');const a=(data||[]).find(y=>y.is_active)||(data||[])[0];if(a)$('academicYear').value=a.id}
 function fillMonths(){$('month').innerHTML='<option value="">ತಿಂಗಳು ಆಯ್ಕೆ ಮಾಡಿ</option>'+months.slice(1).map((m,i)=>`<option value="${i+1}">${m}</option>`).join('')}
 function renderEntryTables(){
  const gs=groups();
