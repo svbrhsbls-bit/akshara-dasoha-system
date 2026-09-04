@@ -109,7 +109,8 @@ const groups={
  "8-10":[{key:"8",label:"8"},{key:"9",label:"9"},{key:"10",label:"10"}],
  "1-10":[{key:"1-5",label:"1 - 5"},{key:"6-7",label:"6 - 7"},{key:"8-10",label:"8 - 10"}]
 };
-let activeYear=null,school=null,current=null,currentSchoolId=null,currentSchoolUserId=null,settings={items:[],ingredients:[],nutrition:[],wheat:null};
+let activeYear=null,school=null,current=null,settings={items:[],ingredients:[],nutrition:[],wheat:null};
+let currentSchoolId=null,currentSchoolUserId=null;
 let receipts=new Map(),wheatDays=new Map(),openingMap=new Map(),closingMap=new Map(),editingWheatId=null;
 function esc(v){return String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]))}
 function num(v){const n=Number(v);return Number.isFinite(n)?n:0}
@@ -227,17 +228,16 @@ function fmt(v,unit){
  return n.toFixed(2);
 }
 async function loadCurrentSchool(){
-  const {data:{user},error:authError}=await db.auth.getUser();
-  if(authError)throw authError;
-  if(!user)throw new Error("Login session ಇಲ್ಲ. ಮೊದಲು Login ಮಾಡಿ.");
-  currentSchoolUserId=user.id;
-  const {data:su,error:suError}=await db.from("school_users").select("school_id,role,is_active").eq("user_id",user.id).limit(1).maybeSingle();
-  if(suError)throw suError;
-  if(!su)throw new Error("School mapping ಕಂಡುಬಂದಿಲ್ಲ.");
-  if(String(su.role)==="admin"){ window.location.href="admin.html"; throw new Error("Admin user"); }
-  if(su.is_active===false)throw new Error("School login inactive ಆಗಿದೆ.");
-  currentSchoolId=su.school_id;
-  if(!currentSchoolId)throw new Error("School ID ಕಂಡುಬಂದಿಲ್ಲ.");
+ const {data:{user},error:authError}=await db.auth.getUser();
+ if(authError || !user){ window.location.href="login.html"; return false; }
+ const {data,error}=await db.from("school_users")
+   .select("id,user_id,school_id,username,role,is_active")
+   .eq("user_id",user.id).eq("is_active",true).maybeSingle();
+ if(error) throw error;
+ if(data?.role==="admin"){ window.location.href="admin.html"; return false; }
+ if(!data?.school_id) throw new Error("ಈ Login ಗೆ School mapping ಕಂಡುಬಂದಿಲ್ಲ.");
+ currentSchoolId=data.school_id; currentSchoolUserId=data.id;
+ return true;
 }
 
 async function loadSchool(){
@@ -264,23 +264,19 @@ async function loadSettings(){
   const [a,b,n,w]=await Promise.all([
     db.from("calculation_settings")
       .select("id,academic_year_id,class_group,item_name,quantity_per_student,unit,is_enabled,updated_at,created_at")
-      .eq("academic_year_id",activeYear.id)
-      .eq("school_id",currentSchoolId)
+      .eq("school_id",currentSchoolId).eq("academic_year_id",activeYear.id)
       .order("created_at",{ascending:true}),
     db.from("kitchen_ingredients")
       .select("id,academic_year_id,class_group,ingredient_name,amount_per_student,unit,is_enabled,updated_at,created_at")
-      .eq("academic_year_id",activeYear.id)
-      .eq("school_id",currentSchoolId)
+      .eq("school_id",currentSchoolId).eq("academic_year_id",activeYear.id)
       .order("created_at",{ascending:true}),
     db.from("nutritional_foods")
       .select("id,academic_year_id,class_group,food_name,quantity_per_student,unit,is_enabled,updated_at,created_at")
-      .eq("academic_year_id",activeYear.id)
-      .eq("school_id",currentSchoolId)
+      .eq("school_id",currentSchoolId).eq("academic_year_id",activeYear.id)
       .order("created_at",{ascending:true}),
     db.from("wheat_rate_settings")
       .select("id,academic_year_id,class_group,quantity_per_student,rate_per_kg,updated_at,created_at")
-      .eq("academic_year_id",activeYear.id)
-      .eq("school_id",currentSchoolId)
+      .eq("school_id",currentSchoolId).eq("academic_year_id",activeYear.id)
       .eq("class_group",current?.group||"")
       .maybeSingle()
   ]);
@@ -319,8 +315,8 @@ function addDailyCount(map,date,key,count){if(!map[date])map[date]={};map[date][
 async function loadDaily(){
   const m=num($("month").value),y=reportYear(m),start=iso(y,m,1),end=iso(y,m,new Date(y,m,0).getDate());
   const [d,h]=await Promise.all([
-   db.from("daily_food_distribution").select("distribution_date,item_name,students_count,total_quantity").eq("academic_year_id",activeYear.id).eq("school_id",currentSchoolId).gte("distribution_date",start).lte("distribution_date",end),
-   db.from("school_holidays").select("id,holiday_date,holiday_reason").eq("academic_year_id",activeYear.id).eq("school_id",currentSchoolId).gte("holiday_date",start).lte("holiday_date",end)
+   db.from("daily_food_distribution").select("distribution_date,item_name,students_count,total_quantity").eq("school_id",currentSchoolId).eq("academic_year_id",activeYear.id).gte("distribution_date",start).lte("distribution_date",end),
+   db.from("school_holidays").select("id,holiday_date,holiday_reason").eq("school_id",currentSchoolId).eq("academic_year_id",activeYear.id).gte("holiday_date",start).lte("holiday_date",end)
   ]);
   if(d.error)throw new Error("Daily Food Distribution load failed: "+d.error.message);
   if(h.error)throw new Error("Holiday load failed: "+h.error.message);
@@ -377,7 +373,7 @@ async function loadDaily(){
 }
 
 async function loadReceipts(){
- receipts.clear();const q=await db.from("food_stock_receipts").select("id,item_type,item_name,receipt_date,quantity,unit").eq("academic_year_id",activeYear.id).eq("school_id",currentSchoolId).gte("receipt_date",current.start).lte("receipt_date",current.end);
+ receipts.clear();const q=await db.from("food_stock_receipts").select("id,item_type,item_name,receipt_date,quantity,unit").eq("school_id",currentSchoolId).eq("academic_year_id",activeYear.id).gte("receipt_date",current.start).lte("receipt_date",current.end);
  if(q.error)throw new Error("Stock receipt load failed: "+q.error.message);
  (q.data||[]).forEach(r=>{
    // food_stock_receipts CHECK constraint allows only item / ingredient.
@@ -392,14 +388,14 @@ async function loadReceipts(){
  });
 }
 async function loadWheat(){
- wheatDays.clear();const q=await db.from("food_wheat_days").select("id,wheat_date,wheat_students").eq("academic_year_id",activeYear.id).eq("school_id",currentSchoolId).gte("wheat_date",current.start).lte("wheat_date",current.end).order("wheat_date");
+ wheatDays.clear();const q=await db.from("food_wheat_days").select("id,wheat_date,wheat_students").eq("school_id",currentSchoolId).eq("academic_year_id",activeYear.id).gte("wheat_date",current.start).lte("wheat_date",current.end).order("wheat_date");
  if(q.error)throw new Error("Wheat Day load failed: "+q.error.message);(q.data||[]).forEach(r=>wheatDays.set(String(r.wheat_date).slice(0,10),r));
 }
 async function loadOpening(){
  openingMap.clear();closingMap.clear();
  const [o,c]=await Promise.all([
-  db.from("food_stock_opening_balances").select("id,item_type,item_name,opening_balance,unit").eq("academic_year_id",activeYear.id).eq("school_id",currentSchoolId),
-  db.from("food_stock_monthly_closing").select("id,item_type,item_name,month_number,closing_balance,unit").eq("academic_year_id",activeYear.id).eq("school_id",currentSchoolId)
+  db.from("food_stock_opening_balances").select("id,item_type,item_name,opening_balance,unit").eq("school_id",currentSchoolId).eq("academic_year_id",activeYear.id),
+  db.from("food_stock_monthly_closing").select("id,item_type,item_name,month_number,closing_balance,unit").eq("school_id",currentSchoolId).eq("academic_year_id",activeYear.id)
  ]);
  if(o.error)throw new Error("Opening Balance load failed: "+o.error.message);if(c.error)throw new Error("Monthly Closing load failed: "+c.error.message);
  (o.data||[]).forEach(r=>{
@@ -619,7 +615,7 @@ async function saveCurrentMonthClosings(){
   }
   const z=await db.from("food_stock_monthly_closing").upsert({
     school_id:currentSchoolId,
-    academic_year_id:activeYear.id,
+     academic_year_id:activeYear.id,
     item_type:dbType,
     item_name:dbName,
     month_number:current.month,
@@ -703,7 +699,7 @@ async function deleteOpeningItem(item){
    else {table="nutritional_foods";nameCol="food_name";}
    for(const sg of groupsToChange){
      const q=await db.from(table).update({is_enabled:false,updated_at:new Date().toISOString()})
-       .eq("academic_year_id",activeYear.id).eq("school_id",currentSchoolId).eq("class_group",sg).eq(nameCol,item.name);
+       .eq("school_id",currentSchoolId).eq("academic_year_id",activeYear.id).eq("class_group",sg).eq(nameCol,item.name);
      if(q.error)throw q.error;
    }
    await loadSettings();await loadOpening();renderOpening();renderReport();
@@ -730,7 +726,7 @@ async function saveNewOpeningItem(){
 
      for(const sg of groupsToChange){
        const q=await db.from(table).update({[nameCol]:name,unit:defaultUnit,is_enabled:true,updated_at:new Date().toISOString()})
-        .eq("academic_year_id",activeYear.id).eq("school_id",currentSchoolId).eq("class_group",sg).eq(nameCol,oldName);
+        .eq("school_id",currentSchoolId).eq("academic_year_id",activeYear.id).eq("class_group",sg).eq(nameCol,oldName);
        if(q.error)throw q.error;
      }
 
@@ -742,8 +738,7 @@ async function saveNewOpeningItem(){
      const oldDbName=oldType==="nutrition"?`__NUTRITION_OPENING__|${oldName}`:oldName;
      const existing=await db.from("food_stock_opening_balances")
        .select("id")
-       .eq("academic_year_id",activeYear.id)
-       .eq("school_id",currentSchoolId)
+       .eq("school_id",currentSchoolId).eq("academic_year_id",activeYear.id)
        .eq("item_type",oldDbType)
        .eq("item_name",oldDbName)
        .limit(1)
@@ -751,7 +746,6 @@ async function saveNewOpeningItem(){
      if(existing.error)throw existing.error;
 
      const openingPayload={
-       school_id:currentSchoolId,
        academic_year_id:activeYear.id,
        item_type:dbType,
        item_name:dbName,
@@ -769,10 +763,10 @@ async function saveNewOpeningItem(){
      if(!oq.data)throw new Error("Opening Balance save ಆಗಿಲ್ಲ.");
    }else{
      for(const sg of groupsToChange){
-       const existing=await db.from(table).select("id").eq("academic_year_id",activeYear.id).eq("school_id",currentSchoolId).eq("class_group",sg).eq(nameCol,name).limit(1).maybeSingle();
+       const existing=await db.from(table).select("id").eq("school_id",currentSchoolId).eq("academic_year_id",activeYear.id).eq("class_group",sg).eq(nameCol,name).limit(1).maybeSingle();
        if(existing.error)throw existing.error;
        if(existing.data){
-         const u=await db.from(table).update({unit:defaultUnit,is_enabled:true,updated_at:new Date().toISOString()}).eq("school_id",currentSchoolId).eq("id",existing.data.id);
+         const u=await db.from(table).update({unit:defaultUnit,is_enabled:true,updated_at:new Date().toISOString()}).eq("id",existing.data.id);
          if(u.error)throw u.error;
        }else{
          // Rate/Quantity is intentionally hidden from the user. Keep database calculation value at 0 until configured in Calculation Settings.
@@ -1123,7 +1117,6 @@ async function saveOpenings(){
         ? (namesFor("ingredient").find(x=>x.name===name)?.unit||"₹")
         : (namesFor(type).find(x=>x.name===name)?.unit||"KG");
       const payload={
-        school_id:currentSchoolId,
         academic_year_id:activeYear.id,
         item_type:dbType,
         item_name:dbName,
@@ -1134,8 +1127,7 @@ async function saveOpenings(){
 
       const existing=await db.from("food_stock_opening_balances")
         .select("id")
-        .eq("academic_year_id",activeYear.id)
-        .eq("school_id",currentSchoolId)
+        .eq("school_id",currentSchoolId).eq("academic_year_id",activeYear.id)
         .eq("item_type",dbType)
         .eq("item_name",dbName)
         .limit(1)
@@ -1146,7 +1138,6 @@ async function saveOpenings(){
       if(existing.data){
         q=await db.from("food_stock_opening_balances")
           .update(payload)
-          .eq("school_id",currentSchoolId)
           .eq("id",existing.data.id)
           .select("id,item_type,item_name,opening_balance,unit")
           .maybeSingle();
@@ -1180,8 +1171,7 @@ async function saveReceipts(){
     // Blank/zero means there is no receipt on that date.
     const existingQ=await db.from("food_stock_receipts")
       .select("id,item_type,item_name,receipt_date")
-      .eq("academic_year_id",activeYear.id)
-      .eq("school_id",currentSchoolId)
+      .eq("school_id",currentSchoolId).eq("academic_year_id",activeYear.id)
       .gte("receipt_date",current.start)
       .lte("receipt_date",current.end);
     if(existingQ.error)throw existingQ.error;
@@ -1212,7 +1202,6 @@ async function saveReceipts(){
       const dbName=type==="nutrition"?`__NUTRITION_RECEIPT__|${name}`:name;
 
       rows.push({
-        school_id:currentSchoolId,
         academic_year_id:activeYear.id,
         item_type:dbType,
         item_name:dbName,
@@ -1265,7 +1254,6 @@ async function saveWheat(){
     if(!date)return show($("msg"),"ಗೋಧಿ ದಿನಾಂಕ ಆಯ್ಕೆ ಮಾಡಿ.","err");
 
     const payload={
-      school_id:currentSchoolId,
       academic_year_id:activeYear.id,
       wheat_date:date,
       wheat_students:num($("wheatStudents").value),
@@ -1279,8 +1267,7 @@ async function saveWheat(){
       // ಮೊದಲು ಅದೇ academic year + date entry ಇದೆಯೇ ಎಂದು ಹುಡುಕಿ.
       const existing=await db.from("food_wheat_days")
         .select("id")
-        .eq("academic_year_id",activeYear.id)
-        .eq("school_id",currentSchoolId)
+        .eq("school_id",currentSchoolId).eq("academic_year_id",activeYear.id)
         .eq("wheat_date",date)
         .maybeSingle();
       if(existing.error)throw existing.error;
@@ -1288,7 +1275,6 @@ async function saveWheat(){
       if(existing.data){
         q=await db.from("food_wheat_days")
           .update(payload)
-          .eq("school_id",currentSchoolId)
           .eq("id",existing.data.id);
       }else{
         q=await db.from("food_wheat_days").insert(payload);
@@ -1458,9 +1444,8 @@ $("reportType").onchange = () => {
     fillMonths();
     if(!db) throw new Error("Supabase library load ಆಗಿಲ್ಲ. Internet/CDN connection ಪರಿಶೀಲಿಸಿ.");
 
-    // ಮೊದಲು Login ಮಾಡಿದ School ಅನ್ನು ಗುರುತಿಸಬೇಕು.
-    // ನಂತರ ಮಾತ್ರ school-wise School Settings ಮತ್ತು Academic Year load ಆಗಬೇಕು.
-    await loadCurrentSchool();
+    const ok=await loadCurrentSchool();
+    if(!ok) return;
 
     await loadSchool();
 
