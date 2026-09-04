@@ -151,6 +151,7 @@ const groups={
 };
 const $=id=>document.getElementById(id);
 let currentYear=null,currentRows=null,settingsAcademicYear="";
+let currentSchoolId=null,currentSchoolUserId=null;
 let editDates=new Set();
 let monthClassLocked=false;
 
@@ -160,9 +161,46 @@ function dateISO(y,m,d){return `${y}-${pad(m)}-${pad(d)}`}
 function esc(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
 function selectedClasses(){return groups[$("classGroup").value]||groups["8-10"]}
 
+async function loadCurrentSchool(){
+  try{
+    const {data:{user},error:authError}=await db.auth.getUser();
+    if(authError)throw authError;
+    if(!user){
+      window.location.href="login.html";
+      return null;
+    }
+    const {data:su,error:suError}=await db.from("school_users")
+      .select("id,school_id,role,is_active")
+      .eq("user_id",user.id)
+      .maybeSingle();
+    if(suError)throw suError;
+    if(!su || !su.is_active){
+      await db.auth.signOut();
+      alert("ಈ login accountಗೆ system access ನೀಡಲಾಗಿಲ್ಲ.");
+      window.location.href="login.html";
+      return null;
+    }
+    currentSchoolUserId=su.id;
+    currentSchoolId=su.school_id;
+    if(su.role==="admin"){
+      window.location.href="admin.html";
+      return null;
+    }
+    return su;
+  }catch(e){
+    console.error("School session failed:",e);
+    alert("ಶಾಲೆಯ login ಮಾಹಿತಿ ಪಡೆಯಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ.");
+    await db.auth.signOut().catch(()=>{});
+    window.location.href="login.html";
+    return null;
+  }
+}
+
 async function loadSchoolSettings(){
   try{
-    const {data,error}=await db.from("school_settings").select("*").limit(1).maybeSingle();
+    let query=db.from("school_settings").select("*").limit(1);
+    if(currentSchoolId)query=query.eq("school_id",currentSchoolId);
+    const {data,error}=await query.maybeSingle();
     if(error)throw error;
     const row=data||{};
     const department=row.department_name||"ಅಕ್ಷರ ದಾಸೋಹ ಕಾರ್ಯಕ್ರಮ";
@@ -228,12 +266,14 @@ async function getStudentCounts(yearId,group,month){
     group === "8-10" ? [8,9,10] :
     [1,6,8,9,10];
 
-  const {data,error}=await db.from("student_numbers")
+  let query=db.from("student_numbers")
     .select("class_number,division_name,total_students,boys,girls")
     .eq("academic_year_id",yearId)
     .eq("month_number",Number(month))
     .eq("division_name","ALL")
     .in("class_number",sourceClassNumbers);
+  if(currentSchoolId)query=query.eq("school_id",currentSchoolId);
+  const {data,error}=await query;
 
   if(error)throw error;
 
@@ -271,20 +311,24 @@ async function getStudentCounts(yearId,group,month){
 
 async function getHolidayMap(yearId,month,year){
   const start=dateISO(year,month,1),end=dateISO(year,month,new Date(year,month,0).getDate());
-  const {data,error}=await db.from("school_holidays")
+  let query=db.from("school_holidays")
     .select("id,holiday_date,holiday_reason")
     .eq("academic_year_id",yearId)
     .gte("holiday_date",start).lte("holiday_date",end);
+  if(currentSchoolId)query=query.eq("school_id",currentSchoolId);
+  const {data,error}=await query;
   if(error)throw error;
   const map=new Map();(data||[]).forEach(r=>map.set(r.holiday_date,r));return map;
 }
 
 async function getFood(yearId,month,year){
   const start=dateISO(year,month,1),end=dateISO(year,month,new Date(year,month,0).getDate());
-  const {data,error}=await db.from("daily_food_distribution")
+  let query=db.from("daily_food_distribution")
     .select("id,distribution_date,item_name,students_count,quantity_per_student,total_quantity,unit")
     .eq("academic_year_id",yearId)
     .gte("distribution_date",start).lte("distribution_date",end);
+  if(currentSchoolId)query=query.eq("school_id",currentSchoolId);
+  const {data,error}=await query;
   if(error)throw error;
   const map=new Map();
   (data||[]).forEach(r=>{
@@ -435,7 +479,7 @@ function recalc(){
 }
 
 function monthClassLockKey(){
-  return `daily_food_month_class_lock_${currentYear?.id||settingsAcademicYear||"none"}`;
+  return `daily_food_month_class_lock_${currentSchoolId||"no-school"}_${currentYear?.id||settingsAcademicYear||"none"}`;
 }
 function applyMonthClassLock(){
   const month=$("month"), group=$("classGroup"), edit=$("editMonthClassBtn");
@@ -489,7 +533,7 @@ async function saveAll(){
 
       // Only values that are actually entered are saved.
       if(att>0){
-        records.push({academic_year_id:yearId,distribution_date:date,item_name:"ಹಾಜರಾತಿ||ALL",
+        records.push({school_id:currentSchoolId,academic_year_id:yearId,distribution_date:date,item_name:"ಹಾಜರಾತಿ||ALL",
           students_count:att,quantity_per_student:1,total_quantity:att,unit:"ಮಕ್ಕಳು"});
       }
 
@@ -497,11 +541,11 @@ async function saveAll(){
         const egg=Math.max(0,Number(tr.querySelectorAll(".egg")[i]?.value||0));
         const banana=Math.max(0,Number(tr.querySelectorAll(".banana")[i]?.value||0));
         const meal=egg+banana;
-        if(egg>0) records.push({academic_year_id:yearId,distribution_date:date,item_name:"ಮೊಟ್ಟೆ||"+c,
+        if(egg>0) records.push({school_id:currentSchoolId,academic_year_id:yearId,distribution_date:date,item_name:"ಮೊಟ್ಟೆ||"+c,
           students_count:egg,quantity_per_student:1,total_quantity:egg,unit:"ಮಕ್ಕಳು"});
-        if(banana>0) records.push({academic_year_id:yearId,distribution_date:date,item_name:"ಬಾಳೆಹಣ್ಣು||"+c,
+        if(banana>0) records.push({school_id:currentSchoolId,academic_year_id:yearId,distribution_date:date,item_name:"ಬಾಳೆಹಣ್ಣು||"+c,
           students_count:banana,quantity_per_student:1,total_quantity:banana,unit:"ಮಕ್ಕಳು"});
-        if(meal>0) records.push({academic_year_id:yearId,distribution_date:date,item_name:"ಬಿಸಿಊಟ||"+c,
+        if(meal>0) records.push({school_id:currentSchoolId,academic_year_id:yearId,distribution_date:date,item_name:"ಬಿಸಿಊಟ||"+c,
           students_count:meal,quantity_per_student:1,total_quantity:meal,unit:"ಮಕ್ಕಳು"});
       });
 
@@ -516,10 +560,12 @@ async function saveAll(){
     classes.forEach(c=>{
       itemNames.push("ಮೊಟ್ಟೆ||"+c,"ಬಾಳೆಹಣ್ಣು||"+c,"ಬಿಸಿಯೂಟ||"+c);
     });
-    const {error:delErr}=await db.from("daily_food_distribution")
+    let deleteQuery=db.from("daily_food_distribution")
       .delete().eq("academic_year_id",yearId)
       .gte("distribution_date",start).lte("distribution_date",end)
       .in("item_name",itemNames);
+    if(currentSchoolId)deleteQuery=deleteQuery.eq("school_id",currentSchoolId);
+    const {error:delErr}=await deleteQuery;
     if(delErr)throw delErr;
 
    if(records.length){
@@ -559,12 +605,14 @@ async function loadHolidayList(){
   const end=dateISO(year,month,new Date(year,month,0).getDate());
   try{
     // ಆಯ್ಕೆ ಮಾಡಿದ ತಿಂಗಳ ರಜೆ ದಿನಗಳು ಮಾತ್ರ ತೋರಿಸಬೇಕು.
-    const {data,error}=await db.from("school_holidays")
+    let query=db.from("school_holidays")
       .select("id,holiday_date,holiday_reason")
       .eq("academic_year_id",yearId)
       .gte("holiday_date",start)
       .lte("holiday_date",end)
       .order("holiday_date",{ascending:true});
+    if(currentSchoolId)query=query.eq("school_id",currentSchoolId);
+    const {data,error}=await query;
     if(error)throw error;
     $("holidayList").innerHTML=(data||[]).map(r=>
       `<div class="holiday-item"><b>${esc(r.holiday_date)}</b><span>${esc(r.holiday_reason)}</span>
@@ -582,10 +630,20 @@ async function saveHoliday(){
   try{
     const editId=$("holidayMsg").dataset.editId; let result;
     if(editId){
-      result=await db.from("school_holidays").update({holiday_date:date,holiday_reason:reason,updated_at:new Date().toISOString()}).eq("id",editId);
-    }else{
-      result=await db.from("school_holidays").upsert({academic_year_id:yearId,holiday_date:date,holiday_reason:reason,updated_at:new Date().toISOString()},{onConflict:"academic_year_id,holiday_date"});
-    }
+       let q=db.from("school_holidays")
+         .update({holiday_date:date,holiday_reason:reason,updated_at:new Date().toISOString()})
+         .eq("id",editId);
+       if(currentSchoolId)q=q.eq("school_id",currentSchoolId);
+       result=await q;
+     }else{
+       result=await db.from("school_holidays").upsert({
+         school_id:currentSchoolId,
+         academic_year_id:yearId,
+         holiday_date:date,
+         holiday_reason:reason,
+         updated_at:new Date().toISOString()
+       },{onConflict:"academic_year_id,holiday_date"});
+     }
     if(result.error)throw result.error;
     $("holidayDate").value="";$("holidayReason").value="";$("holidayMsg").dataset.editId="";
     show($("holidayMsg"),"✅ ರಜೆ Save ಆಯಿತು. ಆ ದಿನದ row ಈಗ ರಜೆ ಹೆಸರಿನೊಂದಿಗೆ Lock ಆಗುತ್ತದೆ.","ok");
@@ -596,7 +654,9 @@ async function saveHoliday(){
 async function deleteHoliday(id){
   if(!confirm("ಈ ರಜೆ entry ಅಳಿಸಬೇಕೇ?"))return;
   try{
-    const {error}=await db.from("school_holidays").delete().eq("id",id);
+    let q=db.from("school_holidays").delete().eq("id",id);
+    if(currentSchoolId)q=q.eq("school_id",currentSchoolId);
+    const {error}=await q;
     if(error)throw error;
     await loadSheet();await loadHolidayList();
     show($("holidayMsg"),"ರಜೆ entry ಅಳಿಸಲಾಗಿದೆ.","ok");
@@ -730,6 +790,9 @@ function exportExcel(){
   setTimeout(()=>URL.revokeObjectURL(a.href),1000);
 }
 (async function init(){
+  const schoolUser=await loadCurrentSchool();
+  if(!schoolUser)return;
+
   for(let i=1;i<=12;i++)$("month").insertAdjacentHTML("beforeend",`<option value="${i}">${months[i-1]}</option>`);
   setMonthDefault();
   await loadSchoolSettings();
