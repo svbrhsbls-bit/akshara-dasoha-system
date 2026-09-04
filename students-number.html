@@ -198,6 +198,41 @@ const SUPABASE_URL = "https://ezmudfrpcvjsgnjibvoq.supabase.co";
 const SUPABASE_KEY = "sb_publishable__FYyH6NQaqgARaq2dvuovQ_rKmus0js";
 const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
+let currentSchoolId = null;
+let currentSchoolUserId = null;
+
+async function loadCurrentSchool(){
+  const { data:{ user }, error:userError } = await db.auth.getUser();
+
+  if(userError || !user){
+    window.location.href = "login.html";
+    return false;
+  }
+
+  currentSchoolUserId = user.id;
+
+  const { data: schoolUser, error } = await db
+    .from("school_users")
+    .select("id,school_id,role,is_active")
+    .eq("user_id", user.id)
+    .eq("is_active", true)
+    .maybeSingle();
+
+  if(error || !schoolUser){
+    await db.auth.signOut();
+    window.location.href = "login.html";
+    return false;
+  }
+
+  if(schoolUser.role === "admin"){
+    window.location.href = "admin.html";
+    return false;
+  }
+
+  currentSchoolId = schoolUser.school_id;
+  return !!currentSchoolId;
+}
+
 const groups = ["1-5","6-7","8","9","10"];
 const groupClassNumbers = {"1-5":1,"6-7":6,"8":8,"9":9,"10":10};
 const monthNames = ["","ಜನವರಿ","ಫೆಬ್ರವರಿ","ಮಾರ್ಚ್","ಏಪ್ರಿಲ್","ಮೇ","ಜೂನ್","ಜುಲೈ","ಆಗಸ್ಟ್","ಸೆಪ್ಟೆಂಬರ್","ಅಕ್ಟೋಬರ್","ನವೆಂಬರ್","ಡಿಸೆಂಬರ್"];
@@ -206,6 +241,7 @@ let years = [];
 let editingRows = {};
 
 document.addEventListener("DOMContentLoaded", async () => {
+  if(!(await loadCurrentSchool())) return;
   attachCalculationListeners();
   applyClassRange();
   await loadYears();
@@ -263,7 +299,7 @@ function unlockMonthClass(){
 
 function monthClassLockKey(){
   const yearId=document.getElementById("academicYear").value || "no-year";
-  return `students_number_month_class_lock_${yearId}`;
+  return `students_number_month_class_lock_${currentSchoolId || "no-school"}_${yearId}`;
 }
 
 function persistMonthClassLock(){
@@ -319,6 +355,7 @@ async function checkClassRangeLock(){
   const {data,error}=await db
     .from("student_numbers")
     .select("id")
+    .eq("school_id",currentSchoolId)
     .eq("academic_year_id",yearId)
     .limit(1);
 
@@ -345,6 +382,7 @@ async function updateClassLockForSelection(){
   const {data,error}=await db
     .from("student_numbers")
     .select("class_number")
+    .eq("school_id",currentSchoolId)
     .eq("academic_year_id",yearId)
     .eq("month_number",month)
     .eq("division_name","ALL");
@@ -526,6 +564,7 @@ async function saveNumbers(){
 
   const data = getFormData();
   const rows = selected.map(group => ({
+    school_id: currentSchoolId,
     academic_year_id: yearId,
     month_number: monthNumber,
     class_number: groupClassNumbers[group],
@@ -541,12 +580,12 @@ async function saveNumbers(){
   saveBtn.textContent = "Saving...";
 
   try{
-    // Upsert uses the existing unique constraint:
-    // academic_year_id + month_number + class_number + division_name
+    // Upsert uses the school-wise unique constraint:
+    // school_id + academic_year_id + month_number + class_number + division_name
     const { error } = await db
       .from("student_numbers")
       .upsert(rows, {
-        onConflict: "academic_year_id,month_number,class_number,division_name",
+        onConflict: "school_id,academic_year_id,month_number,class_number,division_name",
         ignoreDuplicates: false
       });
 
@@ -591,6 +630,7 @@ async function loadSaved(){
   const {data,error}=await db
     .from("student_numbers")
     .select("*")
+    .eq("school_id",currentSchoolId)
     .eq("academic_year_id",yearId)
     .eq("division_name","ALL")
     .order("month_number",{ascending:true})
@@ -662,6 +702,7 @@ async function loadSelectedMonthIntoForm(){
   const {data,error}=await db
     .from("student_numbers")
     .select("*")
+    .eq("school_id",currentSchoolId)
     .eq("academic_year_id",yearId)
     .eq("month_number",month)
     .eq("division_name","ALL");
@@ -714,6 +755,7 @@ async function deleteMonth(month){
   const {error}=await db
     .from("student_numbers")
     .delete()
+    .eq("school_id",currentSchoolId)
     .eq("academic_year_id",yearId)
     .eq("month_number",month)
     .eq("division_name","ALL")
