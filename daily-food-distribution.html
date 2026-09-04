@@ -53,8 +53,8 @@ tfoot td{font-weight:700;background:#e8eee9}
 .holiday-item span{flex:1}
 @media(max-width:900px){.controls{grid-template-columns:1fr 1fr}.controls button{width:100%}}
 @media print{
-  /* Print report on ONE A4 page and keep the numbers clearly readable. */
-  html,body{width:297mm;height:210mm;background:#fff}
+  /* Print report on ONE A4 portrait page and keep numbers readable. */
+  html,body{width:210mm;height:297mm;background:#fff}
   body{margin:0}
   header,.no-print{display:none!important}
   .wrap{max-width:none;margin:0;padding:0}
@@ -64,7 +64,7 @@ tfoot td{font-weight:700;background:#e8eee9}
   .sheet th,.sheet td{padding:1px;line-height:1;height:5mm}
   .sheet input{border:0;background:transparent;padding:0;font-size:10px;font-weight:700;width:100%;height:auto;text-align:center}
   .title{font-size:14px}.school{font-size:10.5px;padding:2px!important}
-  .group{font-size:9px}.day{width:10%}.enroll{width:6.5%}.n{width:auto}.actionCol{display:none}
+  .group{font-size:8px}.day{width:11%}.enroll{width:7%}.n{width:5.8%}.actionCol{display:none}
   .row-action{display:none}
   .day-note{font-size:7px}
   .totalcell{font-size:10.5px;font-weight:700}
@@ -72,8 +72,77 @@ tfoot td{font-weight:700;background:#e8eee9}
   .signature{font-size:9px;margin-top:1mm;min-height:8mm;padding-top:1.5mm}
   .signature .line{width:42mm;margin-bottom:1mm}
   .signature small{font-size:7px}
-  @page{size:A4 landscape;margin:3mm}
+  @page{size:A4 portrait;margin:3mm}
 }
+/* Final print-only adjustment: compact A4 landscape, one page, larger numbers */
+@media print{
+  @page{size:A4 landscape;margin:3mm}
+  html,body{width:297mm!important;height:204mm!important;background:#fff!important}
+  body{margin:0!important;overflow:hidden!important}
+  .wrap{width:100%!important;max-width:none!important;margin:0!important;padding:0!important}
+  .card{width:100%!important;padding:0!important;margin:0!important;box-shadow:none!important}
+  .sheet-wrap{width:100%!important;overflow:visible!important;border:0!important}
+  .sheet{
+    width:100%!important;
+    min-width:0!important;
+    table-layout:fixed!important;
+    font-size:10pt!important;
+    line-height:1!important;
+    border-collapse:collapse!important;
+  }
+  .sheet thead th{font-size:9pt!important;line-height:1!important;padding:1px!important;height:4.5mm!important}
+  .sheet tbody td{
+    font-size:10pt!important;
+    line-height:1!important;
+    padding:0!important;
+    height:3.65mm!important;
+    max-height:3.65mm!important;
+  }
+  .sheet tfoot td{
+    font-size:10pt!important;
+    line-height:1!important;
+    padding:0!important;
+    height:4mm!important;
+  }
+  .sheet input.num{
+    font-size:10pt!important;
+    font-weight:700!important;
+    line-height:1!important;
+    padding:0!important;
+    height:3.2mm!important;
+    min-height:0!important;
+    border:0!important;
+    background:transparent!important;
+  }
+  .title{font-size:13pt!important;line-height:1.05!important}
+  .school{font-size:9.5pt!important;line-height:1.05!important;padding:1px!important}
+  .group{font-size:8.5pt!important}
+  .day{width:9%!important}
+  .enroll{width:5.5%!important}
+  .sheet thead tr:nth-child(2) th.n{font-size:8pt!important}
+  /* Make the 8, 9, 10 class columns narrow so all 30 days fit on one page. */
+  .sheet th:nth-child(4),.sheet th:nth-child(5),.sheet th:nth-child(6),
+  .sheet th:nth-child(8),.sheet th:nth-child(9),.sheet th:nth-child(10),
+  .sheet th:nth-child(12),.sheet th:nth-child(13),.sheet th:nth-child(14),
+  .sheet td:nth-child(4),.sheet td:nth-child(5),.sheet td:nth-child(6),
+  .sheet td:nth-child(8),.sheet td:nth-child(9),.sheet td:nth-child(10),
+  .sheet td:nth-child(12),.sheet td:nth-child(13),.sheet td:nth-child(14){
+    width:4.25%!important;
+  }
+  .sheet th:nth-child(7),.sheet th:nth-child(11),.sheet th:nth-child(15),
+  .sheet td:nth-child(7),.sheet td:nth-child(11),.sheet td:nth-child(15){
+    width:6.25%!important;
+  }
+  .sheet th:nth-child(3),.sheet td:nth-child(3){width:6%!important}
+  .sheet th:nth-child(1),.sheet td:nth-child(1){width:9%!important}
+  .sheet th:nth-child(2),.sheet td:nth-child(2){width:5.5%!important}
+  .day-note{font-size:6.5pt!important}
+  .holiday-merged{font-size:9pt!important}
+  .signature{font-size:8pt!important;margin-top:0!important;min-height:6mm!important;padding-top:1mm!important}
+  .signature .line{width:38mm!important;margin-bottom:1mm!important}
+  .signature small{font-size:6.5pt!important}
+}
+
 </style>
 </head>
 <body>
