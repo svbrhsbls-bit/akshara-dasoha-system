@@ -1458,6 +1458,10 @@ $("reportType").onchange = () => {
     fillMonths();
     if(!db) throw new Error("Supabase library load ಆಗಿಲ್ಲ. Internet/CDN connection ಪರಿಶೀಲಿಸಿ.");
 
+    // ಮೊದಲು Login ಮಾಡಿದ School ಅನ್ನು ಗುರುತಿಸಬೇಕು.
+    // ನಂತರ ಮಾತ್ರ school-wise School Settings ಮತ್ತು Academic Year load ಆಗಬೇಕು.
+    await loadCurrentSchool();
+
     await loadSchool();
 
     await loadActiveYear();
