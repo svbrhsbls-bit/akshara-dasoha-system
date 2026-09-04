@@ -572,7 +572,7 @@ async function saveAll(){
   const { error: saveError } = await db
     .from("daily_food_distribution")
     .upsert(records, {
-      onConflict: "academic_year_id,distribution_date,item_name"
+      onConflict: "school_id,academic_year_id,distribution_date,item_name"
     });
 
   if(saveError) throw saveError;
@@ -642,7 +642,7 @@ async function saveHoliday(){
          holiday_date:date,
          holiday_reason:reason,
          updated_at:new Date().toISOString()
-       },{onConflict:"academic_year_id,holiday_date"});
+       },{onConflict:"school_id,academic_year_id,holiday_date"});
      }
     if(result.error)throw result.error;
     $("holidayDate").value="";$("holidayReason").value="";$("holidayMsg").dataset.editId="";
