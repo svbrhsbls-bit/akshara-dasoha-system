@@ -329,6 +329,8 @@ const $=id=>document.getElementById(id);
 
 let activeYear=null;
 let selectedGroup="";
+let currentSchoolId=null;
+let currentSchoolUserId=null;
 let editingItemId=null;
 let editingIngredientId=null;
 let editingNutritionId=null;
@@ -363,7 +365,7 @@ function setSelectionStatus(){
 }
 
 function selectionStorageKey(){
- return "calculation-settings-class-"+(activeYear?.id||"");
+ return "calculation-settings-class-"+(currentSchoolId||"no-school")+"-"+(activeYear?.id||"");
 }
 
 function saveSelection(){
@@ -410,6 +412,42 @@ function restoreSelection(){
  School Settingsನಲ್ಲಿ Active ಆಗಿರುವ Academic Year ಮಾತ್ರ.
  ಮೊದಲು academic_years.is_active=true ಅನ್ನು ಬಳಸಲಾಗುತ್ತದೆ.
 */
+async function loadCurrentSchool(){
+ try{
+  const {data:{user},error:userError}=await db.auth.getUser();
+  if(userError || !user){
+   window.location.href="login.html";
+   return false;
+  }
+  currentSchoolUserId=user.id;
+
+  const {data:su,error}=await db
+   .from("school_users")
+   .select("id,school_id,role,is_active")
+   .eq("user_id",user.id)
+   .eq("is_active",true)
+   .maybeSingle();
+
+  if(error || !su){
+   await db.auth.signOut();
+   window.location.href="login.html";
+   return false;
+  }
+
+  if(su.role==="admin"){
+   window.location.href="admin.html";
+   return false;
+  }
+
+  currentSchoolId=su.school_id;
+  return true;
+ }catch(e){
+  console.error(e);
+  window.location.href="login.html";
+  return false;
+ }
+}
+
 async function loadActiveYear(){
 
  const {data,error}=await db
@@ -443,6 +481,7 @@ async function loadSchoolSettings(){
   const {data,error}=await db
    .from("school_settings")
    .select("*")
+   .eq("school_id",currentSchoolId)
    .limit(1)
    .maybeSingle();
 
@@ -510,6 +549,7 @@ async function loadItems(){
  const {data,error}=await db
   .from("calculation_settings")
   .select("*")
+  .eq("school_id",currentSchoolId)
   .eq("academic_year_id",activeYear.id)
   .eq("class_group",selectedGroup)
   .order("created_at",{ascending:true});
@@ -581,6 +621,7 @@ async function saveItem(){
   ಇದ್ದರೆ Update, ಇಲ್ಲದಿದ್ದರೆ Insert.
  */
  const payload={
+  school_id:currentSchoolId,
   academic_year_id:activeYear.id,
   class_group:selectedGroup,
   item_name:name,
@@ -598,6 +639,7 @@ async function saveItem(){
    .from("calculation_settings")
    .update(payload)
    .eq("id",editingItemId)
+   .eq("school_id",currentSchoolId)
    .eq("academic_year_id",activeYear.id)
    .select()
    .single();
@@ -607,6 +649,7 @@ async function saveItem(){
   const {data:existing,error:findError}=await db
    .from("calculation_settings")
    .select("id")
+   .eq("school_id",currentSchoolId)
    .eq("academic_year_id",activeYear.id)
    .eq("class_group",selectedGroup)
    .eq("item_name",name)
@@ -623,6 +666,7 @@ async function saveItem(){
     .from("calculation_settings")
     .update(payload)
     .eq("id",existing.id)
+    .eq("school_id",currentSchoolId)
     .select()
     .single();
 
@@ -674,6 +718,7 @@ async function deleteItem(id){
   .from("calculation_settings")
   .delete()
   .eq("id",id)
+  .eq("school_id",currentSchoolId)
   .eq("academic_year_id",activeYear.id);
 
  if(error){
@@ -1208,6 +1253,9 @@ $("nutritionSaveBtn").onclick=saveNutrition;
 $("nutritionCancelBtn").onclick=resetNutrition;
 
 (async function init(){
+
+ const schoolOk=await loadCurrentSchool();
+ if(!schoolOk)return;
 
  await loadSchoolSettings();
 
