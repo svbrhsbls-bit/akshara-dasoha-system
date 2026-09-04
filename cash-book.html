@@ -218,6 +218,9 @@ let state={
   openingBalance:null
 };
 
+let currentSchoolId=null;
+let currentSchoolUserId=null;
+
 let academicYears=[];
 let selectedYear="";
 let selectedYearId=null;
@@ -260,10 +263,33 @@ function totalsForDate(date){
 /* =========================================================
    SUPABASE: YEAR LIST + SCHOOL SETTINGS
 ========================================================= */
+async function loadCurrentSchool(){
+  const {data:{user},error:userError}=await db.auth.getUser();
+  if(userError)throw userError;
+  if(!user)throw new Error("Login session ಇಲ್ಲ. ದಯವಿಟ್ಟು Login ಮಾಡಿ.");
+
+  const {data:su,error:suError}=await db.from("school_users")
+    .select("id,user_id,school_id,role,is_active")
+    .eq("user_id",user.id)
+    .eq("is_active",true)
+    .maybeSingle();
+
+  if(suError)throw suError;
+  if(!su)throw new Error("ಈ Loginಗೆ School access ಇಲ್ಲ.");
+  if(su.role==="admin"){
+    window.location.href="admin.html";
+    throw new Error("Admin dashboardಗೆ redirect ಆಗುತ್ತಿದೆ.");
+  }
+
+  currentSchoolId=su.school_id;
+  currentSchoolUserId=su.user_id;
+  if(!currentSchoolId)throw new Error("School ID ಸಿಗಲಿಲ್ಲ.");
+}
+
 async function loadSchoolAndYears(){
   const [yearsRes,schoolRes]=await Promise.all([
     db.from("academic_years").select("id,year_name,is_active,created_at").order("created_at",{ascending:true}),
-    db.from("school_settings").select("department_name,school_name,academic_year").order("created_at",{ascending:true}).limit(1).maybeSingle()
+    db.from("school_settings").select("department_name,school_name,academic_year").eq("school_id",currentSchoolId).order("created_at",{ascending:true}).limit(1).maybeSingle()
   ]);
 
   if(yearsRes.error) throw yearsRes.error;
@@ -278,7 +304,7 @@ async function loadSchoolAndYears(){
   const active=(academicYears.find(x=>x.is_active)?.year_name)||schoolRes.data?.academic_year||academicYears[0]?.year_name||"";
   firstAcademicYear=academicYears[0]?.year_name||active||"";
 
-  const remembered=localStorage.getItem('cashbook_selected_year');
+  const remembered=localStorage.getItem('cashbook_selected_year_'+currentSchoolId);
   selectedYear=(academicYears.some(x=>x.year_name===remembered)?remembered:active);
   if(!selectedYear && academicYears[0])selectedYear=academicYears[0].year_name;
 
@@ -308,6 +334,7 @@ function updateHeaderYear(){
 async function loadItems(){
   const {data,error}=await db.from("cash_book_items")
     .select("id,item_name,sort_order,created_at")
+    .eq("school_id",currentSchoolId)
     .order("sort_order",{ascending:true})
     .order("created_at",{ascending:true});
   if(error)throw error;
@@ -315,7 +342,7 @@ async function loadItems(){
   if((data||[]).length){
     state.items=data.map(x=>x.item_name).filter(x=>x && x!=="ಒಟ್ಟು");
   }else{
-    const payload=DEFAULT_ITEMS.map((item,i)=>({item_name:item,sort_order:i}));
+    const payload=DEFAULT_ITEMS.map((item,i)=>({school_id:currentSchoolId,item_name:item,sort_order:i}));
     const ins=await db.from("cash_book_items").insert(payload);
     if(ins.error)throw ins.error;
     state.items=DEFAULT_ITEMS.slice();
@@ -332,11 +359,11 @@ async function loadYearData(){
 
   const [jRes,kRes,oRes]=await Promise.all([
     db.from("cash_book_entries").select("id,academic_year,entry_type,entry_date,item_name,amount,details,created_at")
-      .eq("academic_year",selectedYear).eq("entry_type","jama").order("entry_date",{ascending:true}).order("created_at",{ascending:true}),
+      .eq("school_id",currentSchoolId).eq("academic_year",selectedYear).eq("entry_type","jama").order("entry_date",{ascending:true}).order("created_at",{ascending:true}),
     db.from("cash_book_entries").select("id,academic_year,entry_type,entry_date,item_name,amount,details,created_at")
-      .eq("academic_year",selectedYear).eq("entry_type","kharchu").order("entry_date",{ascending:true}).order("created_at",{ascending:true}),
+      .eq("school_id",currentSchoolId).eq("academic_year",selectedYear).eq("entry_type","kharchu").order("entry_date",{ascending:true}).order("created_at",{ascending:true}),
     db.from("cash_book_opening_balances").select("id,academic_year,item_name,amount,created_at")
-      .eq("academic_year",selectedYear).order("created_at",{ascending:true})
+      .eq("school_id",currentSchoolId).eq("academic_year",selectedYear).order("created_at",{ascending:true})
   ]);
   if(jRes.error)throw jRes.error;
   if(kRes.error)throw kRes.error;
@@ -370,9 +397,9 @@ async function loadYearData(){
 }
 async function calculateYearClosing(year){
   const [jRes,kRes,oRes]=await Promise.all([
-    db.from("cash_book_entries").select("entry_date,item_name,amount").eq("academic_year",year).eq("entry_type","jama").order("entry_date",{ascending:true}),
-    db.from("cash_book_entries").select("entry_date,item_name,amount").eq("academic_year",year).eq("entry_type","kharchu").order("entry_date",{ascending:true}),
-    db.from("cash_book_opening_balances").select("item_name,amount").eq("academic_year",year)
+    db.from("cash_book_entries").select("entry_date,item_name,amount").eq("school_id",currentSchoolId).eq("academic_year",year).eq("entry_type","jama").order("entry_date",{ascending:true}),
+    db.from("cash_book_entries").select("entry_date,item_name,amount").eq("school_id",currentSchoolId).eq("academic_year",year).eq("entry_type","kharchu").order("entry_date",{ascending:true}),
+    db.from("cash_book_opening_balances").select("item_name,amount").eq("school_id",currentSchoolId).eq("academic_year",year)
   ]);
   if(jRes.error)throw jRes.error;
   if(kRes.error)throw kRes.error;
@@ -395,7 +422,7 @@ async function calculateYearClosing(year){
 /* One-time migration from the old localStorage version, preserving current 2026-27 data.
    It runs only when the selected year's Supabase data is empty. */
 async function migrateLegacyLocalDataIfNeeded(){
-  if(!selectedYear || localStorage.getItem('cashbook_supabase_migrated_'+selectedYear))return;
+  if(!selectedYear || localStorage.getItem('cashbook_supabase_migrated_'+currentSchoolId+'_'+selectedYear))return;
 
   const localRaw=localStorage.getItem('cashbook_v2');
   if(!localRaw)return;
@@ -405,7 +432,7 @@ async function migrateLegacyLocalDataIfNeeded(){
 
   const remoteHasData=state.jama.length||state.kharchu.length||state.openingBalance;
   if(remoteHasData){
-    localStorage.setItem('cashbook_supabase_migrated_'+selectedYear,'1');
+    localStorage.setItem('cashbook_supabase_migrated_'+currentSchoolId+'_'+selectedYear,'1');
     return;
   }
 
@@ -413,9 +440,9 @@ async function migrateLegacyLocalDataIfNeeded(){
   if(oldOpening && selectedYear===firstAcademicYear){
     const payload=Object.entries(oldOpening)
       .filter(([item])=>state.items.includes(item) && item!=="ಒಟ್ಟು")
-      .map(([item,amount])=>({academic_year:selectedYear,item_name:item,amount:Number(amount||0)}));
+      .map(([item,amount])=>({school_id:currentSchoolId,academic_year:selectedYear,item_name:item,amount:Number(amount||0)}));
     if(payload.length){
-      const r=await db.from("cash_book_opening_balances").upsert(payload,{onConflict:"academic_year,item_name"});
+      const r=await db.from("cash_book_opening_balances").upsert(payload,{onConflict:"school_id,academic_year,item_name"});
       if(r.error)throw r.error;
       state.openingBalance={};
       payload.forEach(x=>state.openingBalance[x.item_name]=x.amount);
@@ -427,21 +454,21 @@ async function migrateLegacyLocalDataIfNeeded(){
     for(const x of arr){
       if(!safeDate(x.date)||!state.items.includes(x.item)||Number(x.amount||0)<=0)continue;
       const row={
-        academic_year:selectedYear,entry_type:type,entry_date:x.date,
+        school_id:currentSchoolId,academic_year:selectedYear,entry_type:type,entry_date:x.date,
         item_name:x.item,amount:Number(x.amount||0),details:x.desc||''
       };
-      const r=await db.from("cash_book_entries").upsert(row,{onConflict:"academic_year,entry_type,entry_date,item_name"});
+      const r=await db.from("cash_book_entries").upsert(row,{onConflict:"school_id,academic_year,entry_type,entry_date,item_name"});
       if(r.error)throw r.error;
     }
   }
-  localStorage.setItem('cashbook_supabase_migrated_'+selectedYear,'1');
+  localStorage.setItem('cashbook_supabase_migrated_'+currentSchoolId+'_'+selectedYear,'1');
 
   // Reload after migration so IDs and server timestamps are present.
   const [jRes,kRes]=await Promise.all([
     db.from("cash_book_entries").select("id,academic_year,entry_type,entry_date,item_name,amount,details,created_at")
-      .eq("academic_year",selectedYear).eq("entry_type","jama").order("entry_date",{ascending:true}),
+      .eq("school_id",currentSchoolId).eq("academic_year",selectedYear).eq("entry_type","jama").order("entry_date",{ascending:true}),
     db.from("cash_book_entries").select("id,academic_year,entry_type,entry_date,item_name,amount,details,created_at")
-      .eq("academic_year",selectedYear).eq("entry_type","kharchu").order("entry_date",{ascending:true})
+      .eq("school_id",currentSchoolId).eq("academic_year",selectedYear).eq("entry_type","kharchu").order("entry_date",{ascending:true})
   ]);
   if(jRes.error)throw jRes.error;if(kRes.error)throw kRes.error;
   state.jama=(jRes.data||[]).map(x=>({id:x.id,date:x.entry_date,item:x.item_name,amount:Number(x.amount||0),desc:x.details||'',createdAt:x.created_at}));
@@ -458,7 +485,7 @@ async function changeYear(){
   const row=academicYears.find(x=>x.year_name===y);
   if(!row)return;
   selectedYear=y;selectedYearId=row.id||null;
-  localStorage.setItem('cashbook_selected_year',selectedYear);
+  localStorage.setItem('cashbook_selected_year_'+currentSchoolId,selectedYear);
   updateHeaderYear();
 
   try{
@@ -581,17 +608,17 @@ async function saveItem(i){
   }
 
   try{
-    const r=await db.from("cash_book_items").update({item_name:v}).eq("item_name",old);
+    const r=await db.from("cash_book_items").update({item_name:v}).eq("school_id",currentSchoolId).eq("item_name",old);
     if(r.error)throw r.error;
 
     // Existing year data is also renamed so historical data remains connected.
     const [j,k,o]=await Promise.all([
       db.from("cash_book_entries").update({item_name:v})
-        .eq("academic_year",selectedYear).eq("entry_type","jama").eq("item_name",old),
+        .eq("school_id",currentSchoolId).eq("academic_year",selectedYear).eq("entry_type","jama").eq("item_name",old),
       db.from("cash_book_entries").update({item_name:v})
-        .eq("academic_year",selectedYear).eq("entry_type","kharchu").eq("item_name",old),
+        .eq("school_id",currentSchoolId).eq("academic_year",selectedYear).eq("entry_type","kharchu").eq("item_name",old),
       db.from("cash_book_opening_balances").update({item_name:v})
-        .eq("academic_year",selectedYear).eq("item_name",old)
+        .eq("school_id",currentSchoolId).eq("academic_year",selectedYear).eq("item_name",old)
     ]);
     if(j.error||k.error||o.error){
       console.warn('Item historical rename warning',j.error,k.error,o.error);
@@ -625,7 +652,7 @@ async function removeItem(i){
   if(i<DEFAULT_ITEMS.length)return;
   const item=state.items[i];
   if(!confirm('ಈ Item ಅನ್ನು Item Masterನಿಂದ ತೆಗೆದುಹಾಕಬೇಕೇ?'))return;
-  const r=await db.from("cash_book_items").delete().eq("item_name",item);
+  const r=await db.from("cash_book_items").delete().eq("school_id",currentSchoolId).eq("item_name",item);
   if(r.error)return alert('Item delete failed: '+r.error.message);
   state.items.splice(i,1);
   delete state.openingBalance?.[item];
@@ -667,6 +694,7 @@ async function saveBulkEntry(type){
     if(isEditing){
       const del=await db.from("cash_book_entries")
         .delete()
+        .eq("school_id",currentSchoolId)
         .eq("academic_year",selectedYear)
         .eq("entry_type",type)
         .eq("entry_date",date);
@@ -675,12 +703,12 @@ async function saveBulkEntry(type){
 
     for(const r of rows){
       const payload={
-        academic_year:selectedYear,entry_type:type,entry_date:date,
+        school_id:currentSchoolId,academic_year:selectedYear,entry_type:type,entry_date:date,
         item_name:r.item,amount:r.amount,details:desc
       };
 
       const result=await db.from("cash_book_entries")
-        .upsert(payload,{onConflict:"academic_year,entry_type,entry_date,item_name"})
+        .upsert(payload,{onConflict:"school_id,academic_year,entry_type,entry_date,item_name"})
         .select("id,entry_date,item_name,amount,details,created_at").single();
 
       if(result.error)throw result.error;
@@ -783,7 +811,7 @@ function clearBulkEntry(type){
 }
 async function deleteDate(type,date){
   if(!confirm(`${date} ದಿನದ ಎಲ್ಲಾ ${type==='jama'?'ಜಮಾ':'ಖರ್ಚು'} entries ಅಳಿಸಬೇಕೇ?`))return;
-  const r=await db.from("cash_book_entries").delete().eq("academic_year",selectedYear).eq("entry_type",type).eq("entry_date",date);
+  const r=await db.from("cash_book_entries").delete().eq("school_id",currentSchoolId).eq("academic_year",selectedYear).eq("entry_type",type).eq("entry_date",date);
   if(r.error)return alert('Delete failed: '+r.error.message);
   await loadYearData();renderAll();
 }
@@ -933,8 +961,8 @@ async function saveOpeningBalance(){
   if(state.openingBalance && typeof state.openingBalance==="object"){
     if(!confirm('Opening Balance ಬದಲಾಯಿಸಿದರೆ ಈ ವರ್ಷದ Closing Balanceಗಳು ಮರುಲೆಕ್ಕವಾಗುತ್ತವೆ. Save ಮಾಡಬೇಕೇ?'))return;
   }
-  const payload=state.items.map(it=>({academic_year:selectedYear,item_name:it,amount:next[it]}));
-  const r=await db.from("cash_book_opening_balances").upsert(payload,{onConflict:"academic_year,item_name"});
+  const payload=state.items.map(it=>({school_id:currentSchoolId,academic_year:selectedYear,item_name:it,amount:next[it]}));
+  const r=await db.from("cash_book_opening_balances").upsert(payload,{onConflict:"school_id,academic_year,item_name"});
   if(r.error)return alert('Opening Balance save failed: '+r.error.message);
   state.openingBalance=next;
   renderOpeningBalance();renderAll();
@@ -1137,6 +1165,7 @@ document.querySelectorAll('.tab').forEach(btn=>btn.addEventListener('click',()=>
 async function init(){
   try{
     loading=true;
+    await loadCurrentSchool();
     await loadSchoolAndYears();
     if(!selectedYear){
       alert('School Settingsನಲ್ಲಿ Academic Year ಸೇರಿಸಿ.');
