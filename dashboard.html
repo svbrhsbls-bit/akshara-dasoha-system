@@ -284,6 +284,8 @@ const SUPABASE_KEY="sb_publishable__FYyH6NQaqgARaq2dvuovQ_rKmus0js";
 const db=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
 
 let selectedFile="";
+let currentSchoolId=null;
+let currentSchoolUserId=null;
 
 function $(id){return document.getElementById(id)}
 function money(v){return "₹"+Number(v||0).toLocaleString("en-IN",{minimumFractionDigits:2,maximumFractionDigits:2})}
@@ -335,9 +337,53 @@ function updateTodayDate(){
   $("todayDate").textContent=`${dd}-${mm}-${yyyy} ${weekdays[now.getDay()]}`;
 }
 
+async function loadCurrentSchool(){
+  try{
+    const {data:{user},error:authError}=await db.auth.getUser();
+    if(authError)throw authError;
+    if(!user){
+      window.location.href="login.html";
+      return null;
+    }
+
+    const {data:su,error:suError}=await db.from("school_users")
+      .select("id,school_id,role,is_active")
+      .eq("user_id",user.id)
+      .maybeSingle();
+
+    if(suError)throw suError;
+
+    if(!su || !su.is_active){
+      await db.auth.signOut();
+      alert("ಈ login accountಗೆ system access ನೀಡಲಾಗಿಲ್ಲ.");
+      window.location.href="login.html";
+      return null;
+    }
+
+    currentSchoolUserId=su.id;
+    currentSchoolId=su.school_id;
+
+    if(su.role==="admin"){
+      // Dashboard is intended for school users. Keep Admin Panel separate.
+      window.location.href="admin.html";
+      return null;
+    }
+
+    return su;
+  }catch(e){
+    console.error("School session failed:",e);
+    alert("ಶಾಲೆಯ login ಮಾಹಿತಿ ಪಡೆಯಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ.");
+    await db.auth.signOut().catch(()=>{});
+    window.location.href="login.html";
+    return null;
+  }
+}
+
 async function loadSchool(){
   try{
-    const {data}=await db.from("school_settings").select("*").order("created_at",{ascending:false}).limit(1).maybeSingle();
+    let query=db.from("school_settings").select("*").order("created_at",{ascending:false}).limit(1);
+    if(currentSchoolId)query=query.eq("school_id",currentSchoolId);
+    const {data}=await query.maybeSingle();
     if(data){
       $("topDepartment").textContent=data.department_name||"ಅಕ್ಷರ ದಾಸೋಹ ಕಾರ್ಯಕ್ರಮ";
       $("topSchool").textContent=data.school_name||"ಶಾಲೆಯ ಹೆಸರು";
@@ -362,9 +408,11 @@ async function loadStudents(year){
   if(!year)return;
   try{
     const month=new Date().getMonth()+1;
-    const {data}=await db.from("student_numbers")
+    let query=db.from("student_numbers")
       .select("class_number,total_students,boys,girls,month_number,division_name")
-      .eq("academic_year_id",year.id)
+      .eq("academic_year_id",year.id);
+    if(currentSchoolId)query=query.eq("school_id",currentSchoolId);
+    const {data}=await query
       .eq("month_number",month)
       .eq("division_name","ALL");
     let total=0;
@@ -384,9 +432,11 @@ async function loadFood(year){
   const today=new Date();
   const todayKey=`${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,"0")}-${String(today.getDate()).padStart(2,"0")}`;
   try{
-    const {data,error}=await db.from("daily_food_distribution")
+    let query=db.from("daily_food_distribution")
       .select("distribution_date,item_name,students_count,total_quantity")
-      .eq("academic_year_id",year.id)
+      .eq("academic_year_id",year.id);
+    if(currentSchoolId)query=query.eq("school_id",currentSchoolId);
+    const {data,error}=await query
       .eq("distribution_date",todayKey)
       .eq("item_name","ಹಾಜರಾತಿ||ALL")
       .maybeSingle();
@@ -404,7 +454,9 @@ async function loadFood(year){
 
 async function loadItems(year){
   try{
-    const {data,error}=await db.from("calculation_settings").select("*");
+    let query=db.from("calculation_settings").select("*");
+    if(currentSchoolId)query=query.eq("school_id",currentSchoolId);
+    const {data,error}=await query;
     if(!error)$("itemTotal").textContent=(data||[]).length;
   }catch(e){console.log(e)}
 }
@@ -412,11 +464,15 @@ async function loadItems(year){
 async function loadCash(year){
   if(!year)return;
   try{
-    const [j,k,o]=await Promise.all([
-      db.from("cash_book_entries").select("amount").eq("academic_year",year.year_name).eq("entry_type","jama"),
-      db.from("cash_book_entries").select("amount").eq("academic_year",year.year_name).eq("entry_type","kharchu"),
-      db.from("cash_book_opening_balances").select("amount").eq("academic_year",year.year_name)
-    ]);
+    let jamaQuery=db.from("cash_book_entries").select("amount").eq("academic_year",year.year_name).eq("entry_type","jama");
+    let kharchuQuery=db.from("cash_book_entries").select("amount").eq("academic_year",year.year_name).eq("entry_type","kharchu");
+    let openingQuery=db.from("cash_book_opening_balances").select("amount").eq("academic_year",year.year_name);
+    if(currentSchoolId){
+      jamaQuery=jamaQuery.eq("school_id",currentSchoolId);
+      kharchuQuery=kharchuQuery.eq("school_id",currentSchoolId);
+      openingQuery=openingQuery.eq("school_id",currentSchoolId);
+    }
+    const [j,k,o]=await Promise.all([jamaQuery,kharchuQuery,openingQuery]);
     if(j.error||k.error||o.error)throw new Error("Cash tables");
     const opening=(o.data||[]).reduce((s,r)=>s+Number(r.amount||0),0);
     const jama=(j.data||[]).reduce((s,r)=>s+Number(r.amount||0),0);
@@ -476,9 +532,11 @@ async function loadItemClosings(){
 
     // Calculation Settingsನಲ್ಲಿ ಇರುವ Items ಹೆಸರುಗಳೇ Dashboardನ ಆಹಾರ ಪದಾರ್ಥಗಳ ಮೂಲ.
     // Ingredients / Nutrition ಅನ್ನು ಇಲ್ಲಿ ಬಳಸುವುದಿಲ್ಲ.
-    const {data:settings,error:settingsError}=await db.from("calculation_settings")
+    let settingsQuery=db.from("calculation_settings")
       .select("item_name,is_enabled,class_group")
       .eq("academic_year_id",year.id);
+    if(currentSchoolId)settingsQuery=settingsQuery.eq("school_id",currentSchoolId);
+    const {data:settings,error:settingsError}=await settingsQuery;
     if(settingsError)throw settingsError;
 
     const itemNames=new Set(
@@ -487,10 +545,12 @@ async function loadItemClosings(){
         .map(r=>String(r.item_name||"").trim())
     );
 
-    const {data:closings,error}=await db.from("food_stock_monthly_closing")
+    let closingsQuery=db.from("food_stock_monthly_closing")
       .select("item_name,closing_balance,unit,month_number,item_type")
       .eq("academic_year_id",year.id)
       .eq("month_number",month);
+    if(currentSchoolId)closingsQuery=closingsQuery.eq("school_id",currentSchoolId);
+    const {data:closings,error}=await closingsQuery;
     if(error)throw error;
 
     // Nutrition closing rows are stored with item_type='item' but have the
@@ -551,12 +611,14 @@ async function loadDailyFoodCounts(){
 
     note.textContent=`${monthNamesForDashboard[month-1]}-${reportYear} | ಪ್ರತಿದಿನದ ಬಿಸಿಊಟ ಮಕ್ಕಳ ಸಂಖ್ಯೆ`;
 
-    const {data,error}=await db.from("daily_food_distribution")
+    let query=db.from("daily_food_distribution")
       .select("distribution_date,students_count,total_quantity")
       .eq("academic_year_id",year.id)
       .gte("distribution_date",start)
       .lte("distribution_date",end)
       .order("distribution_date",{ascending:true});
+    if(currentSchoolId)query=query.eq("school_id",currentSchoolId);
+    const {data,error}=await query;
     if(error)throw error;
 
     const totals={};
@@ -604,6 +666,10 @@ async function logout(){
 async function init(){
   updateTodayDate();
   setInterval(updateTodayDate,60000);
+
+  const schoolUser=await loadCurrentSchool();
+  if(!schoolUser)return;
+
   await loadSchool();
   const year=await loadYear();
   await Promise.all([loadStudents(year),loadFood(year),loadItems(year),loadCash(year),loadItemClosings(),loadDailyFoodCounts()]);
