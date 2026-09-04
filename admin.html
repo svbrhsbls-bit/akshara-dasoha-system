@@ -1,17 +1,160 @@
-<!doctype html><html lang="kn"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>ಅಕ್ಷರ ದಾಸೋಹ ಕಾರ್ಯಕ್ರಮ - Admin Panel</title><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><style>
-*{box-sizing:border-box}body{margin:0;font-family:Arial,"Noto Sans Kannada",sans-serif;background:#f4f7fb;color:#172033}.top{background:#173b6c;color:#fff;padding:18px 24px;display:flex;justify-content:space-between;align-items:center}.top h1{margin:0;font-size:24px}.container{max-width:1100px;margin:25px auto;padding:0 18px}.card{background:#fff;border-radius:14px;padding:22px;box-shadow:0 4px 18px #0001;margin-bottom:20px}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}label{display:block;font-weight:700;margin-bottom:7px}input{width:100%;padding:12px;border:1px solid #cbd5e1;border-radius:8px;font-size:16px}button{border:0;border-radius:8px;padding:12px 18px;font-size:16px;font-weight:700;cursor:pointer}.primary{background:#1769aa;color:#fff}.danger{background:#b42318;color:#fff}.msg{margin-top:15px;padding:12px;border-radius:8px;display:none}.ok{background:#e8f7ee;color:#126b36}.err{background:#fdecec;color:#a61b1b}table{width:100%;border-collapse:collapse;margin-top:10px}th,td{border-bottom:1px solid #e5e7eb;padding:11px;text-align:left}th{background:#f8fafc}.badge{padding:4px 9px;border-radius:20px;background:#e7f6ec;color:#176b39}@media(max-width:700px){.grid{grid-template-columns:1fr}.top{display:block}.top button{margin-top:12px}}</style></head><body>
-<header class="top"><div><h1>ಅಕ್ಷರ ದಾಸೋಹ ಕಾರ್ಯಕ್ರಮ</h1><div>Admin Panel — ಶಾಲೆಗಳ ನಿರ್ವಹಣೆ</div></div><button class="danger" id="logoutBtn">Logout</button></header>
-<main class="container"><div class="card" style="border-left:5px solid #1769aa">
-<strong>Admin Login ಯಶಸ್ವಿಯಾದ ನಂತರ ಇಲ್ಲಿ ಶಾಲೆಗಳನ್ನು Create ಮಾಡಬಹುದು.</strong><br>
-ಪ್ರತಿ ಶಾಲೆಯ Username ಆಗಿ ಆ ಶಾಲೆಯ <strong>DISE Code</strong> ಬಳಸಲಾಗುತ್ತದೆ.
-</div><section class="card"><h2>🏫 ಹೊಸ ಶಾಲೆ Create ಮಾಡಿ</h2><div class="grid"><div><label>ಶಾಲೆಯ ಹೆಸರು</label><input id="schoolName" placeholder="ಶಾಲೆಯ ಹೆಸರು"></div><div><label>Username (DISE Code)</label><input id="username" placeholder="ಉದಾ: 29130501906" autocomplete="off"></div><div><label>School Password</label><input id="password" type="password" placeholder="ಶಾಲೆಗೆ Password ನಮೂದಿಸಿ" autocomplete="new-password"></div><div style="display:flex;align-items:end"><button class="primary" id="createBtn">➕ ಶಾಲೆ Create ಮಾಡಿ</button></div></div><div id="msg" class="msg"></div></section>
-<section class="card"><h2>🏫 ಶಾಲೆಗಳ ಪಟ್ಟಿ</h2><table><thead><tr><th>ಶಾಲೆ</th><th>School Code</th><th>Username</th><th>ಸ್ಥಿತಿ</th></tr></thead><tbody id="schoolRows"><tr><td colspan="4">Loading...</td></tr></tbody></table></section></main>
+<!doctype html>
+<html lang="kn">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ಅಕ್ಷರ ದಾಸೋಹ ಕಾರ್ಯಕ್ರಮ - Admin Panel</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:Arial,"Noto Sans Kannada",sans-serif;background:#f4f7fb;color:#172033}
+.top{background:#173b6c;color:#fff;padding:18px 24px;display:flex;justify-content:space-between;align-items:center}
+.top h1{margin:0;font-size:24px}
+.container{max-width:1200px;margin:25px auto;padding:0 18px}
+.card{background:#fff;border-radius:14px;padding:22px;box-shadow:0 4px 18px #0001;margin-bottom:20px}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+label{display:block;font-weight:700;margin-bottom:7px}
+input{width:100%;padding:12px;border:1px solid #cbd5e1;border-radius:8px;font-size:16px}
+button{border:0;border-radius:8px;padding:10px 14px;font-size:14px;font-weight:700;cursor:pointer}
+button:disabled{opacity:.6;cursor:not-allowed}
+.primary{background:#1769aa;color:#fff}
+.danger{background:#b42318;color:#fff}
+.warning{background:#b7791f;color:#fff}
+.success{background:#18864b;color:#fff}
+.msg{margin-top:15px;padding:12px;border-radius:8px;display:none}
+.ok{background:#e8f7ee;color:#126b36}
+.err{background:#fdecec;color:#a61b1b}
+table{width:100%;border-collapse:collapse;margin-top:10px}
+th,td{border-bottom:1px solid #e5e7eb;padding:11px;text-align:left;vertical-align:middle}
+th{background:#f8fafc}
+.badge{padding:4px 9px;border-radius:20px;background:#e7f6ec;color:#176b39}
+.badge.inactive{background:#fff3cd;color:#8a6500}
+.actions{display:flex;gap:7px;flex-wrap:wrap}
+.note{background:#fff8e1;border:1px solid #f1d37a;padding:12px;border-radius:8px;margin-top:12px}
+@media(max-width:800px){.grid{grid-template-columns:1fr}.top{display:block}.top button{margin-top:12px}table{font-size:13px}}
+</style>
+</head>
+<body>
+<header class="top">
+  <div><h1>ಅಕ್ಷರ ದಾಸೋಹ ಕಾರ್ಯಕ್ರಮ</h1><div>Admin Panel — School Management</div></div>
+  <button class="danger" id="logoutBtn">Logout</button>
+</header>
+<main class="container">
+<section class="card">
+  <h2>🏫 ಹೊಸ ಶಾಲೆ ಸೇರಿಸಿ</h2>
+  <div class="grid">
+    <div><label>ಶಾಲೆಯ ಹೆಸರು</label><input id="schoolName" placeholder="ಶಾಲೆಯ ಹೆಸರು"></div>
+    <div><label>Username (DISE Code)</label><input id="username" placeholder="ಉದಾ: 29130501906" autocomplete="off"></div>
+    <div><label>Password</label><input id="password" type="password" placeholder="ಕನಿಷ್ಠ 6 ಅಕ್ಷರಗಳು" autocomplete="new-password"></div>
+    <div style="display:flex;align-items:end"><button class="primary" id="createBtn">➕ ಶಾಲೆ Create ಮಾಡಿ</button></div>
+  </div>
+  <div id="msg" class="msg"></div>
+</section>
+<section class="card">
+  <h2>🏫 ಶಾಲೆಗಳ ಪಟ್ಟಿ</h2>
+  <div class="note"><b>ಸುರಕ್ಷತೆ:</b> ಶಾಲೆಯನ್ನು Deactivate ಮಾಡಿದರೆ ಅದರ records ಅಳಿಸುವುದಿಲ್ಲ. ತಪ್ಪು ಶಾಲೆ deactivate ಆಗದಂತೆ DISE Code type ಮಾಡಿ confirm ಮಾಡಬೇಕು.</div>
+  <table>
+    <thead><tr><th>ಶಾಲೆ</th><th>School Code</th><th>Username (DISE)</th><th>ಸ್ಥಿತಿ</th><th>Actions</th></tr></thead>
+    <tbody id="schoolRows"><tr><td colspan="5">Loading...</td></tr></tbody>
+  </table>
+</section>
+</main>
 <script>
-const SUPABASE_URL="https://ezmudfrpcvjsgnjibvoq.supabase.co",SUPABASE_KEY="sb_publishable__FYyH6NQaqgARaq2dvuovQ_rKmus0js",client=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+const SUPABASE_URL="https://ezmudfrpcvjsgnjibvoq.supabase.co";
+const SUPABASE_KEY="sb_publishable__FYyH6NQaqgARaq2dvuovQ_rKmus0js";
+const client=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+
 function msg(t,ok=false){const e=document.getElementById("msg");e.textContent=t;e.className="msg "+(ok?"ok":"err");e.style.display="block"}
 function esc(v){return String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]))}
-async function requireAdmin(){const {data:{session}}=await client.auth.getSession();if(!session){location.href="login.html";return false}const {data,error}=await client.from("school_users").select("role,is_active").eq("user_id",session.user.id).maybeSingle();if(error||!data||data.role!=="admin"||!data.is_active){await client.auth.signOut();alert("Admin access ಮಾತ್ರ ಅನುಮತಿಸಲಾಗಿದೆ.");location.href="login.html";return false}return true}
-async function loadSchools(){const {data,error}=await client.from("schools").select("school_name,school_code,is_active,school_users(username,role)").order("created_at",{ascending:true});const b=document.getElementById("schoolRows");if(error){b.innerHTML=`<tr><td colspan="4">${esc(error.message)}</td></tr>`;return}const rows=(data||[]).filter(s=>s.school_code!=="ADMIN");if(!rows.length){b.innerHTML='<tr><td colspan="4">ಇನ್ನೂ ಯಾವುದೇ ಶಾಲೆ Create ಮಾಡಿಲ್ಲ.</td></tr>';return}b.innerHTML=rows.map(s=>{const u=(s.school_users||[]).find(x=>x.role==="school");return `<tr><td>${esc(s.school_name)}</td><td>${esc(s.school_code)}</td><td>${esc(u?.username||"")}</td><td>${s.is_active?'<span class="badge">Active</span>':'Inactive'}</td></tr>`}).join("")}
-document.getElementById("createBtn").onclick=async()=>{const school_name=document.getElementById("schoolName").value.trim(),username=document.getElementById("username").value.trim(),password=document.getElementById("password").value;if(!school_name||!username||!password)return msg("ಶಾಲೆಯ ಹೆಸರು, Username ಮತ್ತು Password ಎಲ್ಲಾ ನಮೂದಿಸಿ.");if(password.length<6)return msg("Password ಕನಿಷ್ಠ 6 ಅಕ್ಷರಗಳಿರಬೇಕು.");const btn=document.getElementById("createBtn");btn.disabled=true;btn.textContent="Creating...";try{const {data,error}=await client.functions.invoke("create-school",{body:{school_name,username,password}});if(error)throw error;if(!data?.success)throw new Error(data?.error||"School create failed.");msg(`ಶಾಲೆ ಯಶಸ್ವಿಯಾಗಿ Create ಆಗಿದೆ. School Code: ${data.school_code}`,true);document.getElementById("schoolName").value="";document.getElementById("username").value="";document.getElementById("password").value="";await loadSchools()}catch(e){msg(e.message||"School create failed.")}finally{btn.disabled=false;btn.textContent="➕ ಶಾಲೆ Create ಮಾಡಿ"}};
-document.getElementById("logoutBtn").onclick=async()=>{await client.auth.signOut();location.href="login.html"};(async()=>{if(await requireAdmin())await loadSchools()})();
-</script></body></html>
+
+async function requireAdmin(){
+ const {data:{session}}=await client.auth.getSession();
+ if(!session){location.href="login.html";return false}
+ const {data,error}=await client.from("school_users").select("role,is_active").eq("user_id",session.user.id).maybeSingle();
+ if(error||!data||data.role!=="admin"||!data.is_active){await client.auth.signOut();alert("Admin access ಮಾತ್ರ ಅನುಮತಿಸಲಾಗಿದೆ.");location.href="login.html";return false}
+ return true;
+}
+
+async function loadSchools(){
+ const {data,error}=await client.from("schools").select("id,school_name,school_code,is_active,school_users(username,role)").order("created_at",{ascending:true});
+ const b=document.getElementById("schoolRows");
+ if(error){b.innerHTML=`<tr><td colspan="5">${esc(error.message)}</td></tr>`;return}
+ const rows=(data||[]).filter(s=>s.school_code!=="ADMIN");
+ if(!rows.length){b.innerHTML='<tr><td colspan="5">ಇನ್ನೂ ಯಾವುದೇ ಶಾಲೆ Create ಮಾಡಿಲ್ಲ.</td></tr>';return}
+ b.innerHTML=rows.map(s=>{
+   const u=(s.school_users||[]).find(x=>x.role==="school");
+   const username=u?.username||"";
+   const status=s.is_active?'<span class="badge">Active</span>':'<span class="badge inactive">Inactive</span>';
+   const actions=s.is_active
+    ? `<div class="actions">
+        <button class="warning" onclick="changePassword('${esc(s.id)}','${esc(s.school_name)}','${esc(username)}')">🔑 Password Change</button>
+        <button class="danger" onclick="deactivateSchool('${esc(s.id)}','${esc(s.school_name)}','${esc(username)}')">🔒 Deactivate</button>
+       </div>`
+    : `<button class="success" onclick="reactivateSchool('${esc(s.id)}','${esc(s.school_name)}','${esc(username)}')">🔓 Reactivate</button>`;
+   return `<tr><td>${esc(s.school_name)}</td><td>${esc(s.school_code)}</td><td>${esc(username)}</td><td>${status}</td><td>${actions}</td></tr>`;
+ }).join("");
+}
+
+document.getElementById("createBtn").onclick=async()=>{
+ const school_name=document.getElementById("schoolName").value.trim();
+ const username=document.getElementById("username").value.trim();
+ const password=document.getElementById("password").value;
+ if(!school_name||!username||!password)return msg("ಶಾಲೆಯ ಹೆಸರು, Username ಮತ್ತು Password ಎಲ್ಲಾ ನಮೂದಿಸಿ.");
+ if(password.length<6)return msg("Password ಕನಿಷ್ಠ 6 ಅಕ್ಷರಗಳಿರಬೇಕು.");
+ const btn=document.getElementById("createBtn");btn.disabled=true;btn.textContent="Creating...";
+ try{
+   const {data,error}=await client.functions.invoke("create-school",{body:{school_name,username,password}});
+   if(error)throw error;
+   if(!data?.success)throw new Error(data?.error||"School create failed.");
+   msg(`ಶಾಲೆ ಯಶಸ್ವಿಯಾಗಿ Create ಆಗಿದೆ. School Code: ${data.school_code}`,true);
+   document.getElementById("schoolName").value="";document.getElementById("username").value="";document.getElementById("password").value="";
+   await loadSchools();
+ }catch(e){msg(e.message||"School create failed.")}finally{btn.disabled=false;btn.textContent="➕ ಶಾಲೆ Create ಮಾಡಿ"}
+};
+
+async function changePassword(schoolId,schoolName,username){
+ const first=prompt(`ಶಾಲೆ: ${schoolName}\nDISE Code: ${username}\n\nಹೊಸ Password ನಮೂದಿಸಿ:`);
+ if(first===null)return;
+ if(first.length<8){alert("Password ಕನಿಷ್ಠ 8 ಅಕ್ಷರಗಳಿರಬೇಕು.");return}
+ const second=prompt("ಹೊಸ Password ಅನ್ನು ಮತ್ತೊಮ್ಮೆ ನಮೂದಿಸಿ:");
+ if(second===null)return;
+ if(first!==second){alert("ಎರಡು Passwordಗಳು ಒಂದೇ ಆಗಿಲ್ಲ.");return}
+ if(!confirm(`ಶಾಲೆ: ${schoolName}\nDISE Code: ${username}\n\nಈ ಶಾಲೆಯ Password ಬದಲಾಯಿಸಬೇಕೇ?`))return;
+ try{
+   const {data,error}=await client.functions.invoke("change-school-password",{body:{school_id:schoolId,new_password:first}});
+   if(error)throw error;
+   if(!data?.success)throw new Error(data?.error||"Password change failed.");
+   alert("ಶಾಲೆಯ Password ಯಶಸ್ವಿಯಾಗಿ ಬದಲಾಗಿದೆ.");
+ }catch(e){alert(e.message||"Password change failed.")}
+}
+
+async function deactivateSchool(schoolId,schoolName,username){
+ const typed=prompt(`⚠️ ಶಾಲೆಯನ್ನು Deactivate ಮಾಡಲಾಗುತ್ತಿದೆ.\n\nಶಾಲೆ: ${schoolName}\nDISE Code: ${username}\n\nತಪ್ಪು ಶಾಲೆ deactivate ಆಗದಂತೆ ಈ DISE Code ಅನ್ನು type ಮಾಡಿ:\n${username}`);
+ if(typed===null)return;
+ if(typed.trim()!==username){alert("DISE Code ಸರಿಯಾಗಿಲ್ಲ. ಶಾಲೆಯನ್ನು Deactivate ಮಾಡಲಾಗಿಲ್ಲ.");return}
+ if(!confirm(`ಕೊನೆಯ ದೃಢೀಕರಣ:\n\n${schoolName}\nDISE Code: ${username}\n\nDeactivate ಮಾಡಬೇಕೇ?\n\nRecords ಅಳಿಸುವುದಿಲ್ಲ; Login ಮಾತ್ರ ನಿಲ್ಲುತ್ತದೆ.`))return;
+ try{
+   const {data,error}=await client.functions.invoke("deactivate-school",{body:{school_id:schoolId}});
+   if(error)throw error;
+   if(!data?.success)throw new Error(data?.error||"Deactivate failed.");
+   alert("ಶಾಲೆ Deactivate ಆಗಿದೆ. Records ಸುರಕ್ಷಿತವಾಗಿವೆ.");
+   await loadSchools();
+ }catch(e){alert(e.message||"Deactivate failed.")}
+}
+
+async function reactivateSchool(schoolId,schoolName,username){
+ if(!confirm(`ಶಾಲೆ: ${schoolName}\nDISE Code: ${username}\n\nಈ ಶಾಲೆಯನ್ನು ಮತ್ತೆ Active ಮಾಡಬೇಕೇ?`))return;
+ try{
+   const {data,error}=await client.functions.invoke("reactivate-school",{body:{school_id:schoolId}});
+   if(error)throw error;
+   if(!data?.success)throw new Error(data?.error||"Reactivate failed.");
+   alert("ಶಾಲೆ ಮತ್ತೆ Active ಆಗಿದೆ.");
+   await loadSchools();
+ }catch(e){alert(e.message||"Reactivate failed.")}
+}
+
+document.getElementById("logoutBtn").onclick=async()=>{await client.auth.signOut();location.href="login.html"};
+(async()=>{if(await requireAdmin())await loadSchools()})();
+</script>
+</body>
+</html>
