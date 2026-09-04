@@ -162,6 +162,12 @@ iframe{display:block;width:100%;height:calc(100% - 47px);border:0;background:#ff
       </button>
     </nav>
 
+    <div style="padding:12px 12px 0">
+      <button class="nav-btn" type="button" onclick="logout()" style="background:#8b1e1e;color:#fff;justify-content:center;">
+        <span class="nav-icon">🚪</span><span>Logout</span>
+      </button>
+    </div>
+
     <div class="sidebar-bottom">
       ಅಕ್ಷರ ದಾಸೋಹ ಕಾರ್ಯಕ್ರಮ<br>
       Dashboard — ಎಲ್ಲಾ ವಿಭಾಗಗಳು
@@ -584,6 +590,16 @@ async function loadDailyFoodCounts(){
 }
 
 const monthNamesForDashboard=["ಜನವರಿ","ಫೆಬ್ರವರಿ","ಮಾರ್ಚ್","ಏಪ್ರಿಲ್","ಮೇ","ಜೂನ್","ಜುಲೈ","ಆಗಸ್ಟ್","ಸೆಪ್ಟೆಂಬರ್","ಅಕ್ಟೋಬರ್","ನವೆಂಬರ್","ಡಿಸೆಂಬರ್"];
+
+async function logout(){
+  try{
+    const {error}=await db.auth.signOut();
+    if(error)throw error;
+    window.location.href="login.html";
+  }catch(e){
+    alert("Logout ಮಾಡಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ.\n"+(e.message||"Unknown error"));
+  }
+}
 
 async function init(){
   updateTodayDate();
