@@ -92,6 +92,7 @@ let activeYear=null,school=null,current=null,settings={items:[],ingredients:[],n
 let currentSchoolId=null,currentSchoolUserId=null;
 let receipts=new Map(),wheatDays=new Map(),openingMap=new Map(),closingMap=new Map(),editingWheatId=null;
 let availabilityEvents=[];
+let savingOpening=false,savingReceipts=false;
 function esc(v){return String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]))}
 function num(v){const n=Number(v);return Number.isFinite(n)?n:0}
 function pad(n){return String(n).padStart(2,"0")}
@@ -1127,6 +1128,10 @@ async function loadAll(){
  }
 }
 async function saveOpenings(){
+  if(savingOpening)return;
+  savingOpening=true;
+  const btn=$("saveOpeningBtn");
+  if(btn)btn.disabled=true;
   try{
     if(!activeYear?.id) throw new Error("Active Academic Year ಇಲ್ಲ.");
     const inputs=[...document.querySelectorAll("[data-open-type]")];
@@ -1158,28 +1163,13 @@ async function saveOpenings(){
         updated_at:new Date().toISOString()
       };
 
-      const existing=await db.from("food_stock_opening_balances")
-        .select("id")
-        .eq("school_id",currentSchoolId).eq("academic_year_id",activeYear.id)
-        .eq("item_type",dbType)
-        .eq("item_name",dbName)
-        .limit(1)
+      // School-wise unique key is:
+      // school_id + academic_year_id + item_type + item_name.
+      // Upsert prevents duplicate-key errors even if Save is triggered concurrently.
+      const q=await db.from("food_stock_opening_balances")
+        .upsert(payload,{onConflict:"school_id,academic_year_id,item_type,item_name"})
+        .select("id,item_type,item_name,opening_balance,unit")
         .maybeSingle();
-      if(existing.error)throw existing.error;
-
-      let q;
-      if(existing.data){
-        q=await db.from("food_stock_opening_balances")
-          .update(payload)
-          .eq("id",existing.data.id)
-          .select("id,item_type,item_name,opening_balance,unit")
-          .maybeSingle();
-      }else{
-        q=await db.from("food_stock_opening_balances")
-          .insert(payload)
-          .select("id,item_type,item_name,opening_balance,unit")
-          .single();
-      }
       if(q.error)throw q.error;
       if(!q.data)throw new Error(`“${name}” Opening Balance Databaseಗೆ Save ಆಗಿಲ್ಲ. Supabase RLS policy ಪರಿಶೀಲಿಸಿ.`);
     }
@@ -1192,9 +1182,16 @@ async function saveOpenings(){
   }catch(e){
     console.error("Opening Save failed:",e);
     show($("openingMsg"),"Opening Save failed: "+(e?.message||e),"err");
+  }finally{
+    savingOpening=false;
+    if(btn)btn.disabled=false;
   }
 }
 async function saveReceipts(){
+  if(savingReceipts)return;
+  savingReceipts=true;
+  const btn=$("saveBtn");
+  if(btn)btn.disabled=true;
   try{
     const inputs=[...document.querySelectorAll("[data-receipt-type]")];
     if(!inputs.length)throw new Error("ದಾಸ್ತಾನು ನಮೂದಿಸಲು ಯಾವುದೇ ಪದಾರ್ಥ ಲಭ್ಯವಿಲ್ಲ.");
@@ -1303,6 +1300,9 @@ async function saveReceipts(){
   }catch(e){
     console.error(e);
     show($("saveMsg"),"Save failed: "+e.message,"err");
+  }finally{
+    savingReceipts=false;
+    if(btn)btn.disabled=false;
   }
 }
 async function saveWheat(){
