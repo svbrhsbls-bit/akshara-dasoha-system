@@ -297,17 +297,12 @@ button:disabled{
   </div>
 
   <div class="full">
-    <label>ಶಾಲೆಯ ವಿಳಾಸ / School Address</label>
+    <label>ಕ್ಲಸ್ಟರ್ ಹೆಸರು / Cluster Name</label>
     <input
-      id="school_address"
+      id="cluster_name"
       type="text"
-      placeholder="ಶಾಲೆಯ ಸಂಪೂರ್ಣ ವಿಳಾಸ"
+      placeholder="ಕ್ಲಸ್ಟರ್ ಹೆಸರು"
     >
-  </div>
-
-  <div>
-    <label>ಗ್ರಾಮ / Village</label>
-    <input id="village" type="text">
   </div>
 
   <div>
@@ -489,13 +484,8 @@ Reports ಮತ್ತು Printಗಳಲ್ಲಿ automatic ಆಗಿ ಬಳಸಬ
 </div>
 
 <div>
-  <b>ವಿಳಾಸ</b>
-  <span id="v_address"></span>
-</div>
-
-<div>
-  <b>ಗ್ರಾಮ</b>
-  <span id="v_village"></span>
+  <b>ಕ್ಲಸ್ಟರ್ ಹೆಸರು</b>
+  <span id="v_cluster"></span>
 </div>
 
 <div>
@@ -595,8 +585,7 @@ let activeAcademicYear = "";
 const fields = [
   "department_name",
   "school_name",
-  "school_address",
-  "village",
+  "cluster_name",
   "taluk",
   "district",
   "udise_code",
@@ -706,11 +695,8 @@ function preview(row){
   $("v_school").textContent =
     row.school_name || "—";
 
-  $("v_address").textContent =
-    row.school_address || "—";
-
-  $("v_village").textContent =
-    row.village || "—";
+  $("v_cluster").textContent =
+    row.cluster_name || "—";
 
   $("v_taluk").textContent =
     row.taluk || "—";
