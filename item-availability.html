@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="kn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Item Availability</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#f3f6f4;color:#17202a;font-family:Arial,"Noto Sans Kannada","Nirmala UI",sans-serif}
+header{background:#126b38;color:#fff;padding:18px 28px}header h1{margin:0;font-size:27px}header p{margin:5px 0 0}
+.wrap{max-width:1000px;margin:18px auto;padding:0 14px}.card{background:#fff;border-radius:12px;padding:18px;margin-bottom:16px;box-shadow:0 2px 10px #0001}
+.grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;align-items:end}label{display:block;font-weight:700;margin-bottom:6px}
+input,select,button{font:inherit}input,select{width:100%;height:42px;padding:8px 10px;border:1px solid #bfc9c2;border-radius:7px;background:#fff}
+button{border:0;border-radius:7px;padding:9px 15px;font-weight:700;cursor:pointer}.primary{background:#126b38;color:#fff}.secondary{background:#e7ece9}.danger{background:#b42318;color:#fff}
+.msg{display:none;margin-top:10px;padding:10px;border-radius:7px}.msg.ok{display:block;background:#e5f6eb;color:#126b38}.msg.err{display:block;background:#fde8e7;color:#a11}
+.lockbox{background:#eef7f1;border:1px solid #cfe4d6;padding:10px;border-radius:8px;font-weight:700}.small{font-size:13px;color:#64748b}
+.table-wrap{overflow:auto;border:1px solid #6f7772;border-radius:6px}table{border-collapse:collapse;width:100%;background:#fff}th,td{border:1px solid #666;padding:8px;text-align:center}th{background:#e4ebe5}
+.unavailable{font-weight:700;color:#b42318}.available{font-weight:700;color:#126b38}.action-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+@media(max-width:700px){.grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header><h1>Item Availability / ಪದಾರ್ಥ ಲಭ್ಯತೆ</h1><p id="schoolTitle">ಶಾಲೆಯ ಹೆಸರು</p></header>
+<div class="wrap">
+<section class="card">
+<div class="grid">
+<div><label>Academic Year / ಶೈಕ್ಷಣಿಕ ವರ್ಷ</label><div class="lockbox" id="academicYear">Loading...</div></div>
+<div><label>ದಿನಾಂಕ</label><input id="effectiveDate" type="date"></div>
+<div><label>Item / ಪದಾರ್ಥ</label><select id="itemName"><option value="ಹಾಲು">ಹಾಲು</option><option value="ರಾಗಿ ಮಾಲ್ಟ್">ರಾಗಿ ಮಾಲ್ಟ್</option></select></div>
+</div>
+<div class="action-row"><button class="danger" id="unavailableBtn">🚫 Unavailable</button><button class="primary" id="availableBtn">✅ Available</button><button class="secondary" id="refreshBtn">↻ Refresh</button></div>
+<div class="small" style="margin-top:10px">Unavailable ದಾಖಲಿಸಿದ ದಿನಾಂಕದಿಂದ ನಂತರದ Available ದಿನಾಂಕದವರೆಗೆ ಆ Item Unavailable ಆಗಿರುತ್ತದೆ.</div>
+<div id="msg" class="msg"></div>
+</section>
+<section class="card"><h3 style="margin:0 0 10px">ಪ್ರಸ್ತುತ ಸ್ಥಿತಿ</h3><div id="currentStatus"></div></section>
+<section class="card"><h3 style="margin:0 0 10px">Availability History / ದಾಖಲೆ</h3><div id="history"></div></section>
+</div>
+<script>
+const SUPABASE_URL="https://ezmudfrpcvjsgnjibvoq.supabase.co";
+const SUPABASE_KEY="sb_publishable__FYyH6NQaqgARaq2dvuovQ_rKmus0js";
+const db=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+const $=id=>document.getElementById(id);
+let currentSchoolId=null,school=null,activeYear=null;
+const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
+const today=()=>{const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`};
+const fmtDate=v=>{if(!v)return "";const [y,m,d]=String(v).slice(0,10).split("-");return `${d}-${m}-${y}`};
+const show=(t,c="ok")=>{$("msg").textContent=t;$("msg").className="msg "+c};
+
+async function loadCurrentSchool(){
+ const {data:{user},error:a}=await db.auth.getUser(); if(a||!user){location.href="login.html";return false}
+ const {data,error}=await db.from("school_users").select("id,user_id,school_id,username,role,is_active").eq("user_id",user.id).eq("is_active",true).maybeSingle();
+ if(error)throw error;if(data?.role==="admin"){location.href="admin.html";return false}if(!data?.school_id)throw new Error("ಈ Login ಗೆ School mapping ಕಂಡುಬಂದಿಲ್ಲ.");
+ currentSchoolId=data.school_id;return true;
+}
+async function loadSchool(){
+ const {data,error}=await db.from("school_settings").select("*").eq("school_id",currentSchoolId).order("created_at",{ascending:true}).limit(1).maybeSingle();
+ if(error)throw error;if(!data)throw new Error("School Settingsನಲ್ಲಿ ಶಾಲೆಯ ವಿವರಗಳು ಇಲ್ಲ.");school=data;$("schoolTitle").textContent=data.school_name||"ಶಾಲೆಯ ಹೆಸರು";
+}
+async function loadActiveYear(){
+ const wanted=String(school?.academic_year||"").trim().replace(/\s+/g,"");if(!wanted)throw new Error("School Settingsನಲ್ಲಿ Academic Year ಇಲ್ಲ.");
+ let q=await db.from("academic_years").select("id,year_name,is_active,created_at").eq("year_name",wanted).limit(1).maybeSingle();
+ if(q.error)throw q.error;if(!q.data){q=await db.from("academic_years").select("id,year_name,is_active,created_at").eq("is_active",true).order("created_at",{ascending:false}).limit(1).maybeSingle();if(q.error)throw q.error}
+ if(!q.data)throw new Error("academic_yearsನಲ್ಲಿ Active Academic Year ಇಲ್ಲ.");activeYear=q.data;$("academicYear").textContent=q.data.year_name;
+}
+async function loadRows(){
+ const {data,error}=await db.from("item_availability").select("id,item_name,status,effective_date,created_at").eq("school_id",currentSchoolId).eq("academic_year_id",activeYear.id).in("item_name",["ಹಾಲು","ರಾಗಿ ಮಾಲ್ಟ್"]).order("effective_date",{ascending:false}).order("created_at",{ascending:false});
+ if(error)throw new Error("Availability load failed: "+error.message);renderCurrent(data||[]);renderHistory(data||[]);
+}
+function latest(rows,name){return rows.filter(r=>r.item_name===name&&String(r.effective_date)<=today()).sort((a,b)=>String(b.effective_date).localeCompare(String(a.effective_date))||String(b.created_at||"").localeCompare(String(a.created_at||"")))[0]||null}
+function renderCurrent(rows){
+ let h='<div class="table-wrap"><table><thead><tr><th>Item</th><th>ಇಂದಿನ ಸ್ಥಿತಿ</th><th>ದಿನಾಂಕ</th></tr></thead><tbody>';
+ ["ಹಾಲು","ರಾಗಿ ಮಾಲ್ಟ್"].forEach(n=>{const r=latest(rows,n),u=r?.status==="unavailable";h+=`<tr><td>${esc(n)}</td><td class="${u?"unavailable":"available"}">${u?"🚫 Unavailable":"✅ Available"}</td><td>${r?fmtDate(r.effective_date):"-"}</td></tr>`});h+="</tbody></table></div>";$("currentStatus").innerHTML=h;
+}
+function renderHistory(rows){
+ if(!rows.length){$("history").innerHTML='<div class="small">ಯಾವುದೇ Availability ದಾಖಲೆ ಇಲ್ಲ.</div>';return}
+ let h='<div class="table-wrap"><table><thead><tr><th>Item</th><th>ಸ್ಥಿತಿ</th><th>ದಿನಾಂಕ</th><th>Action</th></tr></thead><tbody>';
+ rows.forEach(r=>{h+=`<tr><td>${esc(r.item_name)}</td><td class="${r.status==="unavailable"?"unavailable":"available"}">${r.status==="unavailable"?"🚫 Unavailable":"✅ Available"}</td><td>${fmtDate(r.effective_date)}</td><td><button class="danger" onclick="deleteRow('${r.id}')">Delete</button></td></tr>`});h+="</tbody></table></div>";$("history").innerHTML=h;
+}
+async function saveStatus(status){
+ const item=$("itemName").value,date=$("effectiveDate").value;if(!date){show("ದಿನಾಂಕ ಆಯ್ಕೆ ಮಾಡಿ.","err");return}
+ const {data:old,error:oe}=await db.from("item_availability").select("id").eq("school_id",currentSchoolId).eq("academic_year_id",activeYear.id).eq("item_name",item).eq("effective_date",date).maybeSingle();
+ if(oe)throw new Error(oe.message);
+ let error;
+ if(old){({error}=await db.from("item_availability").update({status,updated_at:new Date().toISOString()}).eq("id",old.id).eq("school_id",currentSchoolId))}
+ else{({error}=await db.from("item_availability").insert({school_id:currentSchoolId,academic_year_id:activeYear.id,item_name:item,status,effective_date:date,updated_at:new Date().toISOString()}))}
+ if(error)throw new Error("Save failed: "+error.message);
+ show(`${item} — ${status==="unavailable"?"Unavailable":"Available"} ${fmtDate(date)} ರಿಂದ ದಾಖಲಿಸಲಾಗಿದೆ.`);await loadRows();
+}
+async function deleteRow(id){
+ if(!confirm("ಈ Availability ದಾಖಲೆಯನ್ನು Delete ಮಾಡಬೇಕೇ?"))return;
+ const {error}=await db.from("item_availability").delete().eq("id",id).eq("school_id",currentSchoolId);if(error){show("Delete failed: "+error.message,"err");return}show("ದಾಖಲೆ Delete ಆಗಿದೆ.");await loadRows();
+}
+async function init(){try{$("effectiveDate").value=today();if(!await loadCurrentSchool())return;await loadSchool();await loadActiveYear();await loadRows()}catch(e){console.error(e);show(e.message||String(e),"err")}}
+$("unavailableBtn").onclick=()=>saveStatus("unavailable").catch(e=>show(e.message,"err"));
+$("availableBtn").onclick=()=>saveStatus("available").catch(e=>show(e.message,"err"));
+$("refreshBtn").onclick=()=>loadRows().catch(e=>show(e.message,"err"));
+window.deleteRow=deleteRow;init();
+</script>
+</body>
+</html>
