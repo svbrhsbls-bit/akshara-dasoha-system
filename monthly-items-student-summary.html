@@ -118,8 +118,40 @@ function usedCountFor(type,name,date,key){
   if(type==="item"&&!wheat&&wheatItem)count=0;
   return count*rate;
 }
-function openingFor(type,name){const prev=current.month===1?12:current.month-1;return num(closings.get(`${prev}|${type}|${name}`)?.closing_balance??openings.get(`${type}|${name}`)?.opening_balance)}
-function monthlyData(type,name){const keys=classKeys(),studentByClass=Object.fromEntries(keys.map(x=>[x[0],0]));const wheatConversion=type==="ingredient"&&normalize(name).includes("ಗೋಧಿ");let stock=0,expense=0;keys.forEach(([k])=>{if(wheatConversion)return;for(let d=1;d<=new Date(current.year,current.month,0).getDate();d++){const date=iso(current.year,current.month,d);if(usedCountFor(type,name,date,k)>0)studentByClass[k]+=bucketCount(date,k)}});for(let d=1;d<=new Date(current.year,current.month,0).getDate();d++){const date=iso(current.year,current.month,d);stock+=num(receipts.get(`${type}|${name}|${date}`)?.quantity);keys.forEach(([k])=>expense+=usedCountFor(type,name,date,k));}const opening=openingFor(type,name),closing=opening+stock-expense;return {studentByClass,opening,stock,expense,closing}}
+function openingFor(type,name){
+  const prev=current.month===1?12:current.month-1;
+  const p=closings.get(`${prev}|${type}|${name}`);
+  if(p){
+    const value=num(p.closing_balance);
+    return type==="ingredient" ? Math.ceil(value-Number.EPSILON) : value;
+  }
+  return num(openings.get(`${type}|${name}`)?.opening_balance);
+}
+function roundIngredientExpenseTotal(value){
+  const n=num(value);
+  return n>0 ? Math.ceil(n-Number.EPSILON) : 0;
+}
+function monthlyData(type,name){
+  const keys=classKeys(),studentByClass=Object.fromEntries(keys.map(x=>[x[0],0]));
+  const wheatConversion=type==="ingredient"&&normalize(name).includes("ಗೋಧಿ");
+  let stock=0,expense=0;
+  keys.forEach(([k])=>{
+    if(wheatConversion)return;
+    for(let d=1;d<=new Date(current.year,current.month,0).getDate();d++){
+      const date=iso(current.year,current.month,d);
+      if(usedCountFor(type,name,date,k)>0)studentByClass[k]+=bucketCount(date,k);
+    }
+  });
+  for(let d=1;d<=new Date(current.year,current.month,0).getDate();d++){
+    const date=iso(current.year,current.month,d);
+    stock+=num(receipts.get(`${type}|${name}|${date}`)?.quantity);
+    keys.forEach(([k])=>expense+=usedCountFor(type,name,date,k));
+  }
+  const opening=openingFor(type,name);
+  const roundedExpense=type==="ingredient" ? roundIngredientExpenseTotal(expense) : expense;
+  const closing=opening+stock-roundedExpense;
+  return {studentByClass,opening,stock,expense:roundedExpense,closing};
+}
 async function loadCurrentSchool(){
   const {data:{user}}=await db.auth.getUser();
   if(!user){location.href="login.html";return false}
@@ -134,7 +166,24 @@ async function loadCurrentSchool(){
 async function loadSchool(){const q=await db.from("school_settings").select("*").eq("school_id",currentSchoolId).order("created_at",{ascending:true}).limit(1).maybeSingle();if(q.error)throw q.error;if(!q.data)throw new Error("School Settingsನಲ್ಲಿ ವಿವರಗಳು ಇಲ್ಲ.");school=q.data;$("departmentTitle").textContent=school.department_name||"ಅಕ್ಷರ ದಾಸೋಹ ಕಾರ್ಯಕ್ರಮ";$("schoolTitle").textContent=school.school_name||"ಶಾಲೆಯ ಹೆಸರು";$("reportDepartment").textContent=school.department_name||"ಅಕ್ಷರ ದಾಸೋಹ ಕಾರ್ಯಕ್ರಮ";$("reportSchool").textContent=school.school_name||"ಶಾಲೆಯ ಹೆಸರು"}
 async function loadYears(){const q=await db.from("academic_years").select("id,year_name,is_active,created_at").order("created_at",{ascending:false});if(q.error)throw q.error;years=q.data||[];$("academicYear").innerHTML=years.map(y=>`<option value="${esc(y.id)}">${esc(y.year_name)}</option>`).join("");const wanted=String(school.academic_year||"").replace(/\s+/g,"");activeYear=years.find(y=>String(y.year_name).replace(/\s+/g,"")===wanted)||years.find(y=>y.is_active)||years[0];if(activeYear)$("academicYear").value=activeYear.id}
 async function loadSettings(){const [a,b,n,w]=await Promise.all([db.from("calculation_settings").select("*").eq("school_id",currentSchoolId).eq("academic_year_id",activeYear.id).order("created_at"),db.from("kitchen_ingredients").select("*").eq("school_id",currentSchoolId).eq("academic_year_id",activeYear.id).order("created_at"),db.from("nutritional_foods").select("*").eq("school_id",currentSchoolId).eq("academic_year_id",activeYear.id).order("created_at"),db.from("wheat_rate_settings").select("id,school_id,academic_year_id,class_group,quantity_per_student,rate_per_kg,updated_at,created_at").eq("school_id",currentSchoolId).eq("academic_year_id",activeYear.id).eq("class_group",current?.group||"").maybeSingle()]);if(a.error||b.error||n.error||w.error)throw new Error((a.error||b.error||n.error||w.error).message);settings.items=(a.data||[]).filter(x=>x.is_enabled!==false);settings.ingredients=(b.data||[]).filter(x=>x.is_enabled!==false);settings.nutrition=(n.data||[]).filter(x=>x.is_enabled!==false);settings.wheat=w.data||null}
-async function loadData(){const m=num($("month").value),y=reportYear(m),start=iso(y,m,1),end=iso(y,m,new Date(y,m,0).getDate());current={month:m,year:y,group:$("classGroup").value,start,end};const [d,h,w,r,o,c]=await Promise.all([db.from("daily_food_distribution").select("distribution_date,item_name,students_count,total_quantity").eq("school_id",currentSchoolId).eq("academic_year_id",activeYear.id).gte("distribution_date",start).lte("distribution_date",end),db.from("school_holidays").select("holiday_date").eq("school_id",currentSchoolId).eq("academic_year_id",activeYear.id).gte("holiday_date",start).lte("holiday_date",end),db.from("food_wheat_days").select("wheat_date,wheat_students").eq("school_id",currentSchoolId).eq("academic_year_id",activeYear.id).gte("wheat_date",start).lte("wheat_date",end),db.from("food_stock_receipts").select("item_type,item_name,receipt_date,quantity").eq("school_id",currentSchoolId).eq("academic_year_id",activeYear.id).gte("receipt_date",start).lte("receipt_date",end),db.from("food_stock_opening_balances").select("item_type,item_name,opening_balance").eq("school_id",currentSchoolId).eq("academic_year_id",activeYear.id),db.from("food_stock_monthly_closing").select("item_type,item_name,month_number,closing_balance").eq("school_id",currentSchoolId).eq("academic_year_id",activeYear.id)]);for(const q of [d,h,w,r,o,c])if(q.error)throw q.error;daily=d.data||[];holidays=new Set((h.data||[]).map(x=>String(x.holiday_date).slice(0,10)));wheatDays=new Map((w.data||[]).map(x=>[String(x.wheat_date).slice(0,10),x]));receipts=new Map((r.data||[]).map(x=>[`${x.item_type}|${x.item_name}|${x.receipt_date}`,x]));openings=new Map((o.data||[]).map(x=>[`${x.item_type}|${x.item_name}`,x]));closings=new Map();(c.data||[]).forEach(x=>{let type=x.item_type,name=x.item_name;if(name.startsWith("__NUTRITION_CLOSING__|")){type="nutrition";name=name.replace("__NUTRITION_CLOSING__|","")}closings.set(`${x.month_number}|${type}|${name}`,x)});}
+async function loadData(){const m=num($("month").value),y=reportYear(m),start=iso(y,m,1),end=iso(y,m,new Date(y,m,0).getDate());current={month:m,year:y,group:$("classGroup").value,start,end};const [d,h,w,r,o,c]=await Promise.all([db.from("daily_food_distribution").select("distribution_date,item_name,students_count,total_quantity").eq("school_id",currentSchoolId).eq("academic_year_id",activeYear.id).gte("distribution_date",start).lte("distribution_date",end),db.from("school_holidays").select("holiday_date").eq("school_id",currentSchoolId).eq("academic_year_id",activeYear.id).gte("holiday_date",start).lte("holiday_date",end),db.from("food_wheat_days").select("wheat_date,wheat_students").eq("school_id",currentSchoolId).eq("academic_year_id",activeYear.id).gte("wheat_date",start).lte("wheat_date",end),db.from("food_stock_receipts").select("item_type,item_name,receipt_date,quantity").eq("school_id",currentSchoolId).eq("academic_year_id",activeYear.id).gte("receipt_date",start).lte("receipt_date",end),db.from("food_stock_opening_balances").select("item_type,item_name,opening_balance").eq("school_id",currentSchoolId).eq("academic_year_id",activeYear.id),db.from("food_stock_monthly_closing").select("item_type,item_name,month_number,closing_balance").eq("school_id",currentSchoolId).eq("academic_year_id",activeYear.id)]);for(const q of [d,h,w,r,o,c])if(q.error)throw q.error;daily=d.data||[];holidays=new Set((h.data||[]).map(x=>String(x.holiday_date).slice(0,10)));wheatDays=new Map((w.data||[]).map(x=>[String(x.wheat_date).slice(0,10),x]));receipts=new Map((r.data||[]).map(x=>[`${x.item_type}|${x.item_name}|${x.receipt_date}`,x]));openings=new Map();
+(o.data||[]).forEach(x=>{
+  let type=x.item_type,name=x.item_name;
+  if(String(type)==="item"&&String(name||"").startsWith("__NUTRITION_OPENING__|")){
+    type="nutrition";
+    name=String(name).replace("__NUTRITION_OPENING__|","");
+  }
+  openings.set(`${type}|${name}`,{...x,item_type:type,item_name:name});
+});
+closings=new Map();
+(c.data||[]).forEach(x=>{
+  let type=x.item_type,name=x.item_name;
+  if(String(name||"").startsWith("__NUTRITION_CLOSING__|")){
+    type="nutrition";
+    name=String(name).replace("__NUTRITION_CLOSING__|","");
+  }
+  closings.set(`${x.month_number}|${type}|${name}`,{...x,item_type:type,item_name:name});
+});}
 function render(){const type=$("reportType").value,names=namesFor(type),keys=classKeys();$("reportMonth").textContent=`ತಿಂಗಳು:- ${months[current.month-1]}-${current.year}`;if(!names.length){$("tableHost").innerHTML='<div class="empty">ಆಯ್ಕೆ ಮಾಡಿದ Class Groupಗೆ ಯಾವುದೇ Item ಲಭ್ಯವಿಲ್ಲ.</div>';return}let h='<div class="table-wrap"><table><thead>';h+=`<tr><th colspan="${2+keys.length+5}" class="group-head">${type==="item"?"Items (ಆಹಾರ ಪದಾರ್ಥಗಳು)":type==="ingredient"?"ಅಡುಗೆ ಪದಾರ್ಥಗಳು":"ಪೌಷ್ಠಿಕ ಆಹಾರ"} — ${esc(groupLabel(current.group))}</th></tr>`;h+=`<tr><th>ಕ್ರ.ಸಂ</th><th>Item</th>${keys.map(x=>`<th>${x[1]}<br><small>ವಿದ್ಯಾರ್ಥಿಗಳು</small></th>`).join("")}<th>ಒಟ್ಟು<br>ವಿದ್ಯಾರ್ಥಿಗಳು</th><th>ಪ್ರಾರಂಭಿಕ<br>ಶಿಲ್ಕು</th><th>ದಾಸ್ತಾನು</th><th>ಖರ್ಚು</th><th>ಒಟ್ಟು ಉಳಿಕೆ</th></tr></thead><tbody>`;let grand={open:0,stock:0,expense:0,close:0,totalStudents:0};const classGrand=Object.fromEntries(keys.map(x=>[x[0],0]));names.forEach((x,i)=>{const d=monthlyData(type,x.name),totalS=keys.reduce((s,k)=>s+d.studentByClass[k[0]],0);grand.open+=d.opening;grand.stock+=d.stock;grand.expense+=d.expense;grand.close+=d.closing;grand.totalStudents+=totalS;keys.forEach(k=>classGrand[k[0]]+=d.studentByClass[k[0]]);h+=`<tr><td>${i+1}</td><td style="text-align:left;font-weight:700">${esc(x.name)}<br><small>${esc(x.unit)}</small></td>${keys.map(k=>`<td>${d.studentByClass[k[0]]||"—"}</td>`).join("")}<td class="total">${totalS||"—"}</td><td>${fmt(d.opening,x.unit)}</td><td>${fmt(d.stock,x.unit)}</td><td>${fmt(d.expense,x.unit)}</td><td class="total">${fmt(d.closing,x.unit)}</td></tr>`});h+=`</tbody><tfoot><tr><th colspan="2">ಒಟ್ಟು</th>${keys.map(k=>`<th>${classGrand[k[0]]||"—"}</th>`).join("")}<th class="total">${grand.totalStudents||"—"}</th><th>${fmt(grand.open,"KG")}</th><th>${fmt(grand.stock,"KG")}</th><th>${fmt(grand.expense,"KG")}</th><th class="total">${fmt(grand.close,"KG")}</th></tr></tfoot></table></div>`;$("tableHost").innerHTML=h}
 async function load(){try{activeYear=years.find(y=>y.id===$("academicYear").value)||activeYear;if(!activeYear)throw new Error("Academic Year ಆಯ್ಕೆ ಮಾಡಿ.");applyClassGroupLock();await loadSettings();await loadData();render();$("reportMonth").textContent=`ತಿಂಗಳು:- ${months[current.month-1]}-${current.year}`;show("ಮಾಹಿತಿ Loaded. ಪ್ರತಿಯೊಂದು Itemಗೆ ಬಳಸಿದ ತರಗತಿಗಳ Students ಮಾತ್ರ ತೋರಿಸಲಾಗಿದೆ.","ok")}catch(e){console.error(e);show("Load failed: "+e.message,"err")}}
 function show(t,type){$("msg").textContent=t;$("msg").className="msg "+type}
