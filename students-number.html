@@ -538,9 +538,12 @@ async function loadYears(){
   if(hidden) hidden.value=data.id;
   if(display) display.value=data.year_name;
 
-  await loadSaved();
-
   restoreMonthClassLock();
+
+  // When the page is opened again, restore the saved Month/Class
+  // and load the already-saved Boys/Girls numbers from Supabase.
+  await loadSaved();
+  await loadSelectedMonthIntoForm();
 }
 
 async function saveNumbers(){
