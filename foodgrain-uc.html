@@ -334,22 +334,31 @@ function editSupply(){setSectionLocked('supply',false);setMsg('UC Supply Edit mo
 async function renderReport(){
  readInputs();if(!state.yearId||!state.month){$('reportBody').innerHTML='';return}
  const gs=groups(),dept=state.schoolSettings.department_name||'ಅಕ್ಷರ ದಾಸೋಹ ಕಾರ್ಯಕ್ರಮ',school=state.schoolSettings.school_name||'ಶಾಲೆಯ ಹೆಸರು';
- const yearText=state.yearName||$('academicYear').selectedOptions[0]?.textContent||'';const y=yearNumber(yearText);const curMonth=months[state.month]||'';const prev=prevMonthYear(state.month,y);const prevLabel=monthLabel(prev.month,prev.year),curLabel=monthLabel(state.month,y);
- const topVals=gs.map(g=>num(state.students[key('ಅಕ್ಕಿ',g)]));const topTotal=topVals.reduce((a,b)=>a+b,0);
+ const yearText=state.yearName||$('academicYear').selectedOptions[0]?.textContent||'';const y=yearNumber(yearText);const prev=prevMonthYear(state.month,y);const prevLabel=monthLabel(prev.month,prev.year),curLabel=monthLabel(state.month,y);
+ const topVals=state.group==='8-10'
+   ? [num(state.students[key('ಅಕ್ಕಿ','8')]),num(state.students[key('ಅಕ್ಕಿ','9-10')])]
+   : [num(state.students[key('ಅಕ್ಕಿ','1-5')]),num(state.students[key('ಅಕ್ಕಿ','6-7')])];
+ const topTotal=topVals.reduce((a,b)=>a+b,0);
  const lower=[8,9,10].map(c=>num(state.schoolCounts[c]));const lowerTotal=lower.reduce((a,b)=>a+b,0);
- let prevClosing={};try{prevClosing=await getClosingForMonth(state.month,y)}catch(e){console.warn('Previous closing load:',e.message)}
+ const wheat8=state.group==='8-10'?num(state.students[key('ಗೋಧಿ','8')]):0;
+ const wheatA=state.group==='8-10'?0:num(state.students[key('ಗೋಧಿ',gs[0])]);
+ const wheatB=state.group==='8-10'?0:num(state.students[key('ಗೋಧಿ',gs[1])]);
+ const wheatTotal=state.group==='8-10'?wheat8:wheatA+wheatB;
+ const dal8=state.group==='8-10'?num(state.students[key('ಬೇಳೆ','8')]):0;
+ const dalA=state.group==='8-10'?num(state.students[key('ಬೇಳೆ','9-10')]):0;
+ const dalB=state.group==='8-10'?0:num(state.students[key('ಬೇಳೆ',gs[1])]);
+ const dalTotal=state.group==='8-10'?dal8+dalA:dal8+dalB;
  let h='';
  h+=`<tr><td colspan="18" class="nob"><img class="logo" src="${EMBLEM}"></td></tr>`;
  h+=`<tr><td colspan="18" class="title">ಕ್ಷೇತ್ರ ಶಿಕ್ಷಣಾಧಿಕಾರಿಗಳ ಕಛೇರಿ, ${esc(dept)} ಹೊಸದುರ್ಗ ಅಕ್ಷರ ದಾಸೋಹ ಕಾರ್ಯಕ್ರಮ</td></tr>`;
- h+=`<tr><td colspan="12" class="school">ಸರ್ಕಾರಿ/ಅನುದಾನಿತ ಪ್ರೌಢಶಾಲೆ: ${esc(school)}</td><td colspan="2">8</td><td colspan="2">9</td><td colspan="2">10</td></tr>`;
- h+=`<tr><td colspan="6" class="summary-label">ಫಲಾನುಭವಿಗಳ ಸಂಖ್ಯೆ: ${fmt(lowerTotal)}</td><td colspan="4" class="summary-label">ಒಟ್ಟು ವಿದ್ಯಾರ್ಥಿಗಳ ಸಂಖ್ಯೆ</td>${topVals.map(v=>`<td class="summary-value">${fmt(v)}</td>`).join('')}<td class="summary-value">${fmt(topTotal)}</td><td colspan="4">ತಿಂಗಳು / ${esc(curLabel)}</td></tr>`;
- const wheat8=state.group==='8-10'?num(state.students[key('ಗೋಧಿ','8')]):0; const wheatA=num(state.students[key('ಗೋಧಿ',gs[0])]); const wheatB=state.group==='8-10'?0:num(state.students[key('ಗೋಧಿ',gs[1])]); const wheatTotal=state.group==='8-10'?wheat8:wheatA+wheatB;
- h+=`<tr><td colspan="6" class="summary-label">ಶಾಲೆ ನಡೆದ ದಿನಗಳ ಸಂಖ್ಯೆ</td><td colspan="4" class="summary-value">${fmt(state.schoolDays)} ದಿನಗಳು</td><td colspan="2" class="summary-label">ಗೋಧಿ</td><td>${fmt(state.group==='8-10'?wheat8:wheatA)}</td><td>${state.group==='8-10'?'—':fmt(wheatB)}</td><td class="summary-value">${fmt(wheatTotal)}</td><td colspan="3"></td></tr>`;
+ h+=`<tr><td colspan="10" class="school">ಸರ್ಕಾರಿ/ಅನುದಾನಿತ ಪ್ರೌಢಶಾಲೆ: ${esc(school)}</td><th>8</th><th>9</th><th>10</th><th>ಒಟ್ಟು</th><th>ಗೋಧಿ</th><th colspan="3">ಬೇಳೆ</th></tr>`;
+ h+=`<tr><td colspan="3" class="summary-label">ಫಲಾನುಭವಿಗಳ ಸಂಖ್ಯೆ: ${fmt(lowerTotal)}</td><td class="summary-label">ತಿಂಗಳು:-</td><td class="summary-value">${esc(curLabel.split('-')[0]||'')}</td><td class="summary-value">${esc(y)}</td><td class="summary-label">ಒಟ್ಟು ವಿದ್ಯಾರ್ಥಿಗಳ ಸಂಖ್ಯೆ</td><td class="summary-value">${fmt(topVals[0])}</td><td class="summary-value">${state.group==='8-10'?fmt(topVals[1]):'—'}</td><td class="summary-value">${state.group==='8-10'?'—':'—'}</td><td class="summary-value">${fmt(topTotal)}</td><td class="summary-value">${fmt(wheat8||wheatA)}</td><td class="summary-value">${fmt(state.group==='8-10'?dal8:dal8)}</td><td class="summary-value">${state.group==='8-10'?fmt(dalA):fmt(dalB)}</td><td class="summary-value">${fmt(dalTotal)}</td><td colspan="3"></td></tr>`;
+ h+=`<tr><td colspan="6" class="summary-label">ಶಾಲೆ ನಡೆದ ದಿನಗಳ ಸಂಖ್ಯೆ:</td><td colspan="4" class="summary-value">${fmt(state.schoolDays)} ದಿನಗಳು</td><td class="summary-label">ಗೋಧಿ</td><td class="summary-value">${fmt(wheat8||wheatA)}</td><td class="summary-value">${state.group==='8-10'?'—':fmt(wheatB)}</td><td class="summary-value">${fmt(wheatTotal)}</td><td class="summary-label">ಬೇಳೆ</td><td class="summary-value">${fmt(dal8)}</td><td class="summary-value">${state.group==='8-10'?fmt(dalA):fmt(dalB)}</td><td class="summary-value">${fmt(dalTotal)}</td></tr>`;
  h+=`<tr><td colspan="18" class="section">: : ಆಹಾರ ಧಾನ್ಯ ಬಳಕೆ ಪ್ರಮಾಣ ಪತ್ರ : :</td></tr>`;
  h+=`<tr><th rowspan="2">ಕ್ರ ಸಂ</th><th rowspan="2">ವಿವರ</th><th rowspan="2">ದಿನಾಂಕ</th>`;
  const heads={'ಅಕ್ಕಿ':'ಅಕ್ಕಿ (0.150)','ಗೋಧಿ':'ಗೋಧಿ (0.150)','ಬೇಳೆ':'ಬೇಳೆ (0.030)','ಎಣ್ಣೆ':'ಎಣ್ಣೆ (7.5)','ಉಪ್ಪು':'ಉಪ್ಪು (0.004)'};items.forEach(it=>h+=`<th colspan="3">${heads[it]}</th>`);h+='</tr><tr>';items.forEach(()=>h+='<th>'+gs[0]+'</th><th>'+gs[1]+'</th><th>ಒಟ್ಟು</th>');h+='</tr>';
  const rows=[['ತಿಂಗಳ ಅಂತ್ಯಕ್ಕೆ ಉಳಿಕೆ','previous'],['ತಿಂಗಳ ಖರೀದಿ','purchase'],['ತಿಂಗಳ ಸರಬರಾಜು','supply'],['ಒಟ್ಟು ದಾಸ್ತಾನು','stock'],['ತಿಂಗಳ ಬಳಕೆ','use'],['ತಿಂಗಳ ಅಂತ್ಯಕ್ಕೆ ಉಳಿಕೆ','closing']];
- rows.forEach((r,ri)=>{h+=`<tr><td>${ri+1}</td><td class="left">${r[0]}</td><td class="small">${r[1]==='previous'?esc(prevLabel):esc(curLabel)}</td>`;items.forEach(it=>{let total=0;gs.forEach(g=>{if(!applies(it,g)){h+='<td>—</td>';return}let v=0;if(r[1]==='previous')v=num(prevClosing[key(it,g)]);if(r[1]==='purchase')v=supplyTotal(it,g,'ಖರೀದಿ');if(r[1]==='supply')v=supplyTotal(it,g,'ಸರಬರಾಜು');if(r[1]==='stock')v=currentOpening(it,g)+supplyTotal(it,g);if(r[1]==='use')v=calcUse(it,g);if(r[1]==='closing')v=currentOpening(it,g)+supplyTotal(it,g)-calcUse(it,g);total+=v;h+=`<td class="num ${r[1]==='closing'?'yellow':''}">${fmt(v)}</td>`});h+=`<td class="num ${r[1]==='closing'?'yellow':''}">${fmt(total)}</td>`});h+='</tr>'});
+ rows.forEach((r,ri)=>{h+=`<tr><td>${ri+1}</td><td class="left">${r[0]}</td><td class="small">${r[1]==='previous'?esc(prevLabel):esc(curLabel)}</td>`;items.forEach(it=>{let total=0;gs.forEach(g=>{if(!applies(it,g)){h+='<td>—</td>';return}let v=0;if(r[1]==='previous')v=num(state.opening[key(it,g)]);if(r[1]==='purchase')v=supplyTotal(it,g,'ಖರೀದಿ');if(r[1]==='supply')v=supplyTotal(it,g,'ಸರಬರಾಜು');if(r[1]==='stock')v=currentOpening(it,g)+supplyTotal(it,g,'ಖರೀದಿ')+supplyTotal(it,g,'ಸರಬರಾಜು');if(r[1]==='use')v=calcUse(it,g);if(r[1]==='closing')v=currentOpening(it,g)+supplyTotal(it,g,'ಖರೀದಿ')+supplyTotal(it,g,'ಸರಬರಾಜು')-calcUse(it,g);total+=v;h+=`<td class="num ${r[1]==='closing'?'yellow':''}">${fmt(v)}</td>`});h+=`<td class="num ${r[1]==='closing'?'yellow':''}">${fmt(total)}</td>`});h+='</tr>'});
  h+=`<tr><td colspan="18" class="nob" style="height:6px"></td></tr>`;
  h+=`<tr><th colspan="3">ತರಗತಿ</th><th>8</th><th>9</th><th>10</th><th colspan="12">ಒಟ್ಟು</th></tr>`;
  ['ದಾಖಲಾತಿ','ಹಾಜರಾತಿ','ಫಲಾನುಭವಿಗಳು'].forEach(label=>{h+=`<tr><th colspan="3" class="left">${label}</th>`;lower.forEach(v=>h+=`<td>${fmt(v)}</td>`);h+=`<td colspan="12"><strong>${fmt(lowerTotal)}</strong></td></tr>`});
