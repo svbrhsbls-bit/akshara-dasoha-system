@@ -626,17 +626,7 @@ async function saveCurrentMonthClosings(){
   }else{
     closing=ledger(x.type,x.name).closing;
   }
-  const existingClosing=await db.from("food_stock_monthly_closing")
-    .select("id")
-    .eq("school_id",currentSchoolId)
-    .eq("academic_year_id",activeYear.id)
-    .eq("item_type",dbType)
-    .eq("item_name",dbName)
-    .eq("month_number",current.month)
-    .maybeSingle();
-  if(existingClosing.error)throw existingClosing.error;
 
-  let z;
   const payload={
     school_id:currentSchoolId,
     academic_year_id:activeYear.id,
@@ -648,14 +638,11 @@ async function saveCurrentMonthClosings(){
     updated_at:now
   };
 
-  if(existingClosing.data?.id){
-    z=await db.from("food_stock_monthly_closing")
-      .update(payload)
-      .eq("school_id",currentSchoolId)
-      .eq("id",existingClosing.data.id);
-  }else{
-    z=await db.from("food_stock_monthly_closing").insert(payload);
-  }
+  const z=await db.from("food_stock_monthly_closing")
+    .upsert(payload,{onConflict:"school_id,academic_year_id,item_type,item_name,month_number"})
+    .select("id")
+    .maybeSingle();
+
   if(z.error)throw z.error;
  });
  await Promise.all(jobs);
