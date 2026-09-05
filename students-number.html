@@ -580,18 +580,33 @@ async function saveNumbers(){
   saveBtn.textContent = "Saving...";
 
   try{
-    // Upsert uses the school-wise unique constraint:
-    // school_id + academic_year_id + month_number + class_number + division_name
-    const { error } = await db
-      .from("student_numbers")
-      .upsert(rows, {
-        onConflict: "school_id,academic_year_id,month_number,class_number,division_name",
-        ignoreDuplicates: false
-      });
+    // Save the selected month/class rows directly.
+    // First remove the old rows for this selection, then insert the current values.
+    // This avoids depending on a database ON CONFLICT constraint and ensures
+    // the saved values are loaded back into the form immediately.
+    const classNumbers = selected.map(group => groupClassNumbers[group]);
 
-    if(error){
-      console.error("student_numbers save error:", error);
-      throw error;
+    const { error:deleteError } = await db
+      .from("student_numbers")
+      .delete()
+      .eq("school_id",currentSchoolId)
+      .eq("academic_year_id",yearId)
+      .eq("month_number",monthNumber)
+      .eq("division_name","ALL")
+      .in("class_number",classNumbers);
+
+    if(deleteError){
+      console.error("student_numbers delete-before-save error:", deleteError);
+      throw deleteError;
+    }
+
+    const { error:insertError } = await db
+      .from("student_numbers")
+      .insert(rows);
+
+    if(insertError){
+      console.error("student_numbers insert error:", insertError);
+      throw insertError;
     }
 
     showMessage(
@@ -602,6 +617,8 @@ async function saveNumbers(){
     persistMonthClassLock();
     setMonthClassLocked(true);
 
+    // Reload the exact saved month so the entered Boys/Girls numbers
+    // remain visible after Save.
     await loadSaved();
     await loadSelectedMonthIntoForm();
 
