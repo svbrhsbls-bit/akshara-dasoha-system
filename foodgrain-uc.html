@@ -1,382 +1,3806 @@
 <!doctype html>
 <html lang="kn">
 <head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ಆಹಾರ ಧಾನ್ಯ ಬಳಕೆ ಪ್ರಮಾಣ ಪತ್ರ</title>
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
 <style>
 @page{size:A4 landscape;margin:5mm}
 *{box-sizing:border-box}
-body{margin:0;background:#eef2f5;color:#111;font-family:"Noto Sans Kannada","Nirmala UI","Tunga",Arial,sans-serif}
+body{
+ margin:0;background:#eef2f5;color:#111;
+ font-family:"Noto Sans Kannada","Nirmala UI","Tunga",Arial,sans-serif
+}
 .app{max-width:1500px;margin:14px auto;padding:0 10px}
-.controls{background:#fff;border:1px solid #ccc;border-radius:10px;padding:12px;margin-bottom:12px}
-.grid{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:9px}
+.controls{
+ background:#fff;border:1px solid #ccc;border-radius:10px;
+ padding:12px;margin-bottom:12px
+}
+.grid{
+ display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:9px
+}
 label{font-weight:700;font-size:14px;display:block;margin-bottom:5px}
-select,input{width:100%;padding:8px;border:1px solid #aaa;border-radius:6px;font:inherit}
+select,input{
+ width:100%;padding:8px;border:1px solid #aaa;border-radius:6px;font:inherit
+}
 .actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
-button{border:0;border-radius:6px;padding:9px 14px;font:inherit;font-weight:700;cursor:pointer}
-.blue{background:#17569a;color:#fff}.green{background:#17733b;color:#fff}.gray{background:#555;color:#fff}.red{background:#b42318;color:#fff}
+button{
+ border:0;border-radius:6px;padding:9px 14px;
+ font:inherit;font-weight:700;cursor:pointer
+}
+.blue{background:#17569a;color:#fff}
+.green{background:#17733b;color:#fff}
+.gray{background:#555;color:#fff}
+.red{background:#b42318;color:#fff}
 .msg{min-height:20px;margin-top:7px;font-weight:700}
-.section-card{background:#fff;border:1px solid #ccc;border-radius:8px;padding:9px;margin-top:9px}
-.section-head{display:flex;align-items:center;justify-content:space-between;gap:10px}
-.card-title{font-size:16px;font-weight:800}.section-actions{display:flex;gap:7px}
+
+.section-card{
+ background:#fff;border:1px solid #ccc;border-radius:8px;
+ padding:9px;margin-top:9px
+}
+.section-head{
+ display:flex;align-items:center;justify-content:space-between;gap:10px
+}
+.card-title{font-size:16px;font-weight:800}
+.section-actions{display:flex;gap:7px}
 .section-fields.locked{opacity:.72}
-.section-fields.locked input,.section-fields.locked select{background:#f3f3f3;cursor:not-allowed}
+.section-fields.locked input,
+.section-fields.locked select{
+ background:#f3f3f3;cursor:not-allowed
+}
 .section-fields button:disabled{opacity:.45;cursor:not-allowed}
 .note{font-size:12px;color:#555;margin-top:5px}
-.input-table{width:100%;border-collapse:collapse;margin-top:7px}
-.input-table th,.input-table td{border:1px solid #aaa;padding:5px;text-align:center}
+
+.input-table{
+ width:100%;border-collapse:collapse;margin-top:7px
+}
+.input-table th,.input-table td{
+ border:1px solid #aaa;padding:5px;text-align:center
+}
 .input-table input,.input-table select{padding:5px}
-.report-wrap{background:#fff;padding:4mm;overflow:auto}
-.report{width:100%;min-width:1250px;border-collapse:collapse;table-layout:fixed;font-size:12px}
-.report th,.report td{border:1px solid #111;padding:3px;text-align:center;vertical-align:middle}
-.nob{border:0!important}.logo{width:70px;height:auto}
+
+.report-wrap{
+ background:#fff;padding:4mm;overflow:auto
+}
+.report{
+ width:100%;min-width:1250px;
+ border-collapse:collapse;table-layout:fixed;font-size:12px
+}
+.report th,.report td{
+ border:1px solid #111;padding:3px;
+ text-align:center;vertical-align:middle
+}
+.nob{border:0!important}
+.logo{width:70px;height:auto}
 .title{font-size:18px;font-weight:800}
 .school{font-size:15px;font-weight:800;text-align:left!important}
 .section{font-size:16px;font-weight:800;padding:7px!important}
 .yellow{background:#fff500;font-weight:800}
-.left{text-align:left!important}.small{font-size:10px}
+.left{text-align:left!important}
+.small{font-size:10px}
 .summary-label{font-weight:700;text-align:left!important}
 .summary-value{font-weight:800}
 .sign{height:58px;vertical-align:bottom!important;font-weight:800}
 .report .num{font-variant-numeric:tabular-nums}
-@media(max-width:900px){.grid{grid-template-columns:1fr 1fr}}
+
+@media(max-width:900px){
+ .grid{grid-template-columns:1fr 1fr}
+}
+
 @media print{
- body{background:#fff}.app{max-width:none;margin:0;padding:0}.controls{display:none!important}
- .report-wrap{padding:0;overflow:visible}.report{min-width:0;font-size:9px}
- .report th,.report td{padding:2px}.title{font-size:13px}.school{font-size:11px}
- .section{font-size:12px;padding:4px!important}.logo{width:58px}.small{font-size:8px}
+ body{background:#fff}
+ .app{max-width:none;margin:0;padding:0}
+ .controls{display:none!important}
+ .report-wrap{padding:0;overflow:visible}
+ .report{min-width:0;font-size:9px}
+ .report th,.report td{padding:2px}
+ .title{font-size:13px}
+ .school{font-size:11px}
+ .section{font-size:12px;padding:4px!important}
+ .logo{width:58px}
+ .small{font-size:8px}
 }
 </style>
 </head>
+
 <body>
+
 <div class="app">
-  <div class="controls">
-    <div class="grid">
-      <div>
-        <label>ಶೈಕ್ಷಣಿಕ ವರ್ಷ</label>
-        <div style="display:flex;gap:6px">
-          <select id="academicYear" style="flex:1"><option value="">ಶೈಕ್ಷಣಿಕ ವರ್ಷ ಆಯ್ಕೆ ಮಾಡಿ</option></select>
-          <button type="button" class="green" id="addYearBtn" style="white-space:nowrap;padding:8px 12px">＋ Year</button>
-        </div>
-        <div class="note">2026, 2027, 2028... ಬೇಕಾದ ವರ್ಷವನ್ನು ಇಲ್ಲಿ Add ಮಾಡಬಹುದು.</div>
-      </div>
-      <div><label>ತಿಂಗಳು</label><select id="month"><option value="">ತಿಂಗಳು ಆಯ್ಕೆ ಮಾಡಿ</option></select></div>
-      <div><label>Class Group</label><select id="classGroup"><option value="1-7">1-7</option><option value="8-10">8-10</option></select></div>
-    </div>
-    <div class="actions">
-      <button class="blue" id="loadBtn">↻ Load</button>
-      <button class="gray" id="printBtn">🖨️ Print / PDF</button>
-      <button class="green" id="excelBtn">📊 Excel Export</button>
-    </div>
-    <div class="msg" id="msg"></div>
 
-    <div class="section-card">
-      <div class="section-head"><div class="card-title">Students Numbers</div><div class="section-actions"><button class="green" id="saveStudentsBtn">💾 Save</button><button class="gray" id="editStudentsBtn">✏️ Edit</button></div></div>
-      <div class="section-fields" id="studentsEntry"></div>
-      <div class="note">UC Students Numbers ಪ್ರತ್ಯೇಕವಾಗಿ ನಮೂದಿಸಲಾಗುತ್ತದೆ. Daily Food Distribution ಅನ್ನು UC calculationಗೆ ಬಳಸುವುದಿಲ್ಲ.</div>
-    </div>
+<div class="controls">
 
-    <div class="section-card">
-      <div class="section-head"><div class="card-title">Opening Balance</div><div class="section-actions"><button class="green" id="saveOpeningBtn">💾 Save</button><button class="gray" id="editOpeningBtn">✏️ Edit</button></div></div>
-      <div class="section-fields" id="openingEntry"></div>
-    </div>
+<div class="grid">
 
-    <div class="section-card">
-      <div class="section-head"><div class="card-title">UC Supply</div><div class="section-actions"><button class="green" id="saveSupplyBtn">💾 Save</button><button class="gray" id="editSupplyBtn">✏️ Edit</button></div></div>
-      <div class="note">ಒಂದು ತಿಂಗಳಲ್ಲಿ ಹಲವು Supply entries ಹಾಕಬಹುದು. ದಿನಾಂಕವು ದಾಖಲಾತಿಗಾಗಿ ಮಾತ್ರ.</div>
-      <div class="section-fields" id="supplyEntry"></div>
-    </div>
-  </div>
-  <div class="report-wrap"><table class="report" id="reportTable"><tbody id="reportBody"></tbody></table></div>
+<div>
+<label>ಶೈಕ್ಷಣಿಕ ವರ್ಷ</label>
+
+<div style="display:flex;gap:6px">
+
+<select id="academicYear" style="flex:1">
+<option value="">ಶೈಕ್ಷಣಿಕ ವರ್ಷ ಆಯ್ಕೆ ಮಾಡಿ</option>
+</select>
+
+<button
+ type="button"
+ class="green"
+ id="addYearBtn"
+ style="white-space:nowrap;padding:8px 12px">
+＋ Year
+</button>
+
 </div>
+
+<div class="note">
+2026, 2027, 2028... ಬೇಕಾದ ವರ್ಷವನ್ನು ಇಲ್ಲಿ Add ಮಾಡಬಹುದು.
+</div>
+
+</div>
+
+<div>
+<label>ತಿಂಗಳು</label>
+<select id="month">
+<option value="">ತಿಂಗಳು ಆಯ್ಕೆ ಮಾಡಿ</option>
+</select>
+</div>
+
+<div>
+<label>Class Group</label>
+<select id="classGroup">
+<option value="1-7">1-7</option>
+<option value="8-10">8-10</option>
+</select>
+</div>
+
+</div>
+
+<div
+ class="grid"
+ style="margin-top:9px;grid-template-columns:1fr 1fr">
+
+<div>
+<label>ಇಲಾಖೆ</label>
+<input
+ id="departmentName"
+ type="text"
+ placeholder="ಇಲಾಖೆ"
+ autocomplete="off">
+</div>
+
+<div>
+<label>ಶಾಲೆಯ ಹೆಸರು</label>
+<input
+ id="schoolName"
+ type="text"
+ placeholder="ಶಾಲೆಯ ಹೆಸರು"
+ autocomplete="off">
+</div>
+
+</div>
+
+<div class="actions">
+
+<button class="blue" id="loadBtn">
+↻ Load
+</button>
+
+<button class="gray" id="printBtn">
+🖨️ Print / PDF
+</button>
+
+<button class="green" id="excelBtn">
+📊 Excel Export
+</button>
+
+</div>
+
+<div class="msg" id="msg"></div>
+
+
+<!-- STUDENTS NUMBERS -->
+
+<div class="section-card">
+
+<div class="section-head">
+
+<div class="card-title">
+Students Numbers
+</div>
+
+<div class="section-actions">
+
+<button
+ class="green"
+ id="saveStudentsBtn">
+💾 Save
+</button>
+
+<button
+ class="gray"
+ id="editStudentsBtn">
+✏️ Edit
+</button>
+
+</div>
+
+</div>
+
+<div
+ class="section-fields"
+ id="studentsEntry">
+</div>
+
+<div class="note">
+UC Students Numbers ಪ್ರತ್ಯೇಕವಾಗಿ ನಮೂದಿಸಲಾಗುತ್ತದೆ.
+Daily Food Distribution ಅನ್ನು UC calculationಗೆ ಬಳಸುವುದಿಲ್ಲ.
+</div>
+
+</div>
+
+
+<!-- OPENING BALANCE -->
+
+<div class="section-card">
+
+<div class="section-head">
+
+<div class="card-title">
+Opening Balance
+</div>
+
+<div class="section-actions">
+
+<button
+ class="green"
+ id="saveOpeningBtn">
+💾 Save
+</button>
+
+<button
+ class="gray"
+ id="editOpeningBtn">
+✏️ Edit
+</button>
+
+</div>
+
+</div>
+
+<div
+ class="section-fields"
+ id="openingEntry">
+</div>
+
+</div>
+
+
+<!-- UC SUPPLY -->
+
+<div class="section-card">
+
+<div class="section-head">
+
+<div class="card-title">
+UC Supply
+</div>
+
+<div class="section-actions">
+
+<button
+ class="green"
+ id="saveSupplyBtn">
+💾 Save
+</button>
+
+<button
+ class="gray"
+ id="editSupplyBtn">
+✏️ Edit
+</button>
+
+</div>
+
+</div>
+
+<div class="note">
+ಒಂದು ತಿಂಗಳಲ್ಲಿ ಹಲವು Supply entries ಹಾಕಬಹುದು.
+ದಿನಾಂಕವು ದಾಖಲಾತಿಗಾಗಿ ಮಾತ್ರ.
+</div>
+
+<div
+ class="section-fields"
+ id="supplyEntry">
+</div>
+
+</div>
+
+</div>
+
+
+<!-- REPORT -->
+
+<div class="report-wrap">
+
+<table
+ class="report"
+ id="reportTable">
+
+<tbody id="reportBody">
+</tbody>
+
+</table>
+
+</div>
+
+</div>
+
+
 <script>
-const SUPABASE_URL='https://ezmudfrpcvjsgnjibvoq.supabase.co';
-const SUPABASE_KEY='sb_publishable__FYyH6NQaqgARaq2dvuovQ_rKmus0js';
-const db=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
-const EMBLEM='data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==';
-const months=['','ಜನವರಿ','ಫೆಬ್ರವರಿ','ಮಾರ್ಚ್','ಏಪ್ರಿಲ್','ಮೇ','ಜೂನ್','ಜುಲೈ','ಆಗಸ್ಟ್','ಸೆಪ್ಟೆಂಬರ್','ಅಕ್ಟೋಬರ್','ನವೆಂಬರ್','ಡಿಸೆಂಬರ್'];
-const items=['ಅಕ್ಕಿ','ಗೋಧಿ','ಬೇಳೆ','ಎಣ್ಣೆ','ಉಪ್ಪು'];
-const state={schoolId:null,schoolSettings:{},yearId:'',yearName:'',month:0,group:'1-7',students:{},opening:{},supplies:[],calc:{},schoolDays:0,schoolCounts:{8:0,9:0,10:0}};
-const $=id=>document.getElementById(id);
-function num(v){const x=Number(v);return Number.isFinite(x)?x:0}
-function fmt(v){return num(v).toFixed(3).replace(/\.000$/,'').replace(/(\.\d*?)0+$/,'$1')}
-function esc(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]))}
-function setMsg(t,ok=false){$('msg').textContent=t;$('msg').style.color=ok?'#17733b':'#b42318'}
-function groups(){return state.group==='1-7'?['1-5','6-7']:['8','9-10']}
-function applies(item,g){return !(state.group==='8-10'&&item==='ಗೋಧಿ'&&g!=='8')}
-function key(item,g){return item+'|'+g}
-function studentGroups(){return state.group==='1-7'?['1-5','6-7']:['8','9-10']}
-function monthLabel(m,y){return `${months[m]||''}-${y||''}`}
-function yearNumber(name){const m=String(name||'').match(/(\d{4})/);return m?Number(m[1]):new Date().getFullYear()}
-function daysInMonth(year,month){return new Date(year,month,0).getDate()}
-function prevMonthYear(month,year){if(month===1)return {month:12,year:year-1};return {month:month-1,year}}
-function monthDateRange(year,month){const pad=n=>String(n).padStart(2,'0');return {start:`${year}-${pad(month)}-01`,end:`${year}-${pad(month)}-${pad(daysInMonth(year,month))}`}}
+
+const SUPABASE_URL =
+'https://ezmudfrpcvjsgnjibvoq.supabase.co';
+
+const SUPABASE_KEY =
+'sb_publishable__FYyH6NQaqgARaq2dvuovQ_rKmus0js';
+
+const db =
+window.supabase.createClient(
+ SUPABASE_URL,
+ SUPABASE_KEY
+);
+
+
+const EMBLEM =
+'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==';
+
+
+const months=[
+'',
+'ಜನವರಿ',
+'ಫೆಬ್ರವರಿ',
+'ಮಾರ್ಚ್',
+'ಏಪ್ರಿಲ್',
+'ಮೇ',
+'ಜೂನ್',
+'ಜುಲೈ',
+'ಆಗಸ್ಟ್',
+'ಸೆಪ್ಟೆಂಬರ್',
+'ಅಕ್ಟೋಬರ್',
+'ನವೆಂಬರ್',
+'ಡಿಸೆಂಬರ್'
+];
+
+
+const items=[
+'ಅಕ್ಕಿ',
+'ಗೋಧಿ',
+'ಬೇಳೆ',
+'ಎಣ್ಣೆ',
+'ಉಪ್ಪು'
+];
+
+
+const state={
+ schoolId:null,
+ schoolSettings:{},
+ yearId:'',
+ yearName:'',
+ month:0,
+ group:'1-7',
+ students:{},
+ opening:{},
+ supplies:[],
+ calc:{},
+ schoolDays:0,
+ schoolCounts:{
+  8:0,
+  9:0,
+  10:0
+ },
+ openingAutoLocked:false
+};
+
+
+const $=id =>
+ document.getElementById(id);
+
+
+function num(v){
+
+ const x=Number(v);
+
+ return Number.isFinite(x)?x:0;
+
+}
+
+
+function fmt(v){
+
+ return num(v)
+ .toFixed(3)
+ .replace(/\.000$/,'')
+ .replace(/(\.\d*?)0+$/,'$1');
+
+}
+
+
+function esc(v){
+
+ return String(v??'')
+ .replace(
+  /[&<>"']/g,
+  c=>({
+   '&':'&amp;',
+   '<':'&lt;',
+   '>':'&gt;',
+   '"':'&quot;',
+   "'":'&#039;'
+  }[c])
+ );
+
+}
+
+
+function setMsg(t,ok=false){
+
+ $('msg').textContent=t;
+
+ $('msg').style.color=
+ ok?'#17733b':'#b42318';
+
+}
+
+
+function groups(){
+
+ return state.group==='1-7'
+  ?['1-5','6-7']
+  :['8','9-10'];
+
+}
+
+
+function applies(item,g){
+
+ return !(
+  state.group==='8-10' &&
+  item==='ಗೋಧಿ' &&
+  g!=='8'
+ );
+
+}
+
+
+function key(item,g){
+
+ return item+'|'+g;
+
+}
+
+
+function monthLabel(m,y){
+
+ return `${months[m]||''}-${y||''}`;
+
+}
+
+
+function yearNumber(name){
+
+ const m=
+ String(name||'')
+ .match(/(\d{4})/);
+
+ return m
+  ?Number(m[1])
+  :new Date().getFullYear();
+
+}
+
+
+function daysInMonth(year,month){
+
+ return new Date(
+  year,
+  month,
+  0
+ ).getDate();
+
+}
+
+
+function prevMonthYear(month,year){
+
+ if(month===1){
+
+  return {
+   month:12,
+   year:year-1
+  };
+
+ }
+
+ return {
+  month:month-1,
+  year
+ };
+
+}
+
+
+function monthDateRange(year,month){
+
+ const pad=
+ n=>String(n).padStart(2,'0');
+
+ return {
+  start:
+   `${year}-${pad(month)}-01`,
+
+  end:
+   `${year}-${pad(month)}-${pad(
+    daysInMonth(year,month)
+   )}`
+ };
+
+}
+
+
+/* AUTH */
 
 async function authenticate(){
- const {data,error}=await db.auth.getSession(); if(error)throw error;
- if(!data?.session){location.href='login.html';return false}
- const uid=data.session.user.id;
- const r=await db.from('school_users').select('school_id,role,is_active').eq('user_id',uid).maybeSingle();
- if(r.error)throw r.error;
- if(!r.data?.is_active)throw new Error('School login inactive.');
- if(r.data.role==='admin'){location.href='admin.html';return false}
- state.schoolId=r.data.school_id;return true;
+
+ const {
+  data,
+  error
+ }=
+ await db.auth.getSession();
+
+ if(error)
+  throw error;
+
+ if(!data?.session){
+
+  location.href='login.html';
+
+  return false;
+
+ }
+
+ const uid=
+ data.session.user.id;
+
+ const r=
+ await db
+ .from('school_users')
+ .select('school_id,role,is_active')
+ .eq('user_id',uid)
+ .maybeSingle();
+
+ if(r.error)
+  throw r.error;
+
+ if(!r.data?.is_active)
+  throw new Error(
+   'School login inactive.'
+  );
+
+ if(r.data.role==='admin'){
+
+  location.href='admin.html';
+
+  return false;
+
+ }
+
+ state.schoolId=
+  r.data.school_id;
+
+ return true;
+
 }
 
-async function loadSchool(){
- const {data,error}=await db.from('school_settings').select('*').eq('school_id',state.schoolId).maybeSingle();
- if(error)throw error;if(!data)throw new Error('School Settingsನಲ್ಲಿ ಶಾಲೆಯ ವಿವರಗಳು ಇಲ್ಲ.');
- state.schoolSettings=data;
+
+/* MANUAL HEADER */
+
+function headerStorageKey(){
+
+ return `uc_fg_header|${state.schoolId}`;
+
 }
+
+
+function loadManualHeader(){
+
+ const saved=
+ localStorage.getItem(
+  headerStorageKey()
+ );
+
+ let v={};
+
+ if(saved){
+
+  try{
+   v=JSON.parse(saved)||{};
+  }catch(e){
+   v={};
+  }
+
+ }
+
+ $('departmentName').value=
+  v.department||'';
+
+ $('schoolName').value=
+  v.school||'';
+
+}
+
+
+function saveManualHeader(){
+
+ if(!state.schoolId)
+  return;
+
+ localStorage.setItem(
+  headerStorageKey(),
+
+  JSON.stringify({
+
+   department:
+    $('departmentName')
+     .value
+     .trim(),
+
+   school:
+    $('schoolName')
+     .value
+     .trim()
+
+  })
+
+ );
+
+ renderReport();
+
+}
+
+
+/* YEAR */
+
 async function loadYears(){
- const {data,error}=await db.from('academic_years').select('id,year_name,is_active').order('year_name',{ascending:false});
- if(error)throw error;
- $('academicYear').innerHTML='<option value="">ಶೈಕ್ಷಣಿಕ ವರ್ಷ ಆಯ್ಕೆ ಮಾಡಿ</option>'+(data||[]).map(y=>`<option value="${esc(y.id)}">${esc(y.year_name)}</option>`).join('');
- const wanted=String(state.schoolSettings.academic_year||'').trim();
- let active=(data||[]).find(y=>String(y.year_name||'').trim()===wanted)||(data||[]).find(y=>y.is_active)||(data||[])[0];
- if(active){$('academicYear').value=active.id;state.yearName=active.year_name||''}
-}
-async function addAcademicYear(){
- const raw=prompt('ಯಾವ Academic Year add ಮಾಡಬೇಕು? ಉದಾ: 2026 ಅಥವಾ 2026-27');
- const yearName=String(raw||'').trim();
- if(!yearName)return;
- if(!/^(\d{4})(?:[-\/](\d{2,4}))?$/.test(yearName)){
-   setMsg('Year ಅನ್ನು 2026 ಅಥವಾ 2026-27 ರೀತಿಯಲ್ಲಿ ನಮೂದಿಸಿ.');
-   return;
- }
+
+ const raw=
+ localStorage.getItem(
+  `uc_fg_years|${state.schoolId}`
+ );
+
+ let years=[];
+
  try{
-   const {data:existing,error:ee}=await db.from('academic_years').select('id,year_name,is_active').eq('year_name',yearName).maybeSingle();
-   if(ee)throw ee;
-   if(existing){
-     $('academicYear').value=existing.id;
-     state.yearId=existing.id;state.yearName=existing.year_name||yearName;
-     setMsg(yearName+' ಈಗಾಗಲೇ ಇದೆ. ಅದನ್ನೇ ಆಯ್ಕೆ ಮಾಡಲಾಗಿದೆ.','ok');
-     await loadAll();
-     return;
-   }
-   const {data,error}=await db.from('academic_years').insert({year_name:yearName,is_active:false}).select('id,year_name,is_active').single();
-   if(error)throw error;
-   await loadYears();
-   $('academicYear').value=data.id;
-   state.yearId=data.id;state.yearName=data.year_name||yearName;
-   setMsg(yearName+' Academic Year Add ಆಯಿತು.','ok');
+  years=JSON.parse(raw)||[];
  }catch(e){
-   console.error(e);
-   setMsg('Year Add failed: '+(e.message||e));
+  years=[];
  }
+
+ years=[
+  ...new Set(
+   years
+   .map(x=>String(x).trim())
+   .filter(Boolean)
+  )
+ ]
+ .sort(
+  (a,b)=>
+   yearNumber(b)-yearNumber(a)
+ );
+
+ $('academicYear').innerHTML=
+  '<option value="">ಶೈಕ್ಷಣಿಕ ವರ್ಷ ಆಯ್ಕೆ ಮಾಡಿ</option>'+
+  years
+  .map(
+   y=>
+   `<option value="${esc(y)}">${esc(y)}</option>`
+  )
+  .join('');
+
 }
 
-function fillMonths(){$('month').innerHTML='<option value="">ತಿಂಗಳು ಆಯ್ಕೆ ಮಾಡಿ</option>'+months.slice(1).map((m,i)=>`<option value="${i+1}">${m}</option>`).join('')}
 
-function sectionKey(name){return `uc_fg_${name}_locked|${state.schoolId}|${state.yearId}|${state.month}|${state.group}`}
-function isSectionLocked(name){return !!state.schoolId&&!!state.yearId&&!!state.month&&localStorage.getItem(sectionKey(name))==='1'}
+async function addAcademicYear(){
+
+ const raw=
+ prompt(
+  'ಯಾವ Year add ಮಾಡಬೇಕು? ಉದಾ: 2026 ಅಥವಾ 2027'
+ );
+
+ const yearName=
+ String(raw||'').trim();
+
+ if(!yearName)
+  return;
+
+ if(!/^\d{4}$/.test(yearName)){
+
+  setMsg(
+   'Year ಅನ್ನು 2026, 2027, 2028 ರೀತಿಯಲ್ಲಿ 4 ಅಂಕೆಯಲ್ಲಿ ನಮೂದಿಸಿ.'
+  );
+
+  return;
+
+ }
+
+ try{
+
+  let {
+   data,
+   error
+  }=
+  await db
+  .from('academic_years')
+  .select('id,year_name')
+  .eq('year_name',yearName)
+  .maybeSingle();
+
+  if(error)
+   throw error;
+
+  if(!data){
+
+   const ins=
+   await db
+   .from('academic_years')
+   .insert({
+    year_name:yearName,
+    is_active:false
+   })
+   .select('id,year_name')
+   .single();
+
+   if(ins.error)
+    throw ins.error;
+
+   data=ins.data;
+
+  }
+
+  const rawList=
+   localStorage.getItem(
+    `uc_fg_years|${state.schoolId}`
+   );
+
+  let years=[];
+
+  try{
+   years=JSON.parse(rawList)||[];
+  }catch(e){
+   years=[];
+  }
+
+  if(!years.includes(yearName))
+   years.push(yearName);
+
+  years.sort(
+   (a,b)=>
+    yearNumber(b)-yearNumber(a)
+  );
+
+  localStorage.setItem(
+   `uc_fg_years|${state.schoolId}`,
+   JSON.stringify(years)
+  );
+
+  await loadYears();
+
+  $('academicYear').value=
+   yearName;
+
+  state.yearId=
+   data.id;
+
+  state.yearName=
+   yearName;
+
+  setMsg(
+   yearName+' Year Add ಆಯಿತು.',
+   true
+  );
+
+  await loadAll();
+
+ }catch(e){
+
+  console.error(e);
+
+  setMsg(
+   'Year Add failed: '+
+   (e.message||e)
+  );
+
+ }
+
+}
+
+
+function fillMonths(){
+
+ $('month').innerHTML=
+  '<option value="">ತಿಂಗಳು ಆಯ್ಕೆ ಮಾಡಿ</option>'+
+  months
+  .slice(1)
+  .map(
+   (m,i)=>
+   `<option value="${i+1}">${m}</option>`
+  )
+  .join('');
+
+}
+
+
+/* LOCK */
+
+function sectionKey(name){
+
+ return `uc_fg_${name}_locked|${state.schoolId}|${state.yearId}|${state.month}|${state.group}`;
+
+}
+
+
+function isSectionLocked(name){
+
+ return !!state.schoolId &&
+        !!state.yearId &&
+        !!state.month &&
+        localStorage.getItem(
+         sectionKey(name)
+        )==='1';
+
+}
+
+
 function applySectionLock(name,locked){
- const box=$(`${name}Entry`);if(!box)return;box.classList.toggle('locked',!!locked);
- box.querySelectorAll('input,select').forEach(x=>x.disabled=!!locked);
- if(name==='supply'){box.querySelectorAll('button').forEach(x=>x.disabled=!!locked);$('addSupplyBtn')?.toggleAttribute('disabled',!!locked)}
+
+ const box=
+  $(`${name}Entry`);
+
+ if(!box)
+  return;
+
+ box.classList.toggle(
+  'locked',
+  !!locked
+ );
+
+ box
+ .querySelectorAll(
+  'input,select'
+ )
+ .forEach(
+  x=>x.disabled=!!locked
+ );
+
+ if(name==='supply'){
+
+  box
+   .querySelectorAll('button')
+   .forEach(
+    x=>x.disabled=!!locked
+   );
+
+  $('addSupplyBtn')
+   ?.toggleAttribute(
+    'disabled',
+    !!locked
+   );
+
+ }
+
 }
-function setSectionLocked(name,locked){if(state.schoolId&&state.yearId&&state.month)localStorage.setItem(sectionKey(name),locked?'1':'0');applySectionLock(name,locked)}
+
+
+function setSectionLocked(name,locked){
+
+ if(
+  state.schoolId &&
+  state.yearId &&
+  state.month
+ ){
+
+  localStorage.setItem(
+   sectionKey(name),
+   locked?'1':'0'
+  );
+
+ }
+
+ applySectionLock(
+  name,
+  locked
+ );
+
+}
+
+
+/* ENTRY TABLES */
 
 function renderEntryTables(){
- const gs=groups();
- let s='<table class="input-table"><thead><tr><th>ಆಹಾರ ಪದಾರ್ಥ</th>'+gs.map(g=>`<th>${g}</th>`).join('')+'<th>ಒಟ್ಟು</th></tr></thead><tbody>';
- ['ಅಕ್ಕಿ','ಬೇಳೆ','ಗೋಧಿ','ಎಣ್ಣೆ / ಉಪ್ಪು'].forEach(it=>{const real=it==='ಎಣ್ಣೆ / ಉಪ್ಪು'?'ಎಣ್ಣೆ':it;s+=`<tr><th>${it}</th>`;gs.forEach(g=>s+=applies(real,g)?`<td><input type="number" min="0" step="1" data-stu="${key(it,g)}"></td>`:'<td>—</td>');s+='<td class="stut">0</td></tr>'});s+='</tbody></table>';$('studentsEntry').innerHTML=s;
- let o='<table class="input-table"><thead><tr><th>Opening Balance</th>'+gs.map(g=>`<th>${g}</th>`).join('')+'<th>ಒಟ್ಟು</th></tr></thead><tbody>';
- items.forEach(it=>{o+=`<tr><th>${it}</th>`;gs.forEach(g=>o+=applies(it,g)?`<td><input type="number" min="0" step="0.001" data-open="${key(it,g)}"></td>`:'<td>—</td>');o+='<td class="opent">0</td></tr>'});o+='</tbody></table>';$('openingEntry').innerHTML=o;
- let q='<table class="input-table"><thead><tr><th>ದಿನಾಂಕ</th><th>ಆಹಾರ ಪದಾರ್ಥ</th><th>ಪ್ರಕಾರ</th>'+gs.map(g=>`<th>${g}</th>`).join('')+'<th>ಒಟ್ಟು</th><th>Action</th></tr></thead><tbody id="supplyRows"></tbody></table><button type="button" class="gray" id="addSupplyBtn">＋ Supply Row</button>';$('supplyEntry').innerHTML=q;
- addSupplyRow();$('addSupplyBtn').addEventListener('click',()=>addSupplyRow());
- document.querySelectorAll('[data-stu],[data-open]').forEach(x=>x.addEventListener('input',()=>{calcTotals();renderReport()}));
- applySectionLock('students',isSectionLocked('students'));applySectionLock('opening',isSectionLocked('opening'));applySectionLock('supply',isSectionLocked('supply'));
+
+ const gs=
+  groups();
+
+
+ /* STUDENTS */
+
+ let s=
+ '<table class="input-table">'+
+ '<thead><tr>'+
+ '<th>ಆಹಾರ ಪದಾರ್ಥ</th>'+
+ gs.map(
+  g=>`<th>${g}</th>`
+ ).join('')+
+ '<th>ಒಟ್ಟು</th>'+
+ '</tr></thead><tbody>';
+
+
+ [
+  'ಅಕ್ಕಿ',
+  'ಬೇಳೆ',
+  'ಗೋಧಿ',
+  'ಎಣ್ಣೆ / ಉಪ್ಪು'
+ ]
+ .forEach(it=>{
+
+  const real=
+   it==='ಎಣ್ಣೆ / ಉಪ್ಪು'
+    ?'ಎಣ್ಣೆ'
+    :it;
+
+  s+=
+   `<tr><th>${it}</th>`;
+
+  gs.forEach(g=>{
+
+   s+=
+    applies(real,g)
+    ?
+    `<td>
+      <input
+       type="number"
+       min="0"
+       step="1"
+       data-stu="${key(it,g)}">
+     </td>`
+    :
+    '<td>—</td>';
+
+  });
+
+  s+=
+   '<td class="stut">0</td></tr>';
+
+ });
+
+ s+='</tbody></table>';
+
+ $('studentsEntry').innerHTML=s;
+
+
+ /* OPENING */
+
+ let o=
+ '<table class="input-table">'+
+ '<thead><tr>'+
+ '<th>Opening Balance</th>'+
+ gs.map(
+  g=>`<th>${g}</th>`
+ ).join('')+
+ '<th>ಒಟ್ಟು</th>'+
+ '</tr></thead><tbody>';
+
+
+ items.forEach(it=>{
+
+  o+=
+   `<tr><th>${it}</th>`;
+
+  gs.forEach(g=>{
+
+   o+=
+    applies(it,g)
+    ?
+    `<td>
+      <input
+       type="number"
+       min="0"
+       step="0.001"
+       data-open="${key(it,g)}">
+     </td>`
+    :
+    '<td>—</td>';
+
+  });
+
+  o+=
+   '<td class="opent">0</td></tr>';
+
+ });
+
+ o+='</tbody></table>';
+
+ $('openingEntry').innerHTML=o;
+
+
+ /* SUPPLY */
+
+ let q=
+ '<table class="input-table">'+
+ '<thead><tr>'+
+ '<th>ದಿನಾಂಕ</th>'+
+ '<th>ಆಹಾರ ಪದಾರ್ಥ</th>'+
+ '<th>ಪ್ರಕಾರ</th>'+
+ gs.map(
+  g=>`<th>${g}</th>`
+ ).join('')+
+ '<th>ಒಟ್ಟು</th>'+
+ '<th>Action</th>'+
+ '</tr></thead>'+
+ '<tbody id="supplyRows"></tbody>'+
+ '</table>'+
+ '<button type="button" class="gray" id="addSupplyBtn">'+
+ '＋ Supply Row'+
+ '</button>';
+
+ $('supplyEntry').innerHTML=q;
+
+ addSupplyRow();
+
+ $('addSupplyBtn')
+  .addEventListener(
+   'click',
+   ()=>addSupplyRow()
+  );
+
+
+ document
+ .querySelectorAll(
+  '[data-stu],[data-open]'
+ )
+ .forEach(
+  x=>
+   x.addEventListener(
+    'input',
+    ()=>{
+     calcTotals();
+     renderReport();
+    }
+   )
+ );
+
+
+ applySectionLock(
+  'students',
+  isSectionLocked('students')
+ );
+
+ applySectionLock(
+  'opening',
+  isSectionLocked('opening')
+ );
+
+ applySectionLock(
+  'supply',
+  isSectionLocked('supply')
+ );
+
 }
+
+
 function calcTotals(){
- $('studentsEntry').querySelectorAll('tbody tr').forEach(tr=>{let t=0;tr.querySelectorAll('[data-stu]').forEach(i=>t+=num(i.value));tr.querySelector('.stut').textContent=fmt(t)});
- $('openingEntry').querySelectorAll('tbody tr').forEach(tr=>{let t=0;tr.querySelectorAll('[data-open]').forEach(i=>t+=num(i.value));tr.querySelector('.opent').textContent=fmt(t)})
+
+ $('studentsEntry')
+ .querySelectorAll('tbody tr')
+ .forEach(tr=>{
+
+  let t=0;
+
+  tr
+   .querySelectorAll('[data-stu]')
+   .forEach(
+    i=>t+=num(i.value)
+   );
+
+  tr
+   .querySelector('.stut')
+   .textContent=
+   fmt(t);
+
+ });
+
+
+ $('openingEntry')
+ .querySelectorAll('tbody tr')
+ .forEach(tr=>{
+
+  let t=0;
+
+  tr
+   .querySelectorAll('[data-open]')
+   .forEach(
+    i=>t+=num(i.value)
+   );
+
+  tr
+   .querySelector('.opent')
+   .textContent=
+   fmt(t);
+
+ });
+
 }
-function addSupplyRow(date='',item='ಅಕ್ಕಿ',type='ಸರಬರಾಜು',vals={}){
- const gs=groups(),tr=document.createElement('tr');
- tr.innerHTML=`<td><input type="date" class="sd" value="${esc(date)}"></td><td><select class="si">${items.map(i=>`<option ${i===item?'selected':''}>${i}</option>`).join('')}</select></td><td><select class="stp"><option ${type==='ಖರೀದಿ'?'selected':''}>ಖರೀದಿ</option><option ${type==='ಸರಬರಾಜು'?'selected':''}>ಸರಬರಾಜು</option></select></td>`+gs.map(g=>`<td>${applies(item,g)?`<input type="number" min="0" step="0.001" class="sg-${g}" value="${num(vals[g])||''}">`:'—'}</td>`).join('')+'<td class="st">0</td><td><button type="button" class="red supply-remove">×</button></td>';
- $('supplyRows').appendChild(tr);tr.querySelector('.supply-remove').addEventListener('click',()=>{tr.remove();renderReport()});
- tr.querySelector('.si').addEventListener('change',()=>{rebuildSupplyRowForItem(tr);renderReport()});
- tr.querySelectorAll('input,select').forEach(x=>x.addEventListener('input',renderReport));
- applySectionLock('supply',isSectionLocked('supply'));updateSupplyRowTotal(tr);
+
+
+/* SUPPLY ROW */
+
+function addSupplyRow(
+ date='',
+ item='ಅಕ್ಕಿ',
+ type='ಸರಬರಾಜು',
+ vals={}
+){
+
+ const gs=
+  groups();
+
+ const tr=
+  document.createElement('tr');
+
+ tr.innerHTML=
+  `<td>
+   <input
+    type="date"
+    class="sd"
+    value="${esc(date)}">
+  </td>
+
+  <td>
+   <select class="si">
+   ${
+    items
+    .map(
+     i=>
+      `<option ${
+       i===item?'selected':''
+      }>${i}</option>`
+    )
+    .join('')
+   }
+   </select>
+  </td>
+
+  <td>
+   <select class="stp">
+    <option ${
+     type==='ಖರೀದಿ'
+      ?'selected':''
+    }>ಖರೀದಿ</option>
+
+    <option ${
+     type==='ಸರಬರಾಜು'
+      ?'selected':''
+    }>ಸರಬರಾಜು</option>
+   </select>
+  </td>`+
+
+  gs
+  .map(
+   g=>
+   `<td>${
+    applies(item,g)
+    ?
+    `<input
+     type="number"
+     min="0"
+     step="0.001"
+     class="sg-${g}"
+     value="${num(vals[g])||''}">`
+    :
+    '—'
+   }</td>`
+  )
+  .join('')+
+
+  '<td class="st">0</td>'+
+  '<td>'+
+  '<button type="button" class="red supply-remove">×</button>'+
+  '</td>';
+
+
+ $('supplyRows')
+  .appendChild(tr);
+
+
+ tr
+ .querySelector('.supply-remove')
+ .addEventListener(
+  'click',
+  ()=>{
+   tr.remove();
+   renderReport();
+  }
+ );
+
+
+ tr
+ .querySelector('.si')
+ .addEventListener(
+  'change',
+  ()=>{
+   rebuildSupplyRowForItem(tr);
+   renderReport();
+  }
+ );
+
+
+ tr
+ .querySelectorAll('input,select')
+ .forEach(
+  x=>
+   x.addEventListener(
+    'input',
+    renderReport
+   )
+ );
+
+
+ applySectionLock(
+  'supply',
+  isSectionLocked('supply')
+ );
+
+ updateSupplyRowTotal(tr);
+
 }
+
+
 function rebuildSupplyRowForItem(tr){
- const item=tr.querySelector('.si').value,gs=groups();
- gs.forEach(g=>{const td=tr.querySelector('.sg-'+CSS.escape(g))?.parentElement;if(!td)return;if(applies(item,g)){if(!td.querySelector('input'))td.innerHTML=`<input type="number" min="0" step="0.001" class="sg-${g}">`}else td.textContent='—'});
- tr.querySelectorAll('input,select').forEach(x=>x.addEventListener('input',renderReport));updateSupplyRowTotal(tr);
+
+ const item=
+  tr.querySelector('.si').value;
+
+ const gs=
+  groups();
+
+ gs.forEach(g=>{
+
+  const td=
+   tr
+   .querySelector(
+    '.sg-'+CSS.escape(g)
+   )
+   ?.parentElement;
+
+  if(!td)
+   return;
+
+  if(applies(item,g)){
+
+   if(!td.querySelector('input')){
+
+    td.innerHTML=
+     `<input
+      type="number"
+      min="0"
+      step="0.001"
+      class="sg-${g}">`;
+
+   }
+
+  }else{
+
+   td.textContent='—';
+
+  }
+
+ });
+
+ tr
+ .querySelectorAll('input,select')
+ .forEach(
+  x=>
+   x.addEventListener(
+    'input',
+    renderReport
+   )
+ );
+
+ updateSupplyRowTotal(tr);
+
 }
-function updateSupplyRowTotal(tr){let t=0;groups().forEach(g=>t+=num(tr.querySelector('.sg-'+CSS.escape(g))?.value));const c=tr.querySelector('.st');if(c)c.textContent=fmt(t)}
+
+
+function updateSupplyRowTotal(tr){
+
+ let t=0;
+
+ groups().forEach(g=>
+  t+=num(
+   tr
+   .querySelector(
+    '.sg-'+CSS.escape(g)
+   )?.value
+  )
+ );
+
+ const c=
+  tr.querySelector('.st');
+
+ if(c)
+  c.textContent=
+   fmt(t);
+
+}
+
+
 function readInputs(){
- state.students={};document.querySelectorAll('[data-stu]').forEach(i=>{state.students[i.dataset.stu]=num(i.value)});
- state.opening={};document.querySelectorAll('[data-open]').forEach(i=>{state.opening[i.dataset.open]=num(i.value)});
- state.supplies=[...document.querySelectorAll('#supplyRows tr')].map(tr=>{const vals={};groups().forEach(g=>vals[g]=num(tr.querySelector('.sg-'+CSS.escape(g))?.value));return {date:tr.querySelector('.sd')?.value||'',item:tr.querySelector('.si')?.value||'',type:tr.querySelector('.stp')?.value||'ಸರಬರಾಜು',vals}}).filter(x=>x.date&&x.item);
+
+ state.students={};
+
+ document
+ .querySelectorAll('[data-stu]')
+ .forEach(
+  i=>
+   state.students[i.dataset.stu]
+   =
+   num(i.value)
+ );
+
+
+ state.opening={};
+
+ document
+ .querySelectorAll('[data-open]')
+ .forEach(
+  i=>
+   state.opening[i.dataset.open]
+   =
+   num(i.value)
+ );
+
+
+ state.supplies=
+  [...document.querySelectorAll(
+   '#supplyRows tr'
+  )]
+  .map(tr=>{
+
+   const vals={};
+
+   groups().forEach(
+    g=>
+     vals[g]=num(
+      tr.querySelector(
+       '.sg-'+CSS.escape(g)
+      )?.value
+     )
+   );
+
+   return {
+    date:
+     tr.querySelector('.sd')
+      ?.value||'',
+
+    item:
+     tr.querySelector('.si')
+      ?.value||'',
+
+    type:
+     tr.querySelector('.stp')
+      ?.value||'ಸರಬರಾಜು',
+
+    vals
+   };
+
+  })
+  .filter(
+   x=>x.date&&x.item
+  );
+
 }
+
+
+/* CALCULATION SETTINGS */
 
 function calcUse(it,g){
- const studentKey=(it==='ಎಣ್ಣೆ'||it==='ಉಪ್ಪು')?key('ಎಣ್ಣೆ / ಉಪ್ಪು',g):key(it,g);
- const rateKeyCandidates=[`${g}|${it}`,`${state.group}|${it}`,`${g==='9-10'?'9-10':g}|${it}`];
- let rate=0;for(const k of rateKeyCandidates){if(state.calc[k]!==undefined){rate=num(state.calc[k]);break}}
- return num(state.students[studentKey])*rate;
-}
-function supplyTotal(it,g,type){return state.supplies.filter(x=>x.item===it&&(type?x.type===type:true)).reduce((a,x)=>a+num(x.vals[g]),0)}
-function currentOpening(it,g){return num(state.opening[key(it,g)])}
 
-async function getClosingForMonth(month,year){
- if(!state.yearId||month<1)return {};
- const result={};
- const gs=groups();
- const prev=prevMonthYear(month,year);
- // previous month opening
- const names=[];for(const it of items)for(const g of gs)if(applies(it,g))names.push(`__UC_FG_OPENING__|${month}|${state.group}|${it}|${g}`);
- // Current month closing is based on current month opening, purchase/supply and UC students.
- // For the report's first row we query the previous month's saved opening and supply/student data.
- const op={};
- const q=await db.from('food_stock_opening_balances').select('item_name,opening_balance').eq('school_id',state.schoolId).eq('academic_year_id',state.yearId).like('item_name','__UC_FG_OPENING__|%');
- if(q.error)throw q.error;(q.data||[]).forEach(r=>{const p=String(r.item_name).split('|');if(p[1]===String(prev.month)&&p[2]===state.group)op[key(p[3],p[4])]=num(r.opening_balance)});
- const rq=await db.from('food_stock_receipts').select('item_name,quantity,receipt_date').eq('school_id',state.schoolId).eq('academic_year_id',state.yearId).like('item_name','__UC_FG_SUPPLY__|%');
- if(rq.error)throw rq.error;
- const supplies=[];(rq.data||[]).forEach(r=>{const p=String(r.item_name).split('|');if(p[1]===String(prev.month)&&p[2]===state.group)supplies.push({item:p[3],group:p[4],type:p[5]||'ಸರಬರಾಜು',qty:num(r.quantity)})});
- const saved=localStorage.getItem(`uc_fg_students|${state.schoolId}|${state.yearId}|${prev.month}|${state.group}`);let stu={};if(saved)try{stu=JSON.parse(saved)||{}}catch(e){}
- for(const it of items)for(const g of gs)if(applies(it,g)){
-   const sk=(it==='ಎಣ್ಣೆ'||it==='ಉಪ್ಪು')?key('ಎಣ್ಣೆ / ಉಪ್ಪು',g):key(it,g);
-   const rate=num(state.calc[`${g}|${it}`]??state.calc[`${state.group}|${it}`]??0);
-   const use=num(stu[sk])*rate;
-   const sup=supplies.filter(x=>x.item===it&&x.group===g).reduce((a,x)=>a+x.qty,0);
-   result[key(it,g)]=num(op[key(it,g)])+sup-use;
+ const studentKey=
+  (it==='ಎಣ್ಣೆ'||it==='ಉಪ್ಪು')
+  ?
+  key('ಎಣ್ಣೆ / ಉಪ್ಪು',g)
+  :
+  key(it,g);
+
+
+ const rateKeyCandidates=[
+  `${g}|${it}`,
+  `${state.group}|${it}`,
+  `${g==='9-10'?'9-10':g}|${it}`
+ ];
+
+
+ let rate=0;
+
+ for(
+  const k of rateKeyCandidates
+ ){
+
+  if(
+   state.calc[k]!==undefined
+  ){
+
+   rate=
+    num(state.calc[k]);
+
+   break;
+
+  }
+
  }
- return result;
+
+ return num(
+  state.students[studentKey]
+ )*rate;
+
 }
+
+
+function supplyTotal(it,g,type){
+
+ return state.supplies
+  .filter(
+   x=>
+    x.item===it &&
+    (
+     type
+     ?x.type===type
+     :true
+    )
+  )
+  .reduce(
+   (a,x)=>
+    a+num(x.vals[g]),
+   0
+  );
+
+}
+
+
+function currentOpening(it,g){
+
+ return num(
+  state.opening[key(it,g)]
+ );
+
+}
+
+
+/* PREVIOUS CLOSING */
+
+async function getClosingForMonth(
+ month,
+ year
+){
+
+ if(
+  !state.yearId||
+  month<1
+ )
+  return {};
+
+
+ const result={};
+
+ const gs=
+  groups();
+
+ const prev=
+  prevMonthYear(
+   month,
+   year
+  );
+
+
+ const op={};
+
+
+ const q=
+  await db
+  .from('food_stock_opening_balances')
+  .select(
+   'item_name,opening_balance'
+  )
+  .eq(
+   'school_id',
+   state.schoolId
+  )
+  .eq(
+   'academic_year_id',
+   state.yearId
+  )
+  .like(
+   'item_name',
+   '__UC_FG_OPENING__|%'
+  );
+
+ if(q.error)
+  throw q.error;
+
+
+ (q.data||[])
+ .forEach(r=>{
+
+  const p=
+   String(r.item_name)
+   .split('|');
+
+  if(
+   p[1]===String(prev.month) &&
+   p[2]===state.group
+  ){
+
+   op[
+    key(p[3],p[4])
+   ]=
+    num(r.opening_balance);
+
+  }
+
+ });
+
+
+ const rq=
+  await db
+  .from('food_stock_receipts')
+  .select(
+   'item_name,quantity,receipt_date'
+  )
+  .eq(
+   'school_id',
+   state.schoolId
+  )
+  .eq(
+   'academic_year_id',
+   state.yearId
+  )
+  .like(
+   'item_name',
+   '__UC_FG_SUPPLY__|%'
+  );
+
+ if(rq.error)
+  throw rq.error;
+
+
+ const supplies=[];
+
+
+ (rq.data||[])
+ .forEach(r=>{
+
+  const p=
+   String(r.item_name)
+   .split('|');
+
+  if(
+   p[1]===String(prev.month) &&
+   p[2]===state.group
+  ){
+
+   supplies.push({
+    item:p[3],
+    group:p[4],
+    type:p[5]||'ಸರಬರಾಜು',
+    qty:num(r.quantity)
+   });
+
+  }
+
+ });
+
+
+ const saved=
+  localStorage.getItem(
+   `uc_fg_students|${state.schoolId}|${state.yearId}|${prev.month}|${state.group}`
+  );
+
+
+ let stu={};
+
+ if(saved){
+
+  try{
+   stu=JSON.parse(saved)||{};
+  }catch(e){
+   stu={};
+  }
+
+ }
+
+
+ for(
+  const it of items
+ )
+ for(
+  const g of gs
+ )
+ if(applies(it,g)){
+
+  const sk=
+   (it==='ಎಣ್ಣೆ'||it==='ಉಪ್ಪು')
+   ?
+   key('ಎಣ್ಣೆ / ಉಪ್ಪು',g)
+   :
+   key(it,g);
+
+
+  const rate=
+   num(
+    state.calc[
+     `${g}|${it}`
+    ]
+    ??
+    state.calc[
+     `${state.group}|${it}`
+    ]
+    ??
+    0
+   );
+
+
+  const use=
+   num(stu[sk])*rate;
+
+
+  const sup=
+   supplies
+   .filter(
+    x=>
+     x.item===it &&
+     x.group===g
+   )
+   .reduce(
+    (a,x)=>
+     a+x.qty,
+    0
+   );
+
+
+  result[
+   key(it,g)
+  ]=
+   num(
+    op[key(it,g)]
+   )
+   +
+   sup
+   -
+   use;
+
+ }
+
+ return result;
+
+}
+
+
+/* PREVIOUS MONTH EXISTS */
+
+async function previousMonthHasData(
+ month,
+ year
+){
+
+ if(month<=1)
+  return false;
+
+ const prev=
+  prevMonthYear(
+   month,
+   year
+  );
+
+
+ const saved=
+  localStorage.getItem(
+   `uc_fg_students|${state.schoolId}|${state.yearId}|${prev.month}|${state.group}`
+  );
+
+ if(saved)
+  return true;
+
+
+ const oq=
+  await db
+  .from('food_stock_opening_balances')
+  .select('id')
+  .eq(
+   'school_id',
+   state.schoolId
+  )
+  .eq(
+   'academic_year_id',
+   state.yearId
+  )
+  .like(
+   'item_name',
+   `__UC_FG_OPENING__|${prev.month}|${state.group}|%`
+  )
+  .limit(1);
+
+ if(oq.error)
+  throw oq.error;
+
+ if((oq.data||[]).length)
+  return true;
+
+
+ const rq=
+  await db
+  .from('food_stock_receipts')
+  .select('id')
+  .eq(
+   'school_id',
+   state.schoolId
+  )
+  .eq(
+   'academic_year_id',
+   state.yearId
+  )
+  .like(
+   'item_name',
+   `__UC_FG_SUPPLY__|${prev.month}|${state.group}|%`
+  )
+  .limit(1);
+
+ if(rq.error)
+  throw rq.error;
+
+ return (rq.data||[]).length>0;
+
+}
+
+
+/* SCHOOL WORKING DAYS */
 
 async function getSchoolWorkingDays(){
- const y=yearNumber(state.yearName),m=state.month;if(!y||!m)return 0;
- const {start,end}=monthDateRange(y,m);const total=daysInMonth(y,m);
- const {data,error}=await db.from('school_holidays').select('holiday_date').eq('school_id',state.schoolId).eq('academic_year_id',state.yearId).gte('holiday_date',start).lte('holiday_date',end);
- if(error)throw error;
- const unique=new Set((data||[]).map(r=>String(r.holiday_date).slice(0,10)));
- return Math.max(0,total-unique.size);
+
+ const y=
+  yearNumber(state.yearName);
+
+ const m=
+  state.month;
+
+ if(!y||!m)
+  return 0;
+
+
+ const {
+  start,
+  end
+ }=
+ monthDateRange(y,m);
+
+
+ const total=
+  daysInMonth(y,m);
+
+
+ const {
+  data,
+  error
+ }=
+ await db
+ .from('school_holidays')
+ .select('holiday_date')
+ .eq(
+  'school_id',
+  state.schoolId
+ )
+ .eq(
+  'academic_year_id',
+  state.yearId
+ )
+ .gte(
+  'holiday_date',
+  start
+ )
+ .lte(
+  'holiday_date',
+  end
+ );
+
+
+ if(error)
+  throw error;
+
+
+ const unique=
+  new Set(
+   (data||[])
+   .map(
+    r=>
+     String(
+      r.holiday_date
+     ).slice(0,10)
+   )
+  );
+
+
+ return Math.max(
+  0,
+  total-unique.size
+ );
+
 }
+
+
+/* CALCULATION */
 
 async function loadCalc(){
+
  state.calc={};
- const {data,error}=await db.from('calculation_settings').select('class_group,item_name,quantity_per_student,is_enabled').eq('school_id',state.schoolId).eq('academic_year_id',state.yearId);
- if(error)throw error;(data||[]).forEach(r=>{if(r.is_enabled!==false)state.calc[`${String(r.class_group).trim()}|${String(r.item_name).trim()}`]=num(r.quantity_per_student)});
- const w=await db.from('wheat_rate_settings').select('*').eq('school_id',state.schoolId).eq('academic_year_id',state.yearId);if(w.error)throw w.error;(w.data||[]).forEach(r=>{const g=String(r.class_group||'').trim();state.calc[`${g}|ಗೋಧಿ`]=num(r.quantity_per_student??r.rate??r.amount)});
+
+
+ const {
+  data,
+  error
+ }=
+ await db
+ .from('calculation_settings')
+ .select(
+  'class_group,item_name,quantity_per_student,is_enabled'
+ )
+ .eq(
+  'school_id',
+  state.schoolId
+ )
+ .eq(
+  'academic_year_id',
+  state.yearId
+ );
+
+
+ if(error)
+  throw error;
+
+
+ (data||[])
+ .forEach(r=>{
+
+  if(r.is_enabled!==false){
+
+   state.calc[
+    `${String(r.class_group).trim()}|${String(r.item_name).trim()}`
+   ]=
+   num(
+    r.quantity_per_student
+   );
+
+  }
+
+ });
+
+
+ const w=
+  await db
+  .from('wheat_rate_settings')
+  .select('*')
+  .eq(
+   'school_id',
+   state.schoolId
+  )
+  .eq(
+   'academic_year_id',
+   state.yearId
+  );
+
+
+ if(w.error)
+  throw w.error;
+
+
+ (w.data||[])
+ .forEach(r=>{
+
+  const g=
+   String(
+    r.class_group||''
+   ).trim();
+
+  state.calc[
+   `${g}|ಗೋಧಿ`
+  ]=
+   num(
+    r.quantity_per_student
+    ??
+    r.rate
+    ??
+    r.amount
+   );
+
+ });
+
 }
+
+
+/* STUDENTS NUMBER SOURCE FOR LOWER TABLE */
 
 async function loadStudentsSource(){
- state.schoolCounts={8:0,9:0,10:0};
- const {data,error}=await db.from('student_numbers').select('class_number,total_students').eq('school_id',state.schoolId).eq('academic_year_id',state.yearId).eq('month_number',state.month).eq('division_name','ALL').in('class_number',[8,9,10]);
- if(error)throw error;(data||[]).forEach(r=>state.schoolCounts[Number(r.class_number)]=num(r.total_students));
+
+ state.schoolCounts={
+  8:0,
+  9:0,
+  10:0
+ };
+
+
+ const {
+  data,
+  error
+ }=
+ await db
+ .from('student_numbers')
+ .select(
+  'class_number,total_students'
+ )
+ .eq(
+  'school_id',
+  state.schoolId
+ )
+ .eq(
+  'academic_year_id',
+  state.yearId
+ )
+ .eq(
+  'month_number',
+  state.month
+ )
+ .eq(
+  'division_name',
+  'ALL'
+ )
+ .in(
+  'class_number',
+  [8,9,10]
+ );
+
+
+ if(error)
+  throw error;
+
+
+ (data||[])
+ .forEach(r=>{
+
+  state.schoolCounts[
+   Number(r.class_number)
+  ]=
+   num(r.total_students);
+
+ });
+
 }
+
+
+/* UC STUDENTS */
+
 async function loadStudentsUC(){
+
  state.students={};
- const saved=localStorage.getItem(`uc_fg_students|${state.schoolId}|${state.yearId}|${state.month}|${state.group}`);
- if(saved){try{state.students=JSON.parse(saved)||{}}catch(e){state.students={}}}
- document.querySelectorAll('[data-stu]').forEach(i=>{i.value=state.students[i.dataset.stu]??''});
- calcTotals();setSectionLocked('students',!!saved);
-}
-async function loadOpening(){
- state.opening={};
- const {data,error}=await db.from('food_stock_opening_balances').select('item_name,opening_balance').eq('school_id',state.schoolId).eq('academic_year_id',state.yearId).like('item_name','__UC_FG_OPENING__|%');
- if(error)throw error;
- (data||[]).forEach(r=>{const p=String(r.item_name).split('|');if(p[1]===String(state.month)&&p[2]===state.group)state.opening[key(p[3],p[4])]=num(r.opening_balance)});
- let has=(data||[]).some(r=>{const p=String(r.item_name).split('|');return p[1]===String(state.month)&&p[2]===state.group});
- if(!has){
+
+ const saved=
+  localStorage.getItem(
+   `uc_fg_students|${state.schoolId}|${state.yearId}|${state.month}|${state.group}`
+  );
+
+
+ if(saved){
+
   try{
-   const y=yearNumber(state.yearName),prevClosing=await getClosingForMonth(state.month,y);
-   for(const it of items)for(const g of groups())if(applies(it,g))state.opening[key(it,g)]=num(prevClosing[key(it,g)]);
-  }catch(e){console.warn('Previous closing default failed:',e.message)}
+   state.students=
+    JSON.parse(saved)||{};
+  }catch(e){
+   state.students={};
+  }
+
  }
- document.querySelectorAll('[data-open]').forEach(i=>{i.value=state.opening[i.dataset.open]??''});calcTotals();setSectionLocked('opening',has);
+
+
+ document
+ .querySelectorAll('[data-stu]')
+ .forEach(
+  i=>
+   i.value=
+    state.students[
+     i.dataset.stu
+    ]??''
+ );
+
+
+ calcTotals();
+
+ setSectionLocked(
+  'students',
+  !!saved
+ );
+
 }
+
+
+/* OPENING */
+
+async function loadOpening(){
+
+ state.opening={};
+ state.openingAutoLocked=false;
+
+
+ const {
+  data,
+  error
+ }=
+ await db
+ .from('food_stock_opening_balances')
+ .select(
+  'item_name,opening_balance'
+ )
+ .eq(
+  'school_id',
+  state.schoolId
+ )
+ .eq(
+  'academic_year_id',
+  state.yearId
+ )
+ .like(
+  'item_name',
+  '__UC_FG_OPENING__|%'
+ );
+
+
+ if(error)
+  throw error;
+
+
+ (data||[])
+ .forEach(r=>{
+
+  const p=
+   String(r.item_name)
+   .split('|');
+
+
+  if(
+   p[1]===String(state.month) &&
+   p[2]===state.group
+  ){
+
+   state.opening[
+    key(p[3],p[4])
+   ]=
+    num(r.opening_balance);
+
+  }
+
+ });
+
+
+ const has=
+  (data||[])
+  .some(r=>{
+
+   const p=
+    String(r.item_name)
+    .split('|');
+
+   return(
+    p[1]===String(state.month) &&
+    p[2]===state.group
+   );
+
+  });
+
+
+ let autoLocked=false;
+
+
+ /*
+  FIRST MONTH:
+  manually entered Opening Balance.
+
+  NEXT MONTH:
+  previous month's closing becomes
+  current month's opening and is locked.
+ */
+
+ if(
+  !has &&
+  state.month>1
+ ){
+
+  try{
+
+   const y=
+    yearNumber(
+     state.yearName
+    );
+
+   const prevClosing=
+    await getClosingForMonth(
+     state.month,
+     y
+    );
+
+   const hasPrev=
+    await previousMonthHasData(
+     state.month,
+     y
+    );
+
+
+   for(
+    const it of items
+   )
+   for(
+    const g of groups()
+   )
+   if(applies(it,g)){
+
+    state.opening[
+     key(it,g)
+    ]=
+     num(
+      prevClosing[
+       key(it,g)
+      ]
+     );
+
+   }
+
+
+   autoLocked=
+    hasPrev;
+
+  }catch(e){
+
+   console.warn(
+    'Previous closing default failed:',
+    e.message
+   );
+
+  }
+
+ }
+
+
+ state.openingAutoLocked=
+  autoLocked;
+
+
+ document
+ .querySelectorAll('[data-open]')
+ .forEach(
+  i=>
+   i.value=
+    state.opening[
+     i.dataset.open
+    ]??''
+ );
+
+
+ calcTotals();
+
+
+ setSectionLocked(
+  'opening',
+  has||autoLocked
+ );
+
+}
+
+
+/* SUPPLY */
+
 async function loadSupply(){
- const {data,error}=await db.from('food_stock_receipts').select('item_name,receipt_date,quantity').eq('school_id',state.schoolId).eq('academic_year_id',state.yearId).like('item_name','__UC_FG_SUPPLY__|%').order('receipt_date',{ascending:true});
- if(error)throw error;
- const rows=(data||[]).map(r=>{const p=String(r.item_name).split('|');return {month:p[1],group:p[2],item:p[3],g:p[4],type:p[5]||'ಸರಬರಾಜು',date:p[6]||r.receipt_date,qty:num(r.quantity)}}).filter(x=>x.month===String(state.month)&&x.group===state.group);
+
+ const {
+  data,
+  error
+ }=
+ await db
+ .from('food_stock_receipts')
+ .select(
+  'item_name,receipt_date,quantity'
+ )
+ .eq(
+  'school_id',
+  state.schoolId
+ )
+ .eq(
+  'academic_year_id',
+  state.yearId
+ )
+ .like(
+  'item_name',
+  '__UC_FG_SUPPLY__|%'
+ )
+ .order(
+  'receipt_date',
+  {
+   ascending:true
+  }
+ );
+
+
+ if(error)
+  throw error;
+
+
+ const rows=
+  (data||[])
+  .map(r=>{
+
+   const p=
+    String(r.item_name)
+    .split('|');
+
+   return{
+    month:p[1],
+    group:p[2],
+    item:p[3],
+    g:p[4],
+    type:p[5]||'ಸರಬರಾಜು',
+    date:p[6]||r.receipt_date,
+    qty:num(r.quantity)
+   };
+
+  })
+  .filter(
+   x=>
+    x.month===String(state.month) &&
+    x.group===state.group
+  );
+
+
  $('supplyRows').innerHTML='';
- if(!rows.length){addSupplyRow();setSectionLocked('supply',false);return}
- const grouped={};rows.forEach(r=>{const id=`${r.date}|${r.item}|${r.type}`;if(!grouped[id])grouped[id]={date:r.date,item:r.item,type:r.type,vals:{}};grouped[id].vals[r.g]=r.qty});
- Object.values(grouped).forEach(r=>addSupplyRow(r.date,r.item,r.type,r.vals));setSectionLocked('supply',true);renderReport();
+
+
+ if(!rows.length){
+
+  addSupplyRow();
+
+  setSectionLocked(
+   'supply',
+   false
+  );
+
+  return;
+
+ }
+
+
+ const grouped={};
+
+
+ rows.forEach(r=>{
+
+  const id=
+   `${r.date}|${r.item}|${r.type}`;
+
+  if(!grouped[id]){
+
+   grouped[id]={
+    date:r.date,
+    item:r.item,
+    type:r.type,
+    vals:{}
+   };
+
+  }
+
+  grouped[id].vals[r.g]=
+   r.qty;
+
+ });
+
+
+ Object
+ .values(grouped)
+ .forEach(
+  r=>
+   addSupplyRow(
+    r.date,
+    r.item,
+    r.type,
+    r.vals
+   )
+ );
+
+
+ setSectionLocked(
+  'supply',
+  true
+ );
+
+ renderReport();
+
 }
+
+
+/* LOAD */
 
 async function loadAll(){
- state.yearId=$('academicYear').value;state.yearName=$('academicYear').selectedOptions[0]?.textContent||'';state.month=num($('month').value);state.group=$('classGroup').value;
- if(!state.yearId||!state.month){setMsg('Academic Year ಮತ್ತು Month ಕಡ್ಡಾಯ.');return}
+
+ state.yearId=
+  $('academicYear').value;
+
+ state.yearName=
+  $('academicYear')
+  .selectedOptions[0]
+  ?.textContent||'';
+
+ state.month=
+  num(
+   $('month').value
+  );
+
+ state.group=
+  $('classGroup').value;
+
+
+ if(
+  !state.yearId||
+  !state.month
+ ){
+
+  setMsg(
+   'Academic Year ಮತ್ತು Month ಕಡ್ಡಾಯ.'
+  );
+
+  return;
+
+ }
+
+
  try{
-  renderEntryTables();await loadCalc();await loadStudentsSource();await loadStudentsUC();await loadOpening();await loadSupply();state.schoolDays=await getSchoolWorkingDays();renderReport();setMsg('ಮಾಹಿತಿ Loaded.','ok');
- }catch(e){console.error(e);setMsg('Load failed: '+(e.message||e))}
+
+  renderEntryTables();
+
+  await loadCalc();
+
+  await loadStudentsSource();
+
+  await loadStudentsUC();
+
+  await loadOpening();
+
+  await loadSupply();
+
+  state.schoolDays=
+   await getSchoolWorkingDays();
+
+  renderReport();
+
+  setMsg(
+   'ಮಾಹಿತಿ Loaded.',
+   true
+  );
+
+ }catch(e){
+
+  console.error(e);
+
+  setMsg(
+   'Load failed: '+
+   (e.message||e)
+  );
+
+ }
+
 }
-function openName(it,g){return `__UC_FG_OPENING__|${state.month}|${state.group}|${it}|${g}`}
+
+
+function openName(it,g){
+
+ return(
+  `__UC_FG_OPENING__|${state.month}|${state.group}|${it}|${g}`
+ );
+
+}
+
+
+/* SAVE STUDENTS */
 
 async function saveStudents(){
- state.yearId=$('academicYear').value;state.yearName=$('academicYear').selectedOptions[0]?.textContent||'';state.month=num($('month').value);state.group=$('classGroup').value;if(!state.yearId||!state.month){setMsg('Academic Year ಮತ್ತು Month ಕಡ್ಡಾಯ.');return}
- readInputs();try{localStorage.setItem(`uc_fg_students|${state.schoolId}|${state.yearId}|${state.month}|${state.group}`,JSON.stringify(state.students));setSectionLocked('students',true);setMsg('Students Numbers Save ಆಯಿತು.','ok');renderReport()}catch(e){console.error(e);setMsg('Students Numbers Save failed: '+(e.message||e))}
-}
-async function saveOpening(){
- state.yearId=$('academicYear').value;state.yearName=$('academicYear').selectedOptions[0]?.textContent||'';state.month=num($('month').value);state.group=$('classGroup').value;if(!state.yearId||!state.month){setMsg('Academic Year ಮತ್ತು Month ಕಡ್ಡಾಯ.');return}readInputs();
- try{for(const it of items)for(const g of groups()){if(!applies(it,g))continue;const name=openName(it,g);const payload={school_id:state.schoolId,academic_year_id:state.yearId,item_type:'item',item_name:name,opening_balance:num(state.opening[key(it,g)]),unit:it==='ಎಣ್ಣೆ'?'Gram':'KG',updated_at:new Date().toISOString()};const ex=await db.from('food_stock_opening_balances').select('id').eq('school_id',state.schoolId).eq('academic_year_id',state.yearId).eq('item_name',name).maybeSingle();if(ex.error)throw ex.error;const r=ex.data?await db.from('food_stock_opening_balances').update(payload).eq('id',ex.data.id):await db.from('food_stock_opening_balances').insert(payload);if(r.error)throw r.error}setSectionLocked('opening',true);setMsg('Opening Balance Save ಆಯಿತು.','ok');renderReport()}catch(e){console.error(e);setMsg('Opening Balance Save failed: '+(e.message||e))}
-}
-async function saveSupply(){
- state.yearId=$('academicYear').value;state.yearName=$('academicYear').selectedOptions[0]?.textContent||'';state.month=num($('month').value);state.group=$('classGroup').value;if(!state.yearId||!state.month){setMsg('Academic Year ಮತ್ತು Month ಕಡ್ಡಾಯ.');return}readInputs();
+
+ state.yearId=
+  $('academicYear').value;
+
+ state.yearName=
+  $('academicYear')
+  .selectedOptions[0]
+  ?.textContent||'';
+
+ state.month=
+  num($('month').value);
+
+ state.group=
+  $('classGroup').value;
+
+
+ if(
+  !state.yearId||
+  !state.month
+ ){
+
+  setMsg(
+   'Academic Year ಮತ್ತು Month ಕಡ್ಡಾಯ.'
+  );
+
+  return;
+
+ }
+
+
+ readInputs();
+
+
  try{
-  const old=await db.from('food_stock_receipts').select('id,item_name').eq('school_id',state.schoolId).eq('academic_year_id',state.yearId).like('item_name','__UC_FG_SUPPLY__|%');if(old.error)throw old.error;
-  const del=(old.data||[]).filter(r=>{const p=String(r.item_name).split('|');return p[1]===String(state.month)&&p[2]===state.group}).map(r=>r.id);if(del.length){const d=await db.from('food_stock_receipts').delete().in('id',del);if(d.error)throw d.error}
-  for(const s of state.supplies)for(const g of groups()){if(!applies(s.item,g))continue;const q=num(s.vals[g]);if(q<=0)continue;const name=`__UC_FG_SUPPLY__|${state.month}|${state.group}|${s.item}|${g}|${s.type}|${s.date}`;const payload={school_id:state.schoolId,academic_year_id:state.yearId,item_type:'item',item_name:name,receipt_date:s.date,quantity:q,unit:s.item==='ಎಣ್ಣೆ'?'Gram':'KG',updated_at:new Date().toISOString()};const r=await db.from('food_stock_receipts').insert(payload);if(r.error)throw r.error}
-  setSectionLocked('supply',true);setMsg('UC Supply Save ಆಯಿತು.','ok');renderReport();
- }catch(e){console.error(e);setMsg('UC Supply Save failed: '+(e.message||e))}
+
+  localStorage.setItem(
+   `uc_fg_students|${state.schoolId}|${state.yearId}|${state.month}|${state.group}`,
+   JSON.stringify(state.students)
+  );
+
+
+  setSectionLocked(
+   'students',
+   true
+  );
+
+
+  setMsg(
+   'Students Numbers Save ಆಯಿತು.',
+   true
+  );
+
+
+  renderReport();
+
+ }catch(e){
+
+  console.error(e);
+
+  setMsg(
+   'Students Numbers Save failed: '+
+   (e.message||e)
+  );
+
+ }
+
 }
-function editStudents(){setSectionLocked('students',false);setMsg('Students Numbers Edit mode. ಬದಲಾವಣೆ ಮಾಡಿ Save ಒತ್ತಿ.','ok')}
-function editOpening(){setSectionLocked('opening',false);setMsg('Opening Balance Edit mode. ಬದಲಾವಣೆ ಮಾಡಿ Save ಒತ್ತಿ.','ok')}
-function editSupply(){setSectionLocked('supply',false);setMsg('UC Supply Edit mode. ಬದಲಾವಣೆ ಮಾಡಿ Save ಒತ್ತಿ.','ok')}
+
+
+/* SAVE OPENING */
+
+async function saveOpening(){
+
+ state.yearId=
+  $('academicYear').value;
+
+ state.yearName=
+  $('academicYear')
+  .selectedOptions[0]
+  ?.textContent||'';
+
+ state.month=
+  num($('month').value);
+
+ state.group=
+  $('classGroup').value;
+
+
+ if(
+  !state.yearId||
+  !state.month
+ ){
+
+  setMsg(
+   'Academic Year ಮತ್ತು Month ಕಡ್ಡಾಯ.'
+  );
+
+  return;
+
+ }
+
+
+ /*
+  Next month opening is automatic
+  and locked.
+ */
+
+ if(state.openingAutoLocked){
+
+  setMsg(
+   'ಈ ತಿಂಗಳ Opening Balance ಹಿಂದಿನ ತಿಂಗಳ Closingನಿಂದ ಬಂದಿದೆ. ಇದು Lock ಆಗಿದೆ.',
+   true
+  );
+
+  return;
+
+ }
+
+
+ readInputs();
+
+
+ try{
+
+  for(
+   const it of items
+  )
+  for(
+   const g of groups()
+  ){
+
+   if(!applies(it,g))
+    continue;
+
+
+   const name=
+    openName(it,g);
+
+
+   const payload={
+
+    school_id:
+     state.schoolId,
+
+    academic_year_id:
+     state.yearId,
+
+    item_type:
+     'item',
+
+    item_name:
+     name,
+
+    opening_balance:
+     num(
+      state.opening[
+       key(it,g)
+      ]
+     ),
+
+    unit:
+     it==='ಎಣ್ಣೆ'
+      ?'Gram'
+      :'KG',
+
+    updated_at:
+     new Date().toISOString()
+
+   };
+
+
+   const ex=
+    await db
+    .from(
+     'food_stock_opening_balances'
+    )
+    .select('id')
+    .eq(
+     'school_id',
+     state.schoolId
+    )
+    .eq(
+     'academic_year_id',
+     state.yearId
+    )
+    .eq(
+     'item_name',
+     name
+    )
+    .maybeSingle();
+
+
+   if(ex.error)
+    throw ex.error;
+
+
+   const r=
+    ex.data
+    ?
+    await db
+    .from(
+     'food_stock_opening_balances'
+    )
+    .update(payload)
+    .eq(
+     'id',
+     ex.data.id
+    )
+    :
+    await db
+    .from(
+     'food_stock_opening_balances'
+    )
+    .insert(payload);
+
+
+   if(r.error)
+    throw r.error;
+
+  }
+
+
+  setSectionLocked(
+   'opening',
+   true
+  );
+
+
+  setMsg(
+   'Opening Balance Save ಆಯಿತು.',
+   true
+  );
+
+
+  renderReport();
+
+
+ }catch(e){
+
+  console.error(e);
+
+  setMsg(
+   'Opening Balance Save failed: '+
+   (e.message||e)
+  );
+
+ }
+
+}
+
+
+/* SAVE SUPPLY */
+
+async function saveSupply(){
+
+ state.yearId=
+  $('academicYear').value;
+
+ state.yearName=
+  $('academicYear')
+  .selectedOptions[0]
+  ?.textContent||'';
+
+ state.month=
+  num($('month').value);
+
+ state.group=
+  $('classGroup').value;
+
+
+ if(
+  !state.yearId||
+  !state.month
+ ){
+
+  setMsg(
+   'Academic Year ಮತ್ತು Month ಕಡ್ಡಾಯ.'
+  );
+
+  return;
+
+ }
+
+
+ readInputs();
+
+
+ try{
+
+  const old=
+   await db
+   .from('food_stock_receipts')
+   .select(
+    'id,item_name'
+   )
+   .eq(
+    'school_id',
+    state.schoolId
+   )
+   .eq(
+    'academic_year_id',
+    state.yearId
+   )
+   .like(
+    'item_name',
+    '__UC_FG_SUPPLY__|%'
+   );
+
+
+  if(old.error)
+   throw old.error;
+
+
+  const del=
+   (old.data||[])
+   .filter(r=>{
+
+    const p=
+     String(r.item_name)
+     .split('|');
+
+    return(
+     p[1]===String(state.month) &&
+     p[2]===state.group
+    );
+
+   })
+   .map(
+    r=>r.id
+   );
+
+
+  if(del.length){
+
+   const d=
+    await db
+    .from(
+     'food_stock_receipts'
+    )
+    .delete()
+    .in(
+     'id',
+     del
+    );
+
+   if(d.error)
+    throw d.error;
+
+  }
+
+
+  for(
+   const s of state.supplies
+  )
+  for(
+   const g of groups()
+  ){
+
+   if(!applies(s.item,g))
+    continue;
+
+
+   const q=
+    num(
+     s.vals[g]
+    );
+
+
+   if(q<=0)
+    continue;
+
+
+   const name=
+    `__UC_FG_SUPPLY__|${state.month}|${state.group}|${s.item}|${g}|${s.type}|${s.date}`;
+
+
+   const payload={
+
+    school_id:
+     state.schoolId,
+
+    academic_year_id:
+     state.yearId,
+
+    item_type:
+     'item',
+
+    item_name:
+     name,
+
+    receipt_date:
+     s.date,
+
+    quantity:
+     q,
+
+    unit:
+     s.item==='ಎಣ್ಣೆ'
+      ?'Gram'
+      :'KG',
+
+    updated_at:
+     new Date().toISOString()
+
+   };
+
+
+   const r=
+    await db
+    .from(
+     'food_stock_receipts'
+    )
+    .insert(payload);
+
+
+   if(r.error)
+    throw r.error;
+
+  }
+
+
+  setSectionLocked(
+   'supply',
+   true
+  );
+
+
+  setMsg(
+   'UC Supply Save ಆಯಿತು.',
+   true
+  );
+
+
+  renderReport();
+
+
+ }catch(e){
+
+  console.error(e);
+
+  setMsg(
+   'UC Supply Save failed: '+
+   (e.message||e)
+  );
+
+ }
+
+}
+
+
+/* EDIT */
+
+function editStudents(){
+
+ setSectionLocked(
+  'students',
+  false
+ );
+
+ setMsg(
+  'Students Numbers Edit mode. ಬದಲಾವಣೆ ಮಾಡಿ Save ಒತ್ತಿ.',
+  true
+ );
+
+}
+
+
+function editOpening(){
+
+ if(state.openingAutoLocked){
+
+  setMsg(
+   'ಮುಂದಿನ ತಿಂಗಳ Opening Balance Lock ಆಗಿದೆ. ಹಿಂದಿನ ತಿಂಗಳ Closingನಿಂದ ಮಾತ್ರ ಬರುತ್ತದೆ.'
+  );
+
+  return;
+
+ }
+
+
+ setSectionLocked(
+  'opening',
+  false
+ );
+
+ setMsg(
+  'Opening Balance Edit mode. ಬದಲಾವಣೆ ಮಾಡಿ Save ಒತ್ತಿ.',
+  true
+ );
+
+}
+
+
+function editSupply(){
+
+ setSectionLocked(
+  'supply',
+  false
+ );
+
+ setMsg(
+  'UC Supply Edit mode. ಬದಲಾವಣೆ ಮಾಡಿ Save ಒತ್ತಿ.',
+  true
+ );
+
+}
+
+
+/* REPORT */
 
 async function renderReport(){
- readInputs();if(!state.yearId||!state.month){$('reportBody').innerHTML='';return}
- const gs=groups(),dept=state.schoolSettings.department_name||'ಅಕ್ಷರ ದಾಸೋಹ ಕಾರ್ಯಕ್ರಮ',school=state.schoolSettings.school_name||'ಶಾಲೆಯ ಹೆಸರು';
- const yearText=state.yearName||$('academicYear').selectedOptions[0]?.textContent||'';const y=yearNumber(yearText);const prev=prevMonthYear(state.month,y);const prevLabel=monthLabel(prev.month,prev.year),curLabel=monthLabel(state.month,y);
- const topVals=state.group==='8-10'
-   ? [num(state.students[key('ಅಕ್ಕಿ','8')]),num(state.students[key('ಅಕ್ಕಿ','9-10')])]
-   : [num(state.students[key('ಅಕ್ಕಿ','1-5')]),num(state.students[key('ಅಕ್ಕಿ','6-7')])];
- const topTotal=topVals.reduce((a,b)=>a+b,0);
- const lower=[8,9,10].map(c=>num(state.schoolCounts[c]));const lowerTotal=lower.reduce((a,b)=>a+b,0);
- const wheat8=state.group==='8-10'?num(state.students[key('ಗೋಧಿ','8')]):0;
- const wheatA=state.group==='8-10'?0:num(state.students[key('ಗೋಧಿ',gs[0])]);
- const wheatB=state.group==='8-10'?0:num(state.students[key('ಗೋಧಿ',gs[1])]);
- const wheatTotal=state.group==='8-10'?wheat8:wheatA+wheatB;
- const dal8=state.group==='8-10'?num(state.students[key('ಬೇಳೆ','8')]):0;
- const dalA=state.group==='8-10'?num(state.students[key('ಬೇಳೆ','9-10')]):0;
- const dalB=state.group==='8-10'?0:num(state.students[key('ಬೇಳೆ',gs[1])]);
- const dalTotal=state.group==='8-10'?dal8+dalA:dal8+dalB;
+
+ readInputs();
+
+
+ if(
+  !state.yearId||
+  !state.month
+ ){
+
+  $('reportBody').innerHTML='';
+
+  return;
+
+ }
+
+
+ const gs=
+  groups();
+
+
+ const dept=
+  $('departmentName')
+  ?.value
+  .trim()
+  ||
+  'ಅಕ್ಷರ ದಾಸೋಹ ಕಾರ್ಯಕ್ರಮ';
+
+
+ const school=
+  $('schoolName')
+  ?.value
+  .trim()
+  ||
+  'ಶಾಲೆಯ ಹೆಸರು';
+
+
+ const yearText=
+  state.yearName||
+  $('academicYear')
+  .selectedOptions[0]
+  ?.textContent||
+  '';
+
+
+ const y=
+  yearNumber(yearText);
+
+
+ const prev=
+  prevMonthYear(
+   state.month,
+   y
+  );
+
+
+ const prevLabel=
+  monthLabel(
+   prev.month,
+   prev.year
+  );
+
+
+ const curLabel=
+  monthLabel(
+   state.month,
+   y
+  );
+
+
+ /*
+  TOP STUDENTS NUMBERS:
+  foodgrain-uc.html itself
+ */
+
+ const topVals=
+  gs.map(
+   g=>
+    num(
+     state.students[
+      key('ಅಕ್ಕಿ',g)
+     ]
+    )
+  );
+
+
+ const topTotal=
+  topVals.reduce(
+   (a,b)=>a+b,
+   0
+  );
+
+
+ /*
+  LOWER TABLE:
+  students-number.html
+ */
+
+ const lower=
+  [8,9,10]
+  .map(
+   c=>
+    num(
+     state.schoolCounts[c]
+    )
+  );
+
+
+ const lowerTotal=
+  lower.reduce(
+   (a,b)=>a+b,
+   0
+  );
+
+
+ let prevClosing={};
+
+
+ try{
+
+  prevClosing=
+   await getClosingForMonth(
+    state.month,
+    y
+   );
+
+ }catch(e){
+
+  console.warn(
+   'Previous closing load:',
+   e.message
+  );
+
+ }
+
+
  let h='';
- h+=`<tr><td colspan="18" class="nob"><img class="logo" src="${EMBLEM}"></td></tr>`;
- h+=`<tr><td colspan="18" class="title">ಕ್ಷೇತ್ರ ಶಿಕ್ಷಣಾಧಿಕಾರಿಗಳ ಕಛೇರಿ, ${esc(dept)} ಹೊಸದುರ್ಗ ಅಕ್ಷರ ದಾಸೋಹ ಕಾರ್ಯಕ್ರಮ</td></tr>`;
- h+=`<tr><td colspan="10" class="school">ಸರ್ಕಾರಿ/ಅನುದಾನಿತ ಪ್ರೌಢಶಾಲೆ: ${esc(school)}</td><th>8</th><th>9</th><th>10</th><th>ಒಟ್ಟು</th><th>ಗೋಧಿ</th><th colspan="3">ಬೇಳೆ</th></tr>`;
- h+=`<tr><td colspan="3" class="summary-label">ಫಲಾನುಭವಿಗಳ ಸಂಖ್ಯೆ: ${fmt(lowerTotal)}</td><td class="summary-label">ತಿಂಗಳು:-</td><td class="summary-value">${esc(curLabel.split('-')[0]||'')}</td><td class="summary-value">${esc(y)}</td><td class="summary-label">ಒಟ್ಟು ವಿದ್ಯಾರ್ಥಿಗಳ ಸಂಖ್ಯೆ</td><td class="summary-value">${fmt(topVals[0])}</td><td class="summary-value">${state.group==='8-10'?fmt(topVals[1]):'—'}</td><td class="summary-value">${state.group==='8-10'?'—':'—'}</td><td class="summary-value">${fmt(topTotal)}</td><td class="summary-value">${fmt(wheat8||wheatA)}</td><td class="summary-value">${fmt(state.group==='8-10'?dal8:dal8)}</td><td class="summary-value">${state.group==='8-10'?fmt(dalA):fmt(dalB)}</td><td class="summary-value">${fmt(dalTotal)}</td><td colspan="3"></td></tr>`;
- h+=`<tr><td colspan="6" class="summary-label">ಶಾಲೆ ನಡೆದ ದಿನಗಳ ಸಂಖ್ಯೆ:</td><td colspan="4" class="summary-value">${fmt(state.schoolDays)} ದಿನಗಳು</td><td class="summary-label">ಗೋಧಿ</td><td class="summary-value">${fmt(wheat8||wheatA)}</td><td class="summary-value">${state.group==='8-10'?'—':fmt(wheatB)}</td><td class="summary-value">${fmt(wheatTotal)}</td><td class="summary-label">ಬೇಳೆ</td><td class="summary-value">${fmt(dal8)}</td><td class="summary-value">${state.group==='8-10'?fmt(dalA):fmt(dalB)}</td><td class="summary-value">${fmt(dalTotal)}</td></tr>`;
- h+=`<tr><td colspan="18" class="section">: : ಆಹಾರ ಧಾನ್ಯ ಬಳಕೆ ಪ್ರಮಾಣ ಪತ್ರ : :</td></tr>`;
- h+=`<tr><th rowspan="2">ಕ್ರ ಸಂ</th><th rowspan="2">ವಿವರ</th><th rowspan="2">ದಿನಾಂಕ</th>`;
- const heads={'ಅಕ್ಕಿ':'ಅಕ್ಕಿ (0.150)','ಗೋಧಿ':'ಗೋಧಿ (0.150)','ಬೇಳೆ':'ಬೇಳೆ (0.030)','ಎಣ್ಣೆ':'ಎಣ್ಣೆ (7.5)','ಉಪ್ಪು':'ಉಪ್ಪು (0.004)'};items.forEach(it=>h+=`<th colspan="3">${heads[it]}</th>`);h+='</tr><tr>';items.forEach(()=>h+='<th>'+gs[0]+'</th><th>'+gs[1]+'</th><th>ಒಟ್ಟು</th>');h+='</tr>';
- const rows=[['ತಿಂಗಳ ಅಂತ್ಯಕ್ಕೆ ಉಳಿಕೆ','previous'],['ತಿಂಗಳ ಖರೀದಿ','purchase'],['ತಿಂಗಳ ಸರಬರಾಜು','supply'],['ಒಟ್ಟು ದಾಸ್ತಾನು','stock'],['ತಿಂಗಳ ಬಳಕೆ','use'],['ತಿಂಗಳ ಅಂತ್ಯಕ್ಕೆ ಉಳಿಕೆ','closing']];
- rows.forEach((r,ri)=>{h+=`<tr><td>${ri+1}</td><td class="left">${r[0]}</td><td class="small">${r[1]==='previous'?esc(prevLabel):esc(curLabel)}</td>`;items.forEach(it=>{let total=0;gs.forEach(g=>{if(!applies(it,g)){h+='<td>—</td>';return}let v=0;if(r[1]==='previous')v=num(state.opening[key(it,g)]);if(r[1]==='purchase')v=supplyTotal(it,g,'ಖರೀದಿ');if(r[1]==='supply')v=supplyTotal(it,g,'ಸರಬರಾಜು');if(r[1]==='stock')v=currentOpening(it,g)+supplyTotal(it,g,'ಖರೀದಿ')+supplyTotal(it,g,'ಸರಬರಾಜು');if(r[1]==='use')v=calcUse(it,g);if(r[1]==='closing')v=currentOpening(it,g)+supplyTotal(it,g,'ಖರೀದಿ')+supplyTotal(it,g,'ಸರಬರಾಜು')-calcUse(it,g);total+=v;h+=`<td class="num ${r[1]==='closing'?'yellow':''}">${fmt(v)}</td>`});h+=`<td class="num ${r[1]==='closing'?'yellow':''}">${fmt(total)}</td>`});h+='</tr>'});
- h+=`<tr><td colspan="18" class="nob" style="height:6px"></td></tr>`;
- h+=`<tr><th colspan="3">ತರಗತಿ</th><th>8</th><th>9</th><th>10</th><th colspan="12">ಒಟ್ಟು</th></tr>`;
- ['ದಾಖಲಾತಿ','ಹಾಜರಾತಿ','ಫಲಾನುಭವಿಗಳು'].forEach(label=>{h+=`<tr><th colspan="3" class="left">${label}</th>`;lower.forEach(v=>h+=`<td>${fmt(v)}</td>`);h+=`<td colspan="12"><strong>${fmt(lowerTotal)}</strong></td></tr>`});
- h+=`<tr><td colspan="18" class="left small">ಸೂಚನೆ:- ಪ್ರತಿ ತಿಂಗಳು 01 ನೇ ತಾರೀಖಿನೊಳಗೆ ಕಛೇರಿಗೆ ಸಲ್ಲಿಸಬೇಕು</td></tr>`;
- h+=`<tr><td colspan="13" class="left small">ಧೃಡೀಕರಣ : 1. ಯಾವ ಉದ್ದೇಶಕ್ಕಾಗಿ ಆಹಾರಧಾನ್ಯ ಬಿಡುಗಡೆಯಾಗುತ್ತೋ ಆ ಉದ್ದೇಶಕ್ಕಾಗಿ ಬಳಕೆಯಾಗಿದೆ ಎಂದು ದೃಢೀಕರಿಸುತ್ತಾ ಸಂಬಂಧಿಸಿದ ದಾಖಲೆಗಳನ್ನು ಶಾಲೆಯಲ್ಲಿ ಅಭಿರಕ್ಷಿಸಿದೆ.<br>2. ಆಹಾರ ಧಾನ್ಯಗಳು (ಅಕ್ಕಿ ಬೇಳೆ ಎಣ್ಣೆ ಹಾಲಿನ ಪುಡಿಗಳನ್ನು ಉತ್ತಮವಾಗಿ ಹಾಗೂ ಸುರಕ್ಷಿತವಾಗಿ ಇಡಲಾಗಿದೆ ಎಂದು ಈ ಮೂಲಕ ದೃಢೀಕರಿಸಿದೆ.</td><td colspan="5" class="sign">ಮುಖ್ಯ ಶಿಕ್ಷಕರ ಸಹಿ ಮತ್ತು ಸೀಲು</td></tr>`;
- $('reportBody').innerHTML=h;document.querySelectorAll('#supplyRows tr').forEach(updateSupplyRowTotal);
+
+
+ /* LOGO */
+
+ h+=
+ `<tr>
+  <td colspan="18" class="nob">
+   <img class="logo" src="${EMBLEM}">
+  </td>
+ </tr>`;
+
+
+ /* DEPARTMENT */
+
+ h+=
+ `<tr>
+  <td colspan="18" class="title">
+   ಕ್ಷೇತ್ರ ಶಿಕ್ಷಣಾಧಿಕಾರಿಗಳ ಕಛೇರಿ,
+   ${esc(dept)}
+   ಹೊಸದುರ್ಗ ಅಕ್ಷರ ದಾಸೋಹ ಕಾರ್ಯಕ್ರಮ
+  </td>
+ </tr>`;
+
+
+ /* SCHOOL + CLASS */
+
+ h+=
+ `<tr>
+  <td colspan="12" class="school">
+   ಸರ್ಕಾರಿ/ಅನುದಾನಿತ ಪ್ರೌಢಶಾಲೆ:
+   ${esc(school)}
+  </td>
+
+  <td colspan="2">8</td>
+  <td colspan="2">9</td>
+  <td colspan="2">10</td>
+ </tr>`;
+
+
+ /* SUMMARY */
+
+ h+=
+ `<tr>
+
+  <td colspan="6"
+      class="summary-label">
+   ಫಲಾನುಭವಿಗಳ ಸಂಖ್ಯೆ:
+   ${fmt(lowerTotal)}
+  </td>
+
+  <td colspan="4"
+      class="summary-label">
+   ಒಟ್ಟು ವಿದ್ಯಾರ್ಥಿಗಳ ಸಂಖ್ಯೆ
+  </td>
+
+  ${
+   topVals
+   .map(
+    v=>
+     `<td class="summary-value">
+      ${fmt(v)}
+     </td>`
+   )
+   .join('')
+  }
+
+  <td class="summary-value">
+   ${fmt(topTotal)}
+  </td>
+
+  <td colspan="4">
+   ತಿಂಗಳು / ${esc(curLabel)}
+  </td>
+
+ </tr>`;
+
+
+ /* WHEAT */
+
+ const wheat8=
+  state.group==='8-10'
+  ?
+  num(
+   state.students[
+    key('ಗೋಧಿ','8')
+   ]
+  )
+  :
+  0;
+
+
+ const wheatA=
+  num(
+   state.students[
+    key('ಗೋಧಿ',gs[0])
+   ]
+  );
+
+
+ const wheatB=
+  state.group==='8-10'
+  ?
+  0
+  :
+  num(
+   state.students[
+    key('ಗೋಧಿ',gs[1])
+   ]
+  );
+
+
+ const wheatTotal=
+  state.group==='8-10'
+  ?
+  wheat8
+  :
+  wheatA+wheatB;
+
+
+ h+=
+ `<tr>
+
+  <td colspan="6"
+      class="summary-label">
+   ಶಾಲೆ ನಡೆದ ದಿನಗಳ ಸಂಖ್ಯೆ
+  </td>
+
+  <td colspan="4"
+      class="summary-value">
+   ${fmt(state.schoolDays)}
+   ದಿನಗಳು
+  </td>
+
+  <td colspan="2"
+      class="summary-label">
+   ಗೋಧಿ
+  </td>
+
+  <td>
+   ${
+    fmt(
+     state.group==='8-10'
+     ?wheat8
+     :wheatA
+    )
+   }
+  </td>
+
+  <td>
+   ${
+    state.group==='8-10'
+    ?
+    '—'
+    :
+    fmt(wheatB)
+   }
+  </td>
+
+  <td class="summary-value">
+   ${fmt(wheatTotal)}
+  </td>
+
+  <td colspan="3"></td>
+
+ </tr>`;
+
+
+ /* TITLE */
+
+ h+=
+ `<tr>
+  <td colspan="18"
+      class="section">
+   : : ಆಹಾರ ಧಾನ್ಯ ಬಳಕೆ ಪ್ರಮಾಣ ಪತ್ರ : :
+  </td>
+ </tr>`;
+
+
+ /* HEAD */
+
+ h+=
+ `<tr>
+
+  <th rowspan="2">ಕ್ರ ಸಂ</th>
+
+  <th rowspan="2">ವಿವರ</th>
+
+  <th rowspan="2">ದಿನಾಂಕ</th>`;
+
+
+ const heads={
+  'ಅಕ್ಕಿ':'ಅಕ್ಕಿ (0.150)',
+  'ಗೋಧಿ':'ಗೋಧಿ (0.150)',
+  'ಬೇಳೆ':'ಬೇಳೆ (0.030)',
+  'ಎಣ್ಣೆ':'ಎಣ್ಣೆ (7.5)',
+  'ಉಪ್ಪು':'ಉಪ್ಪು (0.004)'
+ };
+
+
+ items.forEach(
+  it=>
+   h+=
+   `<th colspan="3">
+    ${heads[it]}
+   </th>`
+ );
+
+
+ h+='</tr><tr>';
+
+
+ items.forEach(
+  ()=>
+   h+=
+   '<th>'+
+   gs[0]+
+   '</th>'+
+   '<th>'+
+   gs[1]+
+   '</th>'+
+   '<th>ಒಟ್ಟು</th>'
+ );
+
+
+ h+='</tr>';
+
+
+ /*
+  STOCK ROWS
+ */
+
+ const rows=[
+  [
+   'ತಿಂಗಳ ಅಂತ್ಯಕ್ಕೆ ಉಳಿಕೆ',
+   'previous'
+  ],
+  [
+   'ತಿಂಗಳ ಖರೀದಿ',
+   'purchase'
+  ],
+  [
+   'ತಿಂಗಳ ಸರಬರಾಜು',
+   'supply'
+  ],
+  [
+   'ಒಟ್ಟು ದಾಸ್ತಾನು',
+   'stock'
+  ],
+  [
+   'ತಿಂಗಳ ಬಳಕೆ',
+   'use'
+  ],
+  [
+   'ತಿಂಗಳ ಅಂತ್ಯಕ್ಕೆ ಉಳಿಕೆ',
+   'closing'
+  ]
+ ];
+
+
+ rows.forEach(
+  (r,ri)=>{
+
+   h+=
+    `<tr>
+     <td>${ri+1}</td>
+     <td class="left">${r[0]}</td>
+     <td class="small">
+      ${
+       r[1]==='previous'
+       ?
+       esc(prevLabel)
+       :
+       esc(curLabel)
+      }
+     </td>`;
+
+
+   items.forEach(
+    it=>{
+
+     let total=0;
+
+
+     gs.forEach(
+      g=>{
+
+       if(!applies(it,g)){
+
+        h+='<td>—</td>';
+
+        return;
+
+       }
+
+
+       let v=0;
+
+
+       if(
+        r[1]==='previous'
+       ){
+
+        v=
+         num(
+          prevClosing[
+           key(it,g)
+          ]
+         );
+
+       }
+
+
+       if(
+        r[1]==='purchase'
+       ){
+
+        v=
+         supplyTotal(
+          it,
+          g,
+          'ಖರೀದಿ'
+         );
+
+       }
+
+
+       if(
+        r[1]==='supply'
+       ){
+
+        v=
+         supplyTotal(
+          it,
+          g,
+          'ಸರಬರಾಜು'
+         );
+
+       }
+
+
+       if(
+        r[1]==='stock'
+       ){
+
+        v=
+         currentOpening(it,g)
+         +
+         supplyTotal(it,g);
+
+       }
+
+
+       if(
+        r[1]==='use'
+       ){
+
+        v=
+         calcUse(it,g);
+
+       }
+
+
+       if(
+        r[1]==='closing'
+       ){
+
+        v=
+         currentOpening(it,g)
+         +
+         supplyTotal(it,g)
+         -
+         calcUse(it,g);
+
+       }
+
+
+       total+=v;
+
+
+       h+=
+        `<td class="num ${
+         r[1]==='closing'
+          ?'yellow'
+          :''
+        }">
+         ${fmt(v)}
+        </td>`;
+
+      }
+     );
+
+
+     h+=
+      `<td class="num ${
+       r[1]==='closing'
+        ?'yellow'
+        :''
+      }">
+       ${fmt(total)}
+      </td>`;
+
+    }
+   );
+
+
+   h+='</tr>';
+
+  }
+ );
+
+
+ /* LOWER TABLE */
+
+ h+=
+ `<tr>
+  <td colspan="18"
+      class="nob"
+      style="height:6px">
+  </td>
+ </tr>`;
+
+
+ h+=
+ `<tr>
+  <th colspan="3">ತರಗತಿ</th>
+  <th>8</th>
+  <th>9</th>
+  <th>10</th>
+  <th colspan="12">ಒಟ್ಟು</th>
+ </tr>`;
+
+
+ [
+  'ದಾಖಲಾತಿ',
+  'ಹಾಜರಾತಿ',
+  'ಫಲಾನುಭವಿಗಳು'
+ ]
+ .forEach(
+  label=>{
+
+   h+=
+    `<tr>
+
+     <th colspan="3"
+         class="left">
+      ${label}
+     </th>`;
+
+
+   lower.forEach(
+    v=>
+     h+=
+     `<td>
+      ${fmt(v)}
+     </td>`
+   );
+
+
+   h+=
+    `<td colspan="12">
+     <strong>
+      ${fmt(lowerTotal)}
+     </strong>
+    </td>
+
+    </tr>`;
+
+  }
+ );
+
+
+ /* NOTE */
+
+ h+=
+ `<tr>
+
+  <td colspan="18"
+      class="left small">
+
+   ಸೂಚನೆ:- ಪ್ರತಿ ತಿಂಗಳು 01 ನೇ
+   ತಾರೀಖಿನೊಳಗೆ ಕಛೇರಿಗೆ ಸಲ್ಲಿಸಬೇಕು
+
+  </td>
+
+ </tr>`;
+
+
+ /* SIGNATURE */
+
+ h+=
+ `<tr>
+
+  <td colspan="13"
+      class="left small">
+
+   ಧೃಡೀಕರಣ :
+
+   1. ಯಾವ ಉದ್ದೇಶಕ್ಕಾಗಿ ಆಹಾರಧಾನ್ಯ
+   ಬಿಡುಗಡೆಯಾಗುತ್ತೋ ಆ ಉದ್ದೇಶಕ್ಕಾಗಿ
+   ಬಳಕೆಯಾಗಿದೆ ಎಂದು ದೃಢೀಕರಿಸುತ್ತಾ
+   ಸಂಬಂಧಿಸಿದ ದಾಖಲೆಗಳನ್ನು ಶಾಲೆಯಲ್ಲಿ
+   ಅಭಿರಕ್ಷಿಸಿದೆ.
+
+   <br>
+
+   2. ಆಹಾರ ಧಾನ್ಯಗಳು
+   (ಅಕ್ಕಿ ಬೇಳೆ ಎಣ್ಣೆ ಹಾಲಿನ ಪುಡಿಗಳನ್ನು)
+   ಉತ್ತಮವಾಗಿ ಹಾಗೂ ಸುರಕ್ಷಿತವಾಗಿ
+   ಇಡಲಾಗಿದೆ ಎಂದು ಈ ಮೂಲಕ ದೃಢೀಕರಿಸಿದೆ.
+
+  </td>
+
+  <td colspan="5"
+      class="sign">
+
+   ಮುಖ್ಯ ಶಿಕ್ಷಕರ ಸಹಿ ಮತ್ತು ಸೀಲು
+
+  </td>
+
+ </tr>`;
+
+
+ $('reportBody').innerHTML=h;
+
+
+ document
+ .querySelectorAll(
+  '#supplyRows tr'
+ )
+ .forEach(
+  updateSupplyRowTotal
+ );
+
 }
+
+
+/* EXCEL */
 
 function exportExcel(){
- const wb=XLSX.utils.table_to_book($('reportTable'),{sheet:'ಆಹಾರ ಧಾನ್ಯ ಬಳಕೆ',raw:true});
- const ws=wb.Sheets[wb.SheetNames[0]];if(ws){ws['!pageSetup']={orientation:'landscape',paperSize:'9',fitToWidth:1,fitToHeight:1};ws['!margins']={left:0.2,right:0.2,top:0.3,bottom:0.3,header:0.1,footer:0.1}}
- XLSX.writeFile(wb,`ಆಹಾರ-ಧಾನ್ಯ-UC-${months[state.month]||'Month'}-${yForFile()}.xlsx`)
-}
-function yForFile(){return yearNumber(state.yearName)}
 
-$('month').addEventListener('change',loadAll);$('classGroup').addEventListener('change',loadAll);$('academicYear').addEventListener('change',loadAll);$('addYearBtn').addEventListener('click',addAcademicYear);$('loadBtn').addEventListener('click',loadAll);
-$('saveStudentsBtn').addEventListener('click',saveStudents);$('editStudentsBtn').addEventListener('click',editStudents);$('saveOpeningBtn').addEventListener('click',saveOpening);$('editOpeningBtn').addEventListener('click',editOpening);$('saveSupplyBtn').addEventListener('click',saveSupply);$('editSupplyBtn').addEventListener('click',editSupply);
-$('printBtn').addEventListener('click',()=>window.print());$('excelBtn').addEventListener('click',exportExcel);
-(async function(){try{fillMonths();if(!await authenticate())return;await loadSchool();await loadYears();renderEntryTables();setMsg('Academic Year ಮತ್ತು Month ಆಯ್ಕೆ ಮಾಡಿ.','ok')}catch(e){console.error(e);setMsg('Initialization failed: '+(e.message||e))}})();
+ const wb=
+  XLSX.utils.table_to_book(
+   $('reportTable'),
+   {
+    sheet:'ಆಹಾರ ಧಾನ್ಯ ಬಳಕೆ',
+    raw:true
+   }
+  );
+
+
+ const ws=
+  wb.Sheets[
+   wb.SheetNames[0]
+  ];
+
+
+ if(ws){
+
+  ws['!pageSetup']={
+   orientation:'landscape',
+   paperSize:'9',
+   fitToWidth:1,
+   fitToHeight:1
+  };
+
+
+  ws['!margins']={
+   left:0.2,
+   right:0.2,
+   top:0.3,
+   bottom:0.3,
+   header:0.1,
+   footer:0.1
+  };
+
+ }
+
+
+ XLSX.writeFile(
+  wb,
+  `ಆಹಾರ-ಧಾನ್ಯ-UC-${
+   months[state.month]||'Month'
+  }-${yForFile()}.xlsx`
+ );
+
+}
+
+
+function yForFile(){
+
+ return yearNumber(
+  state.yearName
+ );
+
+}
+
+
+/* EVENTS */
+
+$('month')
+.addEventListener(
+ 'change',
+ loadAll
+);
+
+$('classGroup')
+.addEventListener(
+ 'change',
+ loadAll
+);
+
+$('academicYear')
+.addEventListener(
+ 'change',
+ loadAll
+);
+
+$('addYearBtn')
+.addEventListener(
+ 'click',
+ addAcademicYear
+);
+
+$('loadBtn')
+.addEventListener(
+ 'click',
+ loadAll
+);
+
+$('saveStudentsBtn')
+.addEventListener(
+ 'click',
+ saveStudents
+);
+
+$('editStudentsBtn')
+.addEventListener(
+ 'click',
+ editStudents
+);
+
+$('saveOpeningBtn')
+.addEventListener(
+ 'click',
+ saveOpening
+);
+
+$('editOpeningBtn')
+.addEventListener(
+ 'click',
+ editOpening
+);
+
+$('saveSupplyBtn')
+.addEventListener(
+ 'click',
+ saveSupply
+);
+
+$('editSupplyBtn')
+.addEventListener(
+ 'click',
+ editSupply
+);
+
+$('printBtn')
+.addEventListener(
+ 'click',
+ ()=>window.print()
+);
+
+$('excelBtn')
+.addEventListener(
+ 'click',
+ exportExcel
+);
+
+
+/* INIT */
+
+(async function(){
+
+ try{
+
+  fillMonths();
+
+  if(
+   !await authenticate()
+  )
+   return;
+
+  loadManualHeader();
+
+  await loadYears();
+
+  renderEntryTables();
+
+  setMsg(
+   'Year ಮತ್ತು Month ಆಯ್ಕೆ ಮಾಡಿ.',
+   true
+  );
+
+ }catch(e){
+
+  console.error(e);
+
+  setMsg(
+   'Initialization failed: '+
+   (e.message||e)
+  );
+
+ }
+
+})();
+
+
+$('departmentName')
+.addEventListener(
+ 'input',
+ saveManualHeader
+);
+
+$('schoolName')
+.addEventListener(
+ 'input',
+ saveManualHeader
+);
+
 </script>
-</body></html>
+
+</body>
+</html>
