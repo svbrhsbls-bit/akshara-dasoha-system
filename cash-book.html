@@ -748,9 +748,36 @@ async function saveBulkEntry(type){
         item_name:r.item,amount:r.amount,details:desc
       };
 
-      const result=await db.from("cash_book_entries")
-        .upsert(payload,{onConflict:"school_id,academic_year,entry_type,entry_date,item_name"})
-        .select("id,entry_date,item_name,amount,details,created_at").single();
+      let result;
+      // KHARCHU entries are saved explicitly as expense rows.
+      // If the same date + item already exists, update it; otherwise insert it.
+      if(type==='kharchu'){
+        const existing=await db.from("cash_book_entries")
+          .select("id")
+          .eq("school_id",currentSchoolId)
+          .eq("academic_year",selectedYear)
+          .eq("entry_type","kharchu")
+          .eq("entry_date",date)
+          .eq("item_name",r.item)
+          .maybeSingle();
+        if(existing.error)throw existing.error;
+
+        if(existing.data?.id){
+          result=await db.from("cash_book_entries")
+            .update({amount:r.amount,details:desc})
+            .eq("school_id",currentSchoolId)
+            .eq("id",existing.data.id)
+            .select("id,entry_date,item_name,amount,details,created_at").single();
+        }else{
+          result=await db.from("cash_book_entries")
+            .insert(payload)
+            .select("id,entry_date,item_name,amount,details,created_at").single();
+        }
+      }else{
+        result=await db.from("cash_book_entries")
+          .upsert(payload,{onConflict:"school_id,academic_year,entry_type,entry_date,item_name"})
+          .select("id,entry_date,item_name,amount,details,created_at").single();
+      }
 
       if(result.error)throw result.error;
     }
