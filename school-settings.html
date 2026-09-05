@@ -585,7 +585,7 @@ let activeAcademicYear = "";
 const fields = [
   "department_name",
   "school_name",
-  "cluster_name",
+  "school_address",
   "taluk",
   "district",
   "udise_code",
@@ -696,7 +696,7 @@ function preview(row){
     row.school_name || "—";
 
   $("v_cluster").textContent =
-    row.cluster_name || "—";
+    row.school_address || "—";
 
   $("v_taluk").textContent =
     row.taluk || "—";
