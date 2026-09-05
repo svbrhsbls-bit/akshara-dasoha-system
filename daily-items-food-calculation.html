@@ -1278,6 +1278,7 @@ async function saveWheat(){
     if(!date)return show($("msg"),"ಗೋಧಿ ದಿನಾಂಕ ಆಯ್ಕೆ ಮಾಡಿ.","err");
 
     const payload={
+      school_id:currentSchoolId,
       academic_year_id:activeYear.id,
       wheat_date:date,
       wheat_students:num($("wheatStudents").value),
