@@ -914,7 +914,8 @@ async function saveIngredient(){
  }
 
  const payload={
-  academic_year_id:activeYear.id,
+  school_id:currentSchoolId,
+   academic_year_id:activeYear.id,
   class_group:selectedGroup,
   ingredient_name:name,
   amount_per_student:Number(amount),
