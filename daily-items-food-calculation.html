@@ -1182,6 +1182,7 @@ async function saveReceipts(){
       const dbName=type==="nutrition"?`__NUTRITION_RECEIPT__|${name}`:name;
 
       rows.push({
+        school_id:currentSchoolId,
         academic_year_id:activeYear.id,
         item_type:dbType,
         item_name:dbName,
