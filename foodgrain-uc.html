@@ -54,10 +54,16 @@ button{border:0;border-radius:6px;padding:9px 14px;font:inherit;font-weight:700;
 <div class="app">
   <div class="controls">
     <div class="grid">
-      <div><label>ಶೈಕ್ಷಣಿಕ ವರ್ಷ</label><select id="academicYear"><option value="">ಶೈಕ್ಷಣಿಕ ವರ್ಷ ಆಯ್ಕೆ ಮಾಡಿ</option></select></div>
+      <div>
+        <label>ಶೈಕ್ಷಣಿಕ ವರ್ಷ</label>
+        <div style="display:flex;gap:6px">
+          <select id="academicYear" style="flex:1"><option value="">ಶೈಕ್ಷಣಿಕ ವರ್ಷ ಆಯ್ಕೆ ಮಾಡಿ</option></select>
+          <button type="button" class="green" id="addYearBtn" style="white-space:nowrap;padding:8px 12px">＋ Year</button>
+        </div>
+        <div class="note">2026, 2027, 2028... ಬೇಕಾದ ವರ್ಷವನ್ನು ಇಲ್ಲಿ Add ಮಾಡಬಹುದು.</div>
+      </div>
       <div><label>ತಿಂಗಳು</label><select id="month"><option value="">ತಿಂಗಳು ಆಯ್ಕೆ ಮಾಡಿ</option></select></div>
       <div><label>Class Group</label><select id="classGroup"><option value="1-7">1-7</option><option value="8-10">8-10</option></select></div>
-      <div><label>ಶಾಲೆ</label><input id="schoolName" readonly></div>
     </div>
     <div class="actions">
       <button class="blue" id="loadBtn">↻ Load</button>
@@ -89,7 +95,7 @@ button{border:0;border-radius:6px;padding:9px 14px;font:inherit;font-weight:700;
 const SUPABASE_URL='https://ezmudfrpcvjsgnjibvoq.supabase.co';
 const SUPABASE_KEY='sb_publishable__FYyH6NQaqgARaq2dvuovQ_rKmus0js';
 const db=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
-{emblem_line}
+const EMBLEM='data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==';
 const months=['','ಜನವರಿ','ಫೆಬ್ರವರಿ','ಮಾರ್ಚ್','ಏಪ್ರಿಲ್','ಮೇ','ಜೂನ್','ಜುಲೈ','ಆಗಸ್ಟ್','ಸೆಪ್ಟೆಂಬರ್','ಅಕ್ಟೋಬರ್','ನವೆಂಬರ್','ಡಿಸೆಂಬರ್'];
 const items=['ಅಕ್ಕಿ','ಗೋಧಿ','ಬೇಳೆ','ಎಣ್ಣೆ','ಉಪ್ಪು'];
 const state={schoolId:null,schoolSettings:{},yearId:'',yearName:'',month:0,group:'1-7',students:{},opening:{},supplies:[],calc:{},schoolDays:0,schoolCounts:{8:0,9:0,10:0}};
@@ -122,7 +128,7 @@ async function authenticate(){
 async function loadSchool(){
  const {data,error}=await db.from('school_settings').select('*').eq('school_id',state.schoolId).maybeSingle();
  if(error)throw error;if(!data)throw new Error('School Settingsನಲ್ಲಿ ಶಾಲೆಯ ವಿವರಗಳು ಇಲ್ಲ.');
- state.schoolSettings=data;$('schoolName').value=data.school_name||'';
+ state.schoolSettings=data;
 }
 async function loadYears(){
  const {data,error}=await db.from('academic_years').select('id,year_name,is_active').order('year_name',{ascending:false});
@@ -132,6 +138,36 @@ async function loadYears(){
  let active=(data||[]).find(y=>String(y.year_name||'').trim()===wanted)||(data||[]).find(y=>y.is_active)||(data||[])[0];
  if(active){$('academicYear').value=active.id;state.yearName=active.year_name||''}
 }
+async function addAcademicYear(){
+ const raw=prompt('ಯಾವ Academic Year add ಮಾಡಬೇಕು? ಉದಾ: 2026 ಅಥವಾ 2026-27');
+ const yearName=String(raw||'').trim();
+ if(!yearName)return;
+ if(!/^(\d{4})(?:[-\/](\d{2,4}))?$/.test(yearName)){
+   setMsg('Year ಅನ್ನು 2026 ಅಥವಾ 2026-27 ರೀತಿಯಲ್ಲಿ ನಮೂದಿಸಿ.');
+   return;
+ }
+ try{
+   const {data:existing,error:ee}=await db.from('academic_years').select('id,year_name,is_active').eq('year_name',yearName).maybeSingle();
+   if(ee)throw ee;
+   if(existing){
+     $('academicYear').value=existing.id;
+     state.yearId=existing.id;state.yearName=existing.year_name||yearName;
+     setMsg(yearName+' ಈಗಾಗಲೇ ಇದೆ. ಅದನ್ನೇ ಆಯ್ಕೆ ಮಾಡಲಾಗಿದೆ.','ok');
+     await loadAll();
+     return;
+   }
+   const {data,error}=await db.from('academic_years').insert({year_name:yearName,is_active:false}).select('id,year_name,is_active').single();
+   if(error)throw error;
+   await loadYears();
+   $('academicYear').value=data.id;
+   state.yearId=data.id;state.yearName=data.year_name||yearName;
+   setMsg(yearName+' Academic Year Add ಆಯಿತು.','ok');
+ }catch(e){
+   console.error(e);
+   setMsg('Year Add failed: '+(e.message||e));
+ }
+}
+
 function fillMonths(){$('month').innerHTML='<option value="">ತಿಂಗಳು ಆಯ್ಕೆ ಮಾಡಿ</option>'+months.slice(1).map((m,i)=>`<option value="${i+1}">${m}</option>`).join('')}
 
 function sectionKey(name){return `uc_fg_${name}_locked|${state.schoolId}|${state.yearId}|${state.month}|${state.group}`}
@@ -329,7 +365,7 @@ function exportExcel(){
 }
 function yForFile(){return yearNumber(state.yearName)}
 
-$('month').addEventListener('change',loadAll);$('classGroup').addEventListener('change',loadAll);$('loadBtn').addEventListener('click',loadAll);
+$('month').addEventListener('change',loadAll);$('classGroup').addEventListener('change',loadAll);$('academicYear').addEventListener('change',loadAll);$('addYearBtn').addEventListener('click',addAcademicYear);$('loadBtn').addEventListener('click',loadAll);
 $('saveStudentsBtn').addEventListener('click',saveStudents);$('editStudentsBtn').addEventListener('click',editStudents);$('saveOpeningBtn').addEventListener('click',saveOpening);$('editOpeningBtn').addEventListener('click',editOpening);$('saveSupplyBtn').addEventListener('click',saveSupply);$('editSupplyBtn').addEventListener('click',editSupply);
 $('printBtn').addEventListener('click',()=>window.print());$('excelBtn').addEventListener('click',exportExcel);
 (async function(){try{fillMonths();if(!await authenticate())return;await loadSchool();await loadYears();renderEntryTables();setMsg('Academic Year ಮತ್ತು Month ಆಯ್ಕೆ ಮಾಡಿ.','ok')}catch(e){console.error(e);setMsg('Initialization failed: '+(e.message||e))}})();
