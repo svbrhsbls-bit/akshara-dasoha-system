@@ -169,8 +169,8 @@ iframe{display:block;width:100%;height:calc(100% - 47px);border:0;background:#ff
     </div>
 
     <div class="sidebar-bottom">
-      ಅಕ್ಷರ ದಾಸೋಹ ಕಾರ್ಯಕ್ರಮ<br>
-      Dashboard — ಎಲ್ಲಾ ವಿಭಾಗಗಳು
+      ರಚನೆ:- ಈರಪ್ಪ ಸಿ<br>
+      Mobile No: 7259515753
     </div>
   </aside>
 
@@ -212,7 +212,10 @@ iframe{display:block;width:100%;height:calc(100% - 47px);border:0;background:#ff
           </div>
 
           <div class="stat">
-            <div class="stat-label">Cash Book ಶಿಲ್ಕು</div>
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+              <div class="stat-label">Cash Book ಶಿಲ್ಕು</div>
+              <button onclick="refreshCashBalance()" style="border:0;border-radius:7px;padding:5px 9px;background:#e5ece7;color:#126b38;font-weight:700;cursor:pointer;">↻ Refresh</button>
+            </div>
             <div class="stat-value" id="cashBalance">₹0.00</div>
             <div class="stat-note">ಅಂತಿಮ ನಗದು ಶಿಲ್ಕು</div>
           </div>
@@ -481,6 +484,15 @@ async function loadCash(year){
   }catch(e){console.log(e)}
 }
 
+
+async function refreshCashBalance(){
+  try{
+    const year=await getActiveYear();
+    if(year) await loadCash(year);
+  }catch(e){
+    console.log(e);
+  }
+}
 
 function academicStartYear(name){
   const m=String(name||"").match(/\d{4}/);
