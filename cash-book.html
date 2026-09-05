@@ -575,6 +575,34 @@ function fillItems(){
     </div>`).join('');
 }
 
+async function addItem(){
+  const input=document.getElementById('newItem');
+  const v=(input?.value||'').trim();
+  if(!v)return alert('Item ಹೆಸರು ನಮೂದಿಸಿ');
+  if(v==='ಒಟ್ಟು')return alert('ಒಟ್ಟು Item ಆಗಿ ಬಳಸಲಾಗುವುದಿಲ್ಲ');
+  if(state.items.some(x=>String(x).trim().toLowerCase()===v.toLowerCase())){
+    return alert('ಈ Item ಈಗಾಗಲೇ ಇದೆ');
+  }
+  try{
+    const maxOrder=state.items.length
+      ? state.items.reduce((m,_,i)=>Math.max(m,i),-1)
+      : -1;
+    const r=await db.from('cash_book_items').insert({
+      school_id:currentSchoolId,
+      item_name:v,
+      sort_order:maxOrder+1
+    });
+    if(r.error)throw r.error;
+    state.items.push(v);
+    if(input)input.value='';
+    fillItems();
+    renderAll();
+    renderOpeningBalance();
+  }catch(e){
+    alert('ಹೊಸ Item save failed: '+e.message);
+  }
+}
+
 function editItem(i){
   const input=document.getElementById(`master_input_${i}`);
   const btn=document.getElementById(`master_btn_${i}`);
@@ -819,23 +847,51 @@ async function deleteDate(type,date){
 /* =========================================================
    TABLE
 ========================================================= */
+function buildItemGroups(){
+  const groups=[];
+  const byKey=new Map();
+  const suffixPattern=/^(.*?)[ ]*-[ ]*(8|9-10|ಸರ್ಕಾರಿ|APF|ಸಕ್ಕರೆ|ಇತರೆ|ಅನಿಲ)$/i;
+
+  state.items.forEach(item=>{
+    const name=String(item||'').trim();
+    if(!name || name==='ಒಟ್ಟು')return;
+    const m=name.match(suffixPattern);
+    if(m){
+      const base=m[1].trim();
+      const sub=m[2].trim();
+      const key=base.toLocaleLowerCase('kn-IN');
+      let g=byKey.get(key);
+      if(!g){
+        g={name:base,subs:[],items:[]};
+        byKey.set(key,g);
+        groups.push(g);
+      }
+      if(!g.subs.includes(sub))g.subs.push(sub);
+      g.items.push(name);
+    }else{
+      groups.push({name,subs:null,items:[name]});
+    }
+  });
+
+  return groups;
+}
+
 function tableHead(){
-  const groups=[
-    ['ಪೋಷಣಾ ಶಕ್ತಿ',['ಸರ್ಕಾರಿ','APF']],['ಉಪ್ಪು',null],
-    ['ತರಕಾರಿ',['8','9-10']],['ಸಾಂಬಾರು',['8','9-10']],
-    ['ಅನಿಲ',['8','9-10']],['ಗೋದಿ',null],['ಗ್ಯಾಸ್',null],
-    ['ಕ್ಷೀರಭಾಗ್ಯ',['ಸಕ್ಕರೆ','ಇತರೆ','ಅನಿಲ']],['ಇತರೆ',null],
-     ['ಬಡ್ಡಿ',null]
-  ];
+  const groups=buildItemGroups();
   let r1='<tr class="group"><th rowspan="2">ದಿನಾಂಕ</th><th rowspan="2">ವಿವರ</th>';
   let r2='<tr class="sub">';
-  groups.forEach(([g,subs])=>{
-    if(subs){r1+=`<th colspan="${subs.length}">${g}</th>`;subs.forEach(s=>r2+=`<th>${s}</th>`)}
-    else r1+=`<th rowspan="2">${g}</th>`;
+  groups.forEach(g=>{
+    if(g.subs){
+      r1+=`<th colspan="${g.subs.length}">${esc(g.name)}</th>`;
+      g.subs.forEach(s=>r2+=`<th>${esc(s)}</th>`);
+    }else{
+      r1+=`<th rowspan="2">${esc(g.name)}</th>`;
+    }
   });
   r1+='<th rowspan="2">ಒಟ್ಟು</th><th rowspan="2" class="no-print">Action</th></tr>';
   return r1+r2+'</tr>';
 }
+
 function renderTable(type){
   const head=document.getElementById(type==='jama'?'jamaHead':'khHead');
   const body=document.getElementById(type==='jama'?'jamaBody':'khBody');
@@ -1067,20 +1123,14 @@ function exportExcel(){
     const school=document.getElementById('schoolName')?.textContent||'ಶಾಲೆಯ ಹೆಸರು';
     const year=document.getElementById('academicYear')?.textContent||selectedYear||'-';
 
-    const groups=[
-      ['ಪೋಷಣಾ ಶಕ್ತಿ',['ಸರ್ಕಾರಿ','APF']],['ಉಪ್ಪು',null],
-      ['ತರಕಾರಿ',['8','9-10']],['ಸಾಂಬಾರು',['8','9-10']],
-      ['ಅನಿಲ',['8','9-10']],['ಗೋದಿ',null],['ಗ್ಯಾಸ್',null],
-      ['ಕ್ಷೀರಭಾಗ್ಯ',['ಸಕ್ಕರೆ','ಇತರೆ','ಅನಿಲ']],['ಇತರೆ',null],
-     ['ಬಡ್ಡಿ',null]
-    ];
+    const groups=buildItemGroups();
     const aoa=[[dept],[school],[`ವರ್ಷ: ${year}`],[title],[],['ದಿನಾಂಕ','ವಿವರ'],['','']];
     let c=2;
-    groups.forEach(([g,subs])=>{
-      aoa[5][c]=g;
-      if(subs){
-        subs.forEach((s,i)=>aoa[6][c+i]=s);
-        c+=subs.length;
+    groups.forEach(g=>{
+      aoa[5][c]=g.name;
+      if(g.subs){
+        g.subs.forEach((sub,i)=>aoa[6][c+i]=sub);
+        c+=g.subs.length;
       }else{ aoa[6][c]=''; c++; }
     });
     aoa[5][c]='ಒಟ್ಟು'; aoa[6][c]='';
@@ -1111,8 +1161,8 @@ function exportExcel(){
     ws['!merges'].push({s:{r:5,c:0},e:{r:6,c:0}});
     ws['!merges'].push({s:{r:5,c:1},e:{r:6,c:1}});
     c=2;
-    groups.forEach(([g,subs])=>{
-      if(subs){ws['!merges'].push({s:{r:5,c},e:{r:5,c:c+subs.length-1}});c+=subs.length;}
+    groups.forEach(g=>{
+      if(g.subs){ws['!merges'].push({s:{r:5,c},e:{r:5,c:c+g.subs.length-1}});c+=g.subs.length;}
       else{ws['!merges'].push({s:{r:5,c},e:{r:6,c}});c++;}
     });
     ws['!merges'].push({s:{r:5,c:lastCol},e:{r:6,c:lastCol}});
