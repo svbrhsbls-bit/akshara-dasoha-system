@@ -91,6 +91,7 @@ const groups={
 let activeYear=null,school=null,current=null,settings={items:[],ingredients:[],nutrition:[],wheat:null};
 let currentSchoolId=null,currentSchoolUserId=null;
 let receipts=new Map(),wheatDays=new Map(),openingMap=new Map(),closingMap=new Map(),editingWheatId=null;
+let availabilityEvents=[];
 function esc(v){return String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]))}
 function num(v){const n=Number(v);return Number.isFinite(n)?n:0}
 function pad(n){return String(n).padStart(2,"0")}
@@ -366,6 +367,35 @@ async function loadReceipts(){
    }
  });
 }
+async function loadItemAvailability(){
+  availabilityEvents=[];
+  const q=await db.from("item_availability")
+    .select("id,item_name,status,effective_date,created_at")
+    .eq("school_id",currentSchoolId)
+    .eq("academic_year_id",activeYear.id)
+    .in("item_name",["ಹಾಲು","ರಾಗಿ ಮಾಲ್ಟ್"])
+    .order("effective_date",{ascending:true})
+    .order("created_at",{ascending:true});
+  if(q.error)throw new Error("Item Availability load failed: "+q.error.message);
+  availabilityEvents=q.data||[];
+}
+
+function availabilityStatus(name,date){
+  const n=normalizeItemName(name);
+  const rows=availabilityEvents
+    .filter(r=>normalizeItemName(r.item_name)===n && String(r.effective_date||"").slice(0,10)<=String(date).slice(0,10))
+    .sort((a,b)=>String(b.effective_date||"").localeCompare(String(a.effective_date||"")) || String(b.created_at||"").localeCompare(String(a.created_at||"")));
+  return rows[0]?.status||"available";
+}
+
+function availabilityBlocksExpense(name,date){
+  const n=normalizeItemName(name);
+  const milkUnavailable=availabilityStatus("ಹಾಲು",date)==="unavailable";
+  if(milkUnavailable && ["ಹಾಲು","ರಾಗಿ ಮಾಲ್ಟ್","ಸಕ್ಕರೆ","ಕ್ಷೀರಭಾಗ್ಯ ಇತರೆ","ಕ್ಷೀರಭಾಗ್ಯ ಅನಿಲ"].some(x=>normalizeItemName(x)===n)) return true;
+  if(isRagiMalt(name) && availabilityStatus("ರಾಗಿ ಮಾಲ್ಟ್",date)==="unavailable") return true;
+  return false;
+}
+
 async function loadWheat(){
  wheatDays.clear();const q=await db.from("food_wheat_days").select("id,wheat_date,wheat_students").eq("school_id",currentSchoolId).eq("academic_year_id",activeYear.id).gte("wheat_date",current.start).lte("wheat_date",current.end).order("wheat_date");
  if(q.error)throw new Error("Wheat Day load failed: "+q.error.message);(q.data||[]).forEach(r=>wheatDays.set(String(r.wheat_date).slice(0,10),r));
@@ -426,6 +456,9 @@ function wheatStudentsForDate(date){
 }
 function expense(type,name,date){
   if(current.holidays.has(date))return 0;
+  // Item Availability: only the availability rules are applied here.
+  // All existing stock, rate, wheat, weekday and rounding calculations remain unchanged.
+  if(availabilityBlocksExpense(name,date))return 0;
 
   const counts=current.counts[date]||{};
   const wheatDay=wheatDays.has(String(date).slice(0,10));
@@ -1077,7 +1110,7 @@ async function loadAll(){
   await loadSettings();
   await loadDaily();
   // These three reads depend only on current month/academic year, so load them together.
-  await Promise.all([loadReceipts(),loadWheat(),loadOpening()]);
+  await Promise.all([loadReceipts(),loadWheat(),loadOpening(),loadItemAvailability()]);
 
   // Render immediately. Monthly closing persistence is derived data and does not
   // need to block the screen; save it in the background so the page feels fast.
