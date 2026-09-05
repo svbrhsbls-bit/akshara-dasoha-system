@@ -571,7 +571,7 @@ function fillItems(){
       <input id="master_input_${i}" value="${esc(x)}" disabled
              style="flex:1;background:#f1f5f3;font-weight:600">
       <button class="secondary" id="master_btn_${i}" onclick="editItem(${i})">✏️ Edit</button>
-      ${i>=DEFAULT_ITEMS.length?`<button class="danger remove" onclick="removeItem(${i})" title="Item ತೆಗೆದುಹಾಕಿ">×</button>`:''}
+      <button class="danger remove" onclick="removeItem(${i})" title="Item ತೆಗೆದುಹಾಕಿ">🗑️ Delete</button>
     </div>`).join('');
 }
 
@@ -677,16 +677,29 @@ async function renameItem(i,v){
 }
 
 async function removeItem(i){
-  if(i<DEFAULT_ITEMS.length)return;
   const item=state.items[i];
+  if(!item)return;
   if(!confirm('ಈ Item ಅನ್ನು Item Masterನಿಂದ ತೆಗೆದುಹಾಕಬೇಕೇ?'))return;
-  const r=await db.from("cash_book_items").delete().eq("school_id",currentSchoolId).eq("item_name",item);
+
+  const r=await db.from("cash_book_items").delete()
+    .eq("school_id",currentSchoolId)
+    .eq("item_name",item);
   if(r.error)return alert('Item delete failed: '+r.error.message);
+
+  // Delete the same Item's Opening Balance also.
+  const ob=await db.from("cash_book_opening_balances").delete()
+    .eq("school_id",currentSchoolId)
+    .eq("academic_year",selectedYear)
+    .eq("item_name",item);
+  if(ob.error)return alert('Opening Balance delete failed: '+ob.error.message);
+
   state.items.splice(i,1);
   delete state.openingBalance?.[item];
   state.jama=state.jama.filter(x=>x.item!==item);
   state.kharchu=state.kharchu.filter(x=>x.item!==item);
-  fillItems();renderAll();
+  fillItems();
+  renderAll();
+  renderOpeningBalance();
 }
 
 function renderBulkEntry(type){
