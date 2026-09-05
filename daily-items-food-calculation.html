@@ -1209,10 +1209,33 @@ async function saveReceipts(){
       if(z.error)throw z.error;
     }
 
-    // Upsert receipts so entering stock on a date adds it to that day's ledger.
-    if(rows.length){
-      const z=await db.from("food_stock_receipts")
-        .upsert(rows,{onConflict:"school_id,academic_year_id,item_type,item_name,receipt_date"});
+    // Save receipts without relying on an ON CONFLICT constraint.
+    // This works with the existing food_stock_receipts table structure.
+    for(const row of rows){
+      const existing = (existingQ.data||[]).find(r =>
+        String(r.item_type)===String(row.item_type) &&
+        String(r.item_name)===String(row.item_name) &&
+        String(r.receipt_date).slice(0,10)===String(row.receipt_date).slice(0,10)
+      );
+
+      let z;
+      if(existing?.id){
+        z = await db.from("food_stock_receipts")
+          .update({
+            school_id:currentSchoolId,
+            academic_year_id:row.academic_year_id,
+            item_type:row.item_type,
+            item_name:row.item_name,
+            receipt_date:row.receipt_date,
+            quantity:row.quantity,
+            unit:row.unit,
+            updated_at:row.updated_at
+          })
+          .eq("school_id",currentSchoolId)
+          .eq("id",existing.id);
+      }else{
+        z = await db.from("food_stock_receipts").insert(row);
+      }
       if(z.error)throw z.error;
     }
 
