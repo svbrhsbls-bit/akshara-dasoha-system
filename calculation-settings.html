@@ -762,6 +762,7 @@ async function loadWheatSetting(){
   const {data,error}=await db
     .from("wheat_rate_settings")
     .select("*")
+    .eq("school_id",currentSchoolId)
     .eq("academic_year_id",activeYear.id)
     .eq("class_group",selectedGroup)
     .maybeSingle();
@@ -824,10 +825,11 @@ async function saveWheatSetting(){
     result=await db.from("wheat_rate_settings")
       .update(payload)
       .eq("id",wheatSettingId)
+      .eq("school_id",currentSchoolId)
       .select().single();
   }else{
     result=await db.from("wheat_rate_settings")
-      .upsert(payload,{onConflict:"academic_year_id,class_group"})
+      .upsert(payload,{onConflict:"school_id,academic_year_id,class_group"})
       .select().single();
   }
 
@@ -1041,6 +1043,7 @@ async function loadNutrition(){
  const {data,error}=await db
   .from("nutritional_foods")
   .select("*")
+   .eq("school_id",currentSchoolId)
   .eq("academic_year_id",activeYear.id)
   .eq("class_group",selectedGroup)
   .order("created_at",{ascending:true});
@@ -1126,6 +1129,7 @@ async function saveNutrition(){
    .from("nutritional_foods")
    .update(payload)
    .eq("id",editingNutritionId)
+   .eq("school_id",currentSchoolId)
    .eq("academic_year_id",activeYear.id)
    .select()
    .single();
@@ -1137,6 +1141,7 @@ async function saveNutrition(){
    .select("id")
    .eq("school_id",currentSchoolId)
    .eq("academic_year_id",activeYear.id)
+   .eq("class_group",selectedGroup)
    .eq("food_name",name)
    .maybeSingle();
 
@@ -1152,7 +1157,6 @@ async function saveNutrition(){
     .update(payload)
     .eq("id",existing.id)
     .eq("school_id",currentSchoolId)
-    .eq("academic_year_id",activeYear.id)
     .select()
     .single();
 
@@ -1208,6 +1212,7 @@ async function deleteNutrition(id){
   .from("nutritional_foods")
   .delete()
   .eq("id",id)
+   .eq("school_id",currentSchoolId)
   .eq("academic_year_id",activeYear.id);
 
  if(error){
