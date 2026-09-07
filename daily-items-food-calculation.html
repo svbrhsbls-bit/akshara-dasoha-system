@@ -258,14 +258,20 @@ async function loadSettings(){
     db.from("wheat_rate_settings")
       .select("id,academic_year_id,class_group,quantity_per_student,rate_per_kg,updated_at,created_at")
       .eq("school_id",currentSchoolId).eq("academic_year_id",activeYear.id)
-      .eq("class_group",current?.group||"")
-      .maybeSingle()
+      .order("created_at",{ascending:false})
   ]);
   if(a.error)throw new Error("Calculation Settings Item load failed: "+a.error.message);
   if(b.error)throw new Error("ಅಡಿಗೆ ಪದಾರ್ಥ load failed: "+b.error.message);
   if(n.error)throw new Error("ಪೌಷ್ಠಿಕ ಆಹಾರ load failed: "+n.error.message);
   if(w.error)throw new Error("ಗೋಧಿ Setting load failed: "+w.error.message);
-  settings.wheat=w.data||null;
+
+  // ಬೇರೆ ಶಾಲೆಗಳಲ್ಲಿಯೂ Class Group spelling/spacing ಬೇರೆಯಾಗಿದ್ದರೂ
+  // ಅದೇ ಶಾಲೆ + Academic Yearನ ಗೋಧಿ Rate ಅನ್ನು ಸರಿಯಾಗಿ ಪಡೆಯಬೇಕು.
+  // ಉದಾ: "8-10" ಮತ್ತು "8 - 10" ಎರಡನ್ನೂ ಒಂದೇ Group ಎಂದು ಪರಿಗಣಿಸಲಾಗುತ್ತದೆ.
+  const wheatGroupKey=String(current?.group||"").replace(/\s+/g,"");
+  settings.wheat=(w.data||[]).find(x=>
+    String(x.class_group||"").replace(/\s+/g,"")===wheatGroupKey
+  )||null;
 
   // If old month-based/duplicate rows still exist, do not add them together.
   // Keep only the latest row for each Class Group + Item.
