@@ -1000,12 +1000,35 @@ async function addAcademicYear(){
     2026-2027
   */
 
-  if(
-    !/^\d{4}-\d{2,4}$/.test(year)
-  ){
+  /*
+    Academic Year must be exactly:
+    2026-27, 2027-28, 2028-29 ...
+    First year = 4 digits
+    Second year = exactly 2 digits
+    Second year must be first year + 1
+  */
+  const yearMatch = year.match(/^(\d{4})-(\d{2})$/);
+
+  if(!yearMatch){
 
     showMessage(
-      "Academic Year ಅನ್ನು 2026-27 ರೀತಿಯಲ್ಲಿ ನಮೂದಿಸಿ.",
+      "Academic Year ಅನ್ನು 2026-27, 2027-28, 2028-29 ರೀತಿಯಲ್ಲಿ ಮಾತ್ರ ನಮೂದಿಸಿ.",
+      "error"
+    );
+
+    $("academic_year_type").focus();
+
+    return;
+
+  }
+
+  const startYear = Number(yearMatch[1]);
+  const endYear = Number(yearMatch[2]);
+
+  if(endYear !== (startYear + 1) % 100){
+
+    showMessage(
+      "Academic Year ಸರಿಯಾದ ಕ್ರಮದಲ್ಲಿ ಇರಬೇಕು. ಉದಾ: 2026-27, 2027-28, 2028-29.",
       "error"
     );
 
