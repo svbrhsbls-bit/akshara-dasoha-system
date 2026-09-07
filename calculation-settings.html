@@ -1135,8 +1135,8 @@ async function saveNutrition(){
   const {data:existing,error:findError}=await db
    .from("nutritional_foods")
    .select("id")
+   .eq("school_id",currentSchoolId)
    .eq("academic_year_id",activeYear.id)
-   .eq("class_group",selectedGroup)
    .eq("food_name",name)
    .maybeSingle();
 
@@ -1151,6 +1151,8 @@ async function saveNutrition(){
     .from("nutritional_foods")
     .update(payload)
     .eq("id",existing.id)
+    .eq("school_id",currentSchoolId)
+    .eq("academic_year_id",activeYear.id)
     .select()
     .single();
 
