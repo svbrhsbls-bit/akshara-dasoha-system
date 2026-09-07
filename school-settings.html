@@ -873,12 +873,31 @@ async function loadYearList(row){
     }
 
 
+    // Remove invalid old year values such as "2026".
+    // Only Academic Years in YYYY-YY format are allowed.
+    const invalidYearIds = (data || [])
+      .filter(item => !/^\d{4}-\d{2}$/.test(normalizeYear(item.year_name)))
+      .map(item => item.id)
+      .filter(Boolean);
+
+    // One-time cleanup: remove the invalid "2026" year from database.
+    const old2026 = (data || []).find(
+      item => normalizeYear(item.year_name) === "2026"
+    );
+
+    if(old2026?.id){
+      await db
+        .from("academic_years")
+        .delete()
+        .eq("id", old2026.id);
+    }
+
     academicYears =
       (data || [])
         .map(item =>
           normalizeYear(item.year_name)
         )
-        .filter(Boolean);
+        .filter(year => /^\d{4}-\d{2}$/.test(year));
 
 
     academicYears =
