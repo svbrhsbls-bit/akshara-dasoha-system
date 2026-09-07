@@ -811,6 +811,7 @@ async function saveWheatSetting(){
   }
 
   const payload={
+    school_id:currentSchoolId,
     academic_year_id:activeYear.id,
     class_group:selectedGroup,
     quantity_per_student:Number(qty),
