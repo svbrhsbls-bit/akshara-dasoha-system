@@ -1003,11 +1003,18 @@ function renderReport(){
 
   const bs=groups[current.group];
   const allNames=namesFor(type);
-  const wheatName=type==="ingredient"
-    ? (allNames.find(x=>normalizeItemName(x.name).includes("ಗೋಧಿ"))?.name||null)
-    : null;
+  let wheatName=null;
+  if(type==="ingredient"){
+    // Separate Wheat Rate is a Calculation Settings entry. Show it in the
+    // ಅಡುಗೆ ಪದಾರ್ಥ report even when kitchen_ingredients has no separate
+    // "ಗೋಧಿ" row. If a real wheat row exists, keep its name.
+    wheatName=allNames.find(x=>normalizeItemName(x.name).includes("ಗೋಧಿ"))?.name||null;
+    if(!wheatName && settings.wheat){
+      wheatName="ಗೋಧಿ ಪರಿವರ್ತನೆ";
+    }
+  }
   const names=type==="ingredient"
-    ? allNames.filter(x=>x.name!==wheatName)
+    ? allNames.filter(x=>!wheatName || x.name!==wheatName)
     : allNames;
 
   const label=type==="item"?"Items (ಆಹಾರ ಪದಾರ್ಥಗಳು)":"ಅಡುಗೆ ಪದಾರ್ಥಗಳು";
