@@ -478,12 +478,12 @@ function renderSheet(year,month,counts,holidays,food,group){
       h+=`<tr data-date="${iso}" class="${saved?'saved-row':''}">
         <td>${pad(d)}-${pad(month)}-${year}</td>
         <td>${enroll}</td>
-        <td><input class="num attendance" value="${att||""}" inputmode="numeric" min="0"
+        <td><input class="num attendance" value="${att}" inputmode="numeric" min="0"
         data-saved="${att>0}" ${!editing&&att>0?"disabled":""}></td>
-        ${egg.map((v,i)=>`<td><input class="num egg" data-class="${classes[i]}" value="${v||""}" inputmode="numeric" min="0"
+        ${egg.map((v,i)=>`<td><input class="num egg" data-class="${classes[i]}" value="${v}" inputmode="numeric" min="0"
         data-saved="${v>0}" ${!editing&&v>0?"disabled":""}></td>`).join("")}
         <td class="totalcell eggRowTotal">${egg.reduce((a,b)=>a+b,0)}</td>
-        ${banana.map((v,i)=>`<td><input class="num banana" data-class="${classes[i]}" value="${v||""}" inputmode="numeric" min="0"
+        ${banana.map((v,i)=>`<td><input class="num banana" data-class="${classes[i]}" value="${v}" inputmode="numeric" min="0"
         data-saved="${v>0}" ${!editing&&v>0?"disabled":""}></td>`).join("")}
         <td class="totalcell bananaRowTotal">${banana.reduce((a,b)=>a+b,0)}</td>
         ${meal.map(v=>`<td class="totalcell meal">${v}</td>`).join("")}
@@ -604,7 +604,7 @@ async function saveAll(){
       const att=Math.max(0,Number(attInp?.value||0));
 
       // Only values that are actually entered are saved.
-      if(att>0){
+      if(attInp && String(attInp.value).trim()!==""){
         records.push({school_id:currentSchoolId,academic_year_id:yearId,distribution_date:date,item_name:"ಹಾಜರಾತಿ||ALL",
           students_count:att,quantity_per_student:1,total_quantity:att,unit:"ಮಕ್ಕಳು"});
       }
@@ -613,9 +613,9 @@ async function saveAll(){
         const egg=Math.max(0,Number(tr.querySelectorAll(".egg")[i]?.value||0));
         const banana=Math.max(0,Number(tr.querySelectorAll(".banana")[i]?.value||0));
         const meal=egg+banana;
-        if(egg>0) records.push({school_id:currentSchoolId,academic_year_id:yearId,distribution_date:date,item_name:"ಮೊಟ್ಟೆ||"+c,
+        if(tr.querySelectorAll(".egg")[i]?.value.trim()!=="") records.push({school_id:currentSchoolId,academic_year_id:yearId,distribution_date:date,item_name:"ಮೊಟ್ಟೆ||"+c,
           students_count:egg,quantity_per_student:1,total_quantity:egg,unit:"ಮಕ್ಕಳು"});
-        if(banana>0) records.push({school_id:currentSchoolId,academic_year_id:yearId,distribution_date:date,item_name:"ಬಾಳೆಹಣ್ಣು||"+c,
+        if(tr.querySelectorAll(".banana")[i]?.value.trim()!=="") records.push({school_id:currentSchoolId,academic_year_id:yearId,distribution_date:date,item_name:"ಬಾಳೆಹಣ್ಣು||"+c,
           students_count:banana,quantity_per_student:1,total_quantity:banana,unit:"ಮಕ್ಕಳು"});
         if(meal>0) records.push({school_id:currentSchoolId,academic_year_id:yearId,distribution_date:date,item_name:"ಬಿಸಿಊಟ||"+c,
           students_count:meal,quantity_per_student:1,total_quantity:meal,unit:"ಮಕ್ಕಳು"});
