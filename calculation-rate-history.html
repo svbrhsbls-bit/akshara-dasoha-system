@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="kn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Calculation Rate History</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#f3f6f4;color:#17202a;font-family:Arial,"Noto Sans Kannada","Nirmala UI",sans-serif}
+header{background:#126b38;color:#fff;padding:18px 28px}header h1{margin:0;font-size:28px}header p{margin:5px 0 0}.wrap{max-width:1250px;margin:18px auto;padding:0 14px}
+.card{background:#fff;border-radius:12px;padding:20px;margin-bottom:16px;box-shadow:0 2px 10px #0001}.grid{display:grid;grid-template-columns:1.3fr 1fr 1fr 1fr;gap:12px;align-items:end}
+label{display:block;font-weight:700;margin-bottom:6px}input,select,button{font:inherit}input,select{width:100%;height:42px;padding:9px;border:1px solid #bfc9c2;border-radius:7px;background:#fff}
+button{border:0;border-radius:7px;padding:9px 14px;font-weight:700;cursor:pointer}.primary{background:#126b38;color:#fff}.secondary{background:#e7ece9}.edit{background:#f59e0b;color:#fff}.danger{background:#b42318;color:#fff}
+.msg{display:none;margin-top:10px;padding:10px;border-radius:7px}.msg.ok{display:block;background:#e5f6eb;color:#126b38}.msg.err{display:block;background:#fde8e7;color:#a11}.msg.info{display:block;background:#eaf3ff;color:#175cd1}
+.lockbox{background:#eef7f1;border:1px solid #cfe4d6;padding:12px;border-radius:8px}.small{font-size:13px;color:#64748b}.table-wrap{overflow:auto;border:1px solid #7f8b84;margin-top:14px}
+table{border-collapse:collapse;width:100%;min-width:1000px;background:#fff}th,td{border:1px solid #7f8b84;padding:8px;text-align:center;vertical-align:middle}th{background:#eef2ef}.actions{white-space:nowrap}.hidden{display:none}
+@media(max-width:900px){.grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header><h1>ದರ / ಪ್ರಮಾಣ ಇತಿಹಾಸ</h1><p id="schoolTitle">ಶಾಲೆಯ ಹೆಸರು</p></header>
+<div class="wrap">
+<section class="card">
+<h2 style="margin-top:0">ಶೈಕ್ಷಣಿಕ ವರ್ಷ</h2>
+<div class="lockbox"><b id="academicYear">Loading...</b><div class="small" style="margin-top:5px">School Settingsನಲ್ಲಿ Active ಆಗಿರುವ Academic Year ಬಳಸಲಾಗುತ್ತದೆ.</div></div>
+<div id="msg" class="msg"></div>
+</section>
+
+<section class="card">
+<h2 style="margin-top:0">ಹೊಸ Rate / ಪ್ರಮಾಣ ದಾಖಲಿಸಿ</h2>
+<div class="grid">
+<div><label>Setting Type</label><select id="settingType">
+<option value="item">Item — KG / Gram</option>
+<option value="wheat">ಗೋಧಿ — ಪ್ರತ್ಯೇಕ ಪರಿವರ್ತನೆ / Rate</option>
+<option value="ingredient">ಅಡಿಗೆ ಪದಾರ್ಥ — ಮೊತ್ತ</option>
+<option value="nutrition">ಪೌಷ್ಠಿಕ ಆಹಾರ</option>
+</select></div>
+<div><label>ಜಾರಿಗೆ ಬರುವ ದಿನಾಂಕ</label><input id="effectiveDate" type="date"></div>
+<div id="classWrap"><label>Class Group</label><select id="classGroup"><option value="1-5">1 - 5</option><option value="6-7">6 - 7</option><option value="8-10">8 - 10</option><option value="1-10">1 - 10</option></select></div>
+<div id="nameWrap"><label id="nameLabel">Item / ಪದಾರ್ಥ</label><input id="name" placeholder="ಉದಾ: ಅಕ್ಕಿ"></div>
+</div>
+<div class="grid" style="margin-top:12px">
+<div><label id="value1Label">ಪ್ರಮಾಣ / ವಿದ್ಯಾರ್ಥಿ</label><input id="value1" type="number" min="0" step="0.001" placeholder="0"></div>
+<div><label id="unitLabel">ಅಳತೆ</label><select id="unit"><option value="KG">KG</option><option value="Gram">Gram</option><option value="Nos">Nos / ಸಂಖ್ಯೆ</option></select></div>
+<div id="value2Wrap"><label id="value2Label">Rate (₹ / KG)</label><input id="value2" type="number" min="0" step="0.01" placeholder="0"></div>
+<div><button class="primary" id="saveBtn">💾 Save</button> <button class="secondary hidden" id="cancelBtn">Cancel</button></div>
+</div>
+<div class="small" style="margin-top:10px"><b>ಮುಖ್ಯ:</b> ಹಳೆಯ ದಾಖಲೆಯನ್ನು Edit ಮಾಡಿ ಬದಲಾಯಿಸಬೇಡಿ. ಸರ್ಕಾರದ Rate / ಪ್ರಮಾಣ ಬದಲಾದಾಗ ಹೊಸ effective date ಜೊತೆಗೆ ಹೊಸ ದಾಖಲೆಯನ್ನು ಸೇರಿಸಿ.</div>
+</section>
+
+<section class="card">
+<h2 style="margin-top:0">ಪ್ರಸ್ತುತ ಅನ್ವಯಿಸುವ Rate / ಪ್ರಮಾಣ</h2>
+<div id="current"></div>
+</section>
+
+<section class="card">
+<h2 style="margin-top:0">Rate History / ಹಿಂದಿನ ದಾಖಲೆಗಳು</h2>
+<div id="history"></div>
+</section>
+</div>
+
+<script>
+const SUPABASE_URL="https://ezmudfrpcvjsgnjibvoq.supabase.co";
+const SUPABASE_KEY="sb_publishable__FYyH6NQaqgARaq2dvuovQ_rKmus0js";
+const db=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+const $=id=>document.getElementById(id);
+let currentSchoolId=null,school=null,activeYear=null,editingId=null;
+const today=()=>{const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`};
+const fmtDate=v=>{if(!v)return "";const [y,m,d]=String(v).slice(0,10).split("-");return `${d}-${m}-${y}`};
+const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
+const typeLabel=t=>({item:"Item — KG / Gram",wheat:"ಗೋಧಿ — ಪ್ರತ್ಯೇಕ ಪರಿವರ್ತನೆ / Rate",ingredient:"ಅಡಿಗೆ ಪದಾರ್ಥ — ಮೊತ್ತ",nutrition:"ಪೌಷ್ಠಿಕ ಆಹಾರ"}[t]||t);
+const groupLabel=g=>({"1-5":"1 - 5","6-7":"6 - 7","8-10":"8 - 10","1-10":"1 - 10"}[g]||g);
+function show(t,c="ok"){$("msg").textContent=t;$("msg").className="msg "+c}
+async function loadCurrentSchool(){
+ const {data:{user},error:a}=await db.auth.getUser();
+ if(a||!user){location.href="login.html";return false}
+ const {data,error}=await db.from("school_users").select("id,user_id,school_id,username,role,is_active").eq("user_id",user.id).eq("is_active",true).maybeSingle();
+ if(error)throw error;if(data?.role==="admin"){location.href="admin.html";return false}if(!data?.school_id)throw new Error("ಈ Login ಗೆ School mapping ಕಂಡುಬಂದಿಲ್ಲ.");
+ currentSchoolId=data.school_id;return true;
+}
+async function loadSchool(){
+ const {data,error}=await db.from("school_settings").select("*").eq("school_id",currentSchoolId).order("created_at",{ascending:true}).limit(1).maybeSingle();
+ if(error)throw error;if(!data)throw new Error("School Settingsನಲ್ಲಿ ಶಾಲೆಯ ವಿವರಗಳು ಇಲ್ಲ.");school=data;$('schoolTitle').textContent=data.school_name||"ಶಾಲೆಯ ಹೆಸರು";
+}
+async function loadActiveYear(){
+ const wanted=String(school?.academic_year||"").trim().replace(/\s+/g,"");
+ if(wanted){const q=await db.from("academic_years").select("id,year_name,is_active,created_at").eq("year_name",wanted).limit(1).maybeSingle();if(q.error)throw q.error;if(q.data){activeYear=q.data;$('academicYear').textContent=q.data.year_name;return}}
+ const q=await db.from("academic_years").select("id,year_name,is_active,created_at").eq("is_active",true).order("created_at",{ascending:false}).limit(1).maybeSingle();
+ if(q.error)throw q.error;if(!q.data)throw new Error("academic_yearsನಲ್ಲಿ Active Academic Year ಇಲ್ಲ.");activeYear=q.data;$('academicYear').textContent=q.data.year_name;
+}
+function updateForm(){
+ const t=$('settingType').value;
+ $('classWrap').classList.toggle('hidden',false);
+ $('nameWrap').classList.toggle('hidden',t==='wheat');
+ $('value2Wrap').classList.toggle('hidden',t!=='wheat');
+ $('unitLabel').textContent=t==='ingredient'?"ಅಳತೆ":"ಅಳತೆ";
+ if(t==='item'){$('nameLabel').textContent="Item / ಪದಾರ್ಥ";$('value1Label').textContent="ಪ್ರಮಾಣ / ವಿದ್ಯಾರ್ಥಿ";$('unit').innerHTML='<option value="KG">KG</option><option value="Gram">Gram</option>';$('value2').value=''}
+ if(t==='wheat'){$('value1Label').textContent="ಗೋಧಿ ಪ್ರಮಾಣ / ವಿದ್ಯಾರ್ಥಿ";$('value2Label').textContent="ಸರ್ಕಾರದ Rate (₹ / KG)";$('unit').innerHTML='<option value="KG">KG</option>';$('name').value="ಗೋಧಿ"}
+ if(t==='ingredient'){$('nameLabel').textContent="Item / ಅಡಿಗೆ ಪದಾರ್ಥ";$('value1Label').textContent="ಮೊತ್ತ / ವಿದ್ಯಾರ್ಥಿ (₹)";$('unit').innerHTML='<option value="₹">₹</option>';$('value2').value=''}
+ if(t==='nutrition'){$('nameLabel').textContent="ಪೌಷ್ಠಿಕ ಆಹಾರ / Item";$('value1Label').textContent="ಅಳತೆ / ವಿದ್ಯಾರ್ಥಿ";$('unit').innerHTML='<option value="Nos">Nos / ಸಂಖ್ಯೆ</option><option value="Gram">Gram</option><option value="KG">KG</option>';$('value2').value=''}
+}
+function resetForm(){editingId=null;$('effectiveDate').value=today();$('name').value='';$('value1').value='';$('value2').value='';$('saveBtn').textContent='💾 Save';$('cancelBtn').classList.add('hidden');updateForm()}
+async function saveRow(){
+ if(!activeYear){show('Academic Year ಇಲ್ಲ.','err');return}
+ const setting_type=$('settingType').value,effective_date=$('effectiveDate').value,class_group=$('classGroup').value,name=setting_type==='wheat'?'ಗೋಧಿ':$('name').value.trim(),value1=$('value1').value,value2=$('value2').value,unit=$('unit').value;
+ if(!effective_date){show('ಜಾರಿಗೆ ಬರುವ ದಿನಾಂಕ ಆಯ್ಕೆ ಮಾಡಿ.','err');return}
+ if(setting_type!=='wheat'&&!name){show('Item / ಪದಾರ್ಥ ನಮೂದಿಸಿ.','err');return}
+ if(value1===''||Number(value1)<0){show('ಪ್ರಮಾಣ / ಮೊತ್ತ ನಮೂದಿಸಿ.','err');return}
+ if(setting_type==='wheat'&&(value2===''||Number(value2)<0)){show('ಗೋಧಿ Rate ನಮೂದಿಸಿ.','err');return}
+ const payload={school_id:currentSchoolId,academic_year_id:activeYear.id,class_group,setting_type,item_name:name,quantity_per_student:Number(value1),unit,rate_per_kg:setting_type==='wheat'?Number(value2):null,effective_date,updated_at:new Date().toISOString()};
+ let result;
+ if(editingId){result=await db.from('calculation_rate_history').update(payload).eq('id',editingId).eq('school_id',currentSchoolId).select().single()}
+ else {result=await db.from('calculation_rate_history').insert(payload).select().single()}
+ if(result.error){show('Save failed: '+result.error.message,'err');return}
+ resetForm();await loadRows();show(editingId?'Update ಆಯಿತು.':'ಹೊಸ Rate / ಪ್ರಮಾಣ ದಾಖಲಾಗಿದೆ.');
+}
+function rowText(r){if(r.setting_type==='wheat')return `ಪ್ರಮಾಣ ${Number(r.quantity_per_student||0)} KG / ವಿದ್ಯಾರ್ಥಿ, Rate ₹${Number(r.rate_per_kg||0).toFixed(2)} / KG`;if(r.setting_type==='ingredient')return `₹${Number(r.quantity_per_student||0).toFixed(2)} / ವಿದ್ಯಾರ್ಥಿ`;return `${Number(r.quantity_per_student||0)} ${r.unit||''} / ವಿದ್ಯಾರ್ಥಿ`}
+function latest(rows){const out=[];const keys=new Set();rows.filter(r=>String(r.effective_date)<=today()).sort((a,b)=>String(b.effective_date).localeCompare(String(a.effective_date))||String(b.created_at||'').localeCompare(String(a.created_at||''))).forEach(r=>{const k=[r.setting_type,r.class_group,r.item_name].join('|');if(!keys.has(k)){keys.add(k);out.push(r)}});return out}
+function renderCurrent(rows){const data=latest(rows);if(!data.length){$('current').innerHTML='<div class="small">ಪ್ರಸ್ತುತ ಅನ್ವಯಿಸುವ ದಾಖಲೆ ಇಲ್ಲ.</div>';return}let h='<div class="table-wrap"><table><thead><tr><th>Type</th><th>Class Group</th><th>Item</th><th>ಪ್ರಮಾಣ / ಮೊತ್ತ</th><th>ಜಾರಿಗೆ ಬಂದ ದಿನಾಂಕ</th></tr></thead><tbody>';data.forEach(r=>{h+=`<tr><td>${esc(typeLabel(r.setting_type))}</td><td>${esc(groupLabel(r.class_group))}</td><td>${esc(r.item_name||'—')}</td><td>${esc(rowText(r))}</td><td>${fmtDate(r.effective_date)}</td></tr>`});h+='</tbody></table></div>';$('current').innerHTML=h}
+function renderHistory(rows){if(!rows.length){$('history').innerHTML='<div class="small">ಯಾವುದೇ Rate History ದಾಖಲೆ ಇಲ್ಲ.</div>';return}let h='<div class="table-wrap"><table><thead><tr><th>Type</th><th>Class Group</th><th>Item</th><th>ಪ್ರಮಾಣ / ಮೊತ್ತ</th><th>ಜಾರಿಗೆ ಬರುವ ದಿನಾಂಕ</th><th>Action</th></tr></thead><tbody>';rows.forEach(r=>{h+=`<tr><td>${esc(typeLabel(r.setting_type))}</td><td>${esc(groupLabel(r.class_group))}</td><td>${esc(r.item_name||'—')}</td><td>${esc(rowText(r))}</td><td>${fmtDate(r.effective_date)}</td><td class="actions"><button class="edit" onclick='editRow(${JSON.stringify(r)})'>✏️ Edit</button> <button class="danger" onclick="deleteRow('${r.id}')">🗑️ Delete</button></td></tr>`});h+='</tbody></table></div>';$('history').innerHTML=h}
+async function loadRows(){const {data,error}=await db.from('calculation_rate_history').select('*').eq('school_id',currentSchoolId).eq('academic_year_id',activeYear.id).order('effective_date',{ascending:false}).order('created_at',{ascending:false});if(error){show('Rate History load failed: '+error.message,'err');return}renderCurrent(data||[]);renderHistory(data||[])}
+function editRow(r){editingId=r.id;$('settingType').value=r.setting_type;$('effectiveDate').value=String(r.effective_date).slice(0,10);$('classGroup').value=r.class_group||'1-5';updateForm();$('name').value=r.item_name||'';$('value1').value=r.quantity_per_student??'';$('value2').value=r.rate_per_kg??'';$('unit').value=r.unit||'KG';$('saveBtn').textContent='💾 Update';$('cancelBtn').classList.remove('hidden');window.scrollTo({top:0,behavior:'smooth'})}
+async function deleteRow(id){if(!confirm('ಈ Rate History ದಾಖಲೆಯನ್ನು Delete ಮಾಡಬೇಕೇ?'))return;const {error}=await db.from('calculation_rate_history').delete().eq('id',id).eq('school_id',currentSchoolId);if(error){show('Delete failed: '+error.message,'err');return}await loadRows();show('Rate History ದಾಖಲೆ Delete ಆಯಿತು.')}
+$('settingType').onchange=updateForm;$('saveBtn').onclick=()=>saveRow().catch(e=>show(e.message,'err'));$('cancelBtn').onclick=resetForm;
+async function init(){try{$('effectiveDate').value=today();updateForm();if(!await loadCurrentSchool())return;await loadSchool();await loadActiveYear();await loadRows()}catch(e){console.error(e);show(e.message||String(e),'err')}}
+window.editRow=editRow;window.deleteRow=deleteRow;init();
+</script>
+</body>
+</html>
