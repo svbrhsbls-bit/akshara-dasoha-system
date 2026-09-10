@@ -35,7 +35,7 @@ th{background:#eef2ef}
 .actions{white-space:nowrap}
 .calc{background:#f8fbf9;font-weight:700}
 .badge{display:inline-block;padding:4px 8px;border-radius:15px;font-size:12px;font-weight:700}
-.historybar{display:flex;gap:10px;align-items:end;flex-wrap:wrap}.historybar>div{min-width:240px}.history-card{display:none}.date-note{background:#fff8e7;border:1px solid #f1d28a;padding:10px;border-radius:8px;margin-top:10px}.modal-back{position:fixed;inset:0;background:#0008;display:none;align-items:center;justify-content:center;z-index:9999}.modal{background:#fff;width:min(520px,92vw);padding:22px;border-radius:12px;box-shadow:0 10px 40px #0005}.modal h3{margin-top:0}.modal input{margin:8px 0}.history-table{min-width:1000px}.date-pill{font-weight:700}.blank-rate{color:#b45309;font-weight:700}@media(max-width:850px){.grid{grid-template-columns:1fr}}
+@media(max-width:850px){.grid{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -92,30 +92,86 @@ Academic Year ಅನ್ನು ಇಲ್ಲಿ ಆಯ್ಕೆ ಮಾಡುವು
 </div>
 </div>
 
+
+<!-- DATE-WISE RATE HISTORY -->
 <div class="card">
-<h2 style="margin-top:0">📅 ಜಾರಿಗೆ ಬರುವ ದಿನಾಂಕ</h2>
-<div class="historybar">
-  <div><label>ಜಾರಿಗೆ ಬರುವ ದಿನಾಂಕ</label><input id="effectiveDate" type="date"></div>
-  <div><button class="primary" id="dateLoadBtn">📅 ದಿನಾಂಕ Load</button></div>
-  <div><button class="secondary" id="historyBtn">📜 ಹಿಂದಿನ ದರಗಳು</button></div>
-</div>
-<div class="date-note">ಈಗ ಇರುವ ಮಾಹಿತಿಗೆ Date ಇಲ್ಲ. ಅದು ಹಾಗೆಯೇ ಉಳಿಯುತ್ತದೆ (Date: —). ಹೊಸ ಸರ್ಕಾರದ ದರ ಬದಲಾವಣೆ ಬಂದಾಗ ಮಾತ್ರ ಹೊಸ Effective Date ಆಯ್ಕೆ ಮಾಡಿ, ಈಗಿರುವ Items ಹೆಸರುಗಳನ್ನು ತೋರಿಸಿ, ಹೊಸ Rate / Amount ಅನ್ನು ಖಾಲಿಯಾಗಿ ಇಟ್ಟು Edit ಮಾಡಿ Save ಮಾಡಬಹುದು.</div>
-<div id="dateStatus" class="small" style="margin-top:8px">ಪ್ರಸ್ತುತ ಹಳೆಯ ಮಾಹಿತಿಯನ್ನು ನೋಡುತ್ತಿದ್ದೀರಿ.</div>
+  <h2 style="margin-top:0">📅 ದಿನಾಂಕದಂತೆ Item ದರ</h2>
+  <div class="grid">
+    <div>
+      <label>ಜಾರಿಗೆ ಬರುವ ದಿನಾಂಕ</label>
+      <input id="effectiveDate" type="date">
+    </div>
+    <div>
+      <label>ಸ್ಥಿತಿ</label>
+      <div id="dateStatus" class="lockbox" style="height:42px;padding:9px">Date ಆಯ್ಕೆ ಮಾಡಿ</div>
+    </div>
+    <div></div>
+    <div>
+      <button class="primary" id="dateLoadBtn">📅 Items Load</button>
+      <button class="secondary" id="historyBtn">📜 ಹಿಂದಿನ ದರಗಳು</button>
+    </div>
+  </div>
+  <div class="small" style="margin-top:10px">
+    ಇಲ್ಲಿ ಹೊಸ ಸರ್ಕಾರದ ದರವನ್ನು ದಿನಾಂಕದೊಂದಿಗೆ ದಾಖಲಿಸಲಾಗುತ್ತದೆ. ಇದು <b>calculation_settings</b>ನ ಈಗಿರುವ ಮಾಹಿತಿಯನ್ನು ಬದಲಾಯಿಸುವುದಿಲ್ಲ.
+  </div>
 </div>
 
-<div class="card history-card" id="historyCard">
-<h2 style="margin-top:0">📜 ಹಿಂದಿನ ದರಗಳು</h2>
-<div class="small">ಈ ಶಾಲೆ + Active Academic Year + ಆಯ್ಕೆ ಮಾಡಿದ Class Groupಗೆ ಸೇರಿದ ಹಿಂದಿನ ಎಲ್ಲಾ dated versions ಇಲ್ಲಿ ಕಾಣಿಸುತ್ತವೆ. ಈಗಿರುವ Date-less ಮಾಹಿತಿಗೆ <b>—</b> ಎಂದು ತೋರಿಸಲಾಗುತ್ತದೆ.</div>
-<div class="table-wrap">
-<table class="history-table"><thead><tr><th>ಜಾರಿಗೆ ಬಂದ ದಿನಾಂಕ</th><th>ವರ್ಗ</th><th>Item</th><th>ಪ್ರಮಾಣ / Amount</th><th>Unit</th><th>Rate / Amount</th><th>Action</th></tr></thead>
-<tbody id="historyBody"><tr><td colspan="7">Class Group Load ಮಾಡಿ.</td></tr></tbody></table>
-</div></div>
+<div class="card" id="dateRateCard" style="display:none">
+  <h2 style="margin-top:0">💰 <span id="dateRateTitle">ಹೊಸ Item ದರ</span></h2>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Sl.No</th>
+          <th>Item</th>
+          <th>ಅಳತೆ / ವಿದ್ಯಾರ್ಥಿ</th>
+          <th>Unit</th>
+          <th>ಹೊಸ ದರ (₹ / KG)</th>
+        </tr>
+      </thead>
+      <tbody id="dateRateBody">
+        <tr><td colspan="5">Date Load ಮಾಡಿ.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div style="margin-top:14px;text-align:right">
+    <button class="primary" id="dateSubmitBtn">💾 Submit</button>
+  </div>
+</div>
 
-<div class="modal-back" id="deleteModal"><div class="modal">
-<h3>⚠️ Date Record Delete</h3><div id="deleteText">ಈ dated record ಅಳಿಸಲು ಕೆಳಗೆ DELETE ಎಂದು type ಮಾಡಿ.</div>
-<input id="deleteConfirmText" placeholder="DELETE">
-<div style="display:flex;gap:10px;justify-content:flex-end"><button class="secondary" id="deleteCancelBtn">Cancel</button><button class="danger" id="deleteConfirmBtn">Delete</button></div>
-</div></div>
+<div class="card" id="historyCard" style="display:none">
+  <h2 style="margin-top:0">📜 ಹಿಂದಿನ ದರಗಳು</h2>
+  <div class="small">ಈ School + Active Academic Year + Class Groupಗೆ ಸೇರಿದ date-wise Item rates ಇಲ್ಲಿ ಕಾಣಿಸುತ್ತವೆ.</div>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>ಜಾರಿಗೆ ಬಂದ ದಿನಾಂಕ</th>
+          <th>Item</th>
+          <th>ಅಳತೆ / ವಿದ್ಯಾರ್ಥಿ</th>
+          <th>Unit</th>
+          <th>ದರ</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody id="historyBody">
+        <tr><td colspan="6">History Load ಮಾಡಿ.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="card" id="dateDeleteCard" style="display:none">
+  <h2 style="margin-top:0">⚠️ Date Delete</h2>
+  <div class="small">ಒಂದು date delete ಮಾಡಿದರೆ ಆ dateಗೆ ಸೇರಿದ ಎಲ್ಲಾ Item rates ಮಾತ್ರ delete ಆಗುತ್ತವೆ. Delete ಮಾಡಲು <b>DELETE</b> type ಮಾಡಬೇಕು.</div>
+  <div style="display:flex;gap:10px;margin-top:10px;align-items:end">
+    <div style="flex:1">
+      <label>Delete confirmation</label>
+      <input id="deleteDateConfirm" placeholder="DELETE">
+    </div>
+    <button class="danger" id="deleteDateBtn">🗑️ Selected Date Delete</button>
+  </div>
+</div>
 
 <!-- ITEM KG / GRAM -->
 <div class="card">
@@ -361,8 +417,6 @@ let editingIngredientId=null;
 let editingNutritionId=null;
 let wheatSettingId=null;
 let selectedEffectiveDate="";
-let dateMode=false;
-let pendingHistoryId=null;
 
 function esc(v){
  return String(v??"").replace(/[&<>"']/g,c=>({
@@ -562,90 +616,162 @@ function editSelection(){
  show("Class Group Edit mode.","info");
 }
 
-async function getHistoryRows(){
-  if(!activeYear||!selectedGroup||!currentSchoolId)return [];
-  const {data,error}=await db.from("calculation_rate_history").select("*")
-    .eq("school_id",currentSchoolId).eq("academic_year_id",activeYear.id)
-    .eq("class_group",selectedGroup).order("effective_date",{ascending:false}).order("created_at",{ascending:true});
-  if(error){
-    console.warn("History load failed:",error.message);
-    return [];
-  }
-  return data||[];
-}
-function historyTypeLabel(t){return {item:"🍚 Item",wheat:"🌾 ಗೋಧಿ",ingredient:"🥕 ಅಡಿಗೆ ಪದಾರ್ಥ",nutrition:"🥚 ಪೌಷ್ಠಿಕ ಆಹಾರ"}[t]||t;}
-function showCurrentHistoryRows(){
-  return Promise.all([
-    db.from("calculation_settings").select("item_name,quantity_per_student,unit").eq("school_id",currentSchoolId).eq("academic_year_id",activeYear.id).eq("class_group",selectedGroup),
-    db.from("wheat_rate_settings").select("quantity_per_student,rate_per_kg").eq("school_id",currentSchoolId).eq("academic_year_id",activeYear.id).eq("class_group",selectedGroup),
-    db.from("kitchen_ingredients").select("ingredient_name,amount_per_student,unit").eq("academic_year_id",activeYear.id).eq("class_group",selectedGroup),
-    db.from("nutritional_foods").select("food_name,quantity_per_student,unit").eq("school_id",currentSchoolId).eq("academic_year_id",activeYear.id).eq("class_group",selectedGroup)
-  ]);
-}
-async function loadHistory(){
-  if(!activeYear||!selectedGroup){$("historyBody").innerHTML='<tr><td colspan="7">Class Group Load ಮಾಡಿ.</td></tr>';return;}
-  const rows=await getHistoryRows();
-  let html="";
-  const current=await showCurrentHistoryRows();
-  const [items,wheat,ings,nut]=current.map(x=>x.data||[]);
-  items.forEach(x=>html+=`<tr><td>—</td><td>${historyTypeLabel("item")}</td><td>${esc(x.item_name)}</td><td>${formatNutritionAmount(x.quantity_per_student)}</td><td>${esc(x.unit||"KG")}</td><td>—</td><td>ಹಳೆಯ ಮಾಹಿತಿ</td></tr>`);
-  wheat.forEach(x=>html+=`<tr><td>—</td><td>${historyTypeLabel("wheat")}</td><td>ಗೋಧಿ</td><td>${x.quantity_per_student??""}</td><td>KG</td><td>₹ ${Number(x.rate_per_kg||0).toFixed(2)}</td><td>ಹಳೆಯ ಮಾಹಿತಿ</td></tr>`);
-  ings.forEach(x=>html+=`<tr><td>—</td><td>${historyTypeLabel("ingredient")}</td><td>${esc(x.ingredient_name)}</td><td>—</td><td>₹</td><td>₹ ${Number(x.amount_per_student||0).toFixed(2)}</td><td>ಹಳೆಯ ಮಾಹಿತಿ</td></tr>`);
-  nut.forEach(x=>html+=`<tr><td>—</td><td>${historyTypeLabel("nutrition")}</td><td>${esc(x.food_name)}</td><td>${formatNutritionAmount(x.quantity_per_student)}</td><td>${esc(x.unit||"Nos")}</td><td>—</td><td>ಹಳೆಯ ಮಾಹಿತಿ</td></tr>`);
-  rows.forEach(x=>{
-    html+=`<tr><td class="date-pill">${esc(x.effective_date)}</td><td>${historyTypeLabel(x.setting_type)}</td><td>${esc(x.item_name||"")}</td><td>${x.quantity_per_student??""}</td><td>${esc(x.unit||"")}</td><td>${x.setting_type==="wheat"?"₹ "+Number(x.rate_per_kg||0).toFixed(2):x.setting_type==="ingredient"?"₹ "+Number(x.rate_per_kg||0).toFixed(2):"—"}</td><td><button class="danger" onclick="askDeleteHistory('${x.id}','${esc(x.effective_date)}')">🗑️ Delete</button></td></tr>`;
-  });
-  $("historyBody").innerHTML=html||'<tr><td colspan="7">ಹಿಂದಿನ ದರಗಳ ಮಾಹಿತಿ ಇಲ್ಲ.</td></tr>';
-}
-function openHistory(){
-  $("historyCard").style.display="block";
-  loadHistory();
-  $("historyCard").scrollIntoView({behavior:"smooth"});
-}
-async function loadDatedVersion(){
-  const d=$("effectiveDate").value;
-  if(!d){show("ಜಾರಿಗೆ ಬರುವ ದಿನಾಂಕ ಆಯ್ಕೆ ಮಾಡಿ.","err");return;}
+
+/* =========================
+   DATE-WISE ITEM RATE HISTORY
+   ========================= */
+function getEffectiveDate(){ return $("effectiveDate").value; }
+
+async function loadDateItems(){
   if(!activeYear||!selectedGroup){show("ಮೊದಲು Class Group Load ಮಾಡಿ.","err");return;}
-  selectedEffectiveDate=d; dateMode=true;
-  $("dateStatus").innerHTML=`📅 <b>${esc(d)}</b> ದಿನಾಂಕದ ಹೊಸ Version. ಹೊಸ values ಖಾಲಿಯಾಗಿವೆ; ಪ್ರತಿಯೊಂದು Itemಗೆ Edit ಮಾಡಿ Save ಮಾಡಿ.`;
-  const rows=await getHistoryRows();
-  const dated=rows.filter(x=>x.effective_date===d);
-  if(dated.length){
-    await loadItems(); await loadWheatSetting(); await loadIngredients(); await loadNutrition();
-    // Existing tables remain untouched; dated values are shown through the history view.
-    show(`ಈ ದಿನಾಂಕಕ್ಕೆ ಈಗಾಗಲೇ ${dated.length} dated record(s) ಇದೆ. ಹಿಂದಿನ ದರಗಳಲ್ಲಿ ನೋಡಬಹುದು.`,"info");
-    openHistory(); return;
-  }
-  // New date: show existing item names with blank editable values.
-  const {data:items=[]}=await db.from("calculation_settings").select("item_name,unit").eq("school_id",currentSchoolId).eq("academic_year_id",activeYear.id).eq("class_group",selectedGroup).order("created_at",{ascending:true});
-  $("itemsBody").innerHTML=items.length?items.map((x,i)=>`<tr><td>${i+1}</td><td>${esc(x.item_name)}</td><td class="blank-rate">ಖಾಲಿ</td><td>${esc(x.unit||"KG")}</td><td class="blank-rate">ಹೊಸ ದರ ನಮೂದಿಸಿ</td><td><button class="edit" onclick='editDatedItem(${JSON.stringify(x)})'>✏️ Edit</button></td></tr>`).join(""): '<tr><td colspan="6">ಈ Classಗೆ Item ಇಲ್ಲ.</td></tr>';
-  const {data:w=[]}=await db.from("wheat_rate_settings").select("quantity_per_student").eq("school_id",currentSchoolId).eq("academic_year_id",activeYear.id).eq("class_group",selectedGroup).maybeSingle();
-  $("wheatQty").value=""; $("wheatRate").value=""; updateWheatExample();
-  $("wheatBody").innerHTML=w?`<tr><td>${esc(groupLabel(selectedGroup))}</td><td class="blank-rate">ಖಾಲಿ</td><td class="blank-rate">ಖಾಲಿ</td><td>—</td><td>—</td></tr>`:'<tr><td colspan="5">ಈ Classಗೆ ಗೋಧಿ Setting ಇಲ್ಲ.</td></tr>';
-  const {data:ings=[]}=await db.from("kitchen_ingredients").select("ingredient_name").eq("academic_year_id",activeYear.id).eq("class_group",selectedGroup).order("created_at",{ascending:true});
-  $("ingredientsBody").innerHTML=ings.length?ings.map((x,i)=>`<tr><td>${i+1}</td><td>${esc(x.ingredient_name)}</td><td class="blank-rate">ಖಾಲಿ</td><td class="blank-rate">ಹೊಸ Amount ನಮೂದಿಸಿ</td><td><button class="edit" onclick='editDatedIngredient(${JSON.stringify(x)})'>✏️ Edit</button></td></tr>`).join(""): '<tr><td colspan="5">ಈ Classಗೆ ಅಡಿಗೆ ಪದಾರ್ಥ ಇಲ್ಲ.</td></tr>';
-  const {data:nuts=[]}=await db.from("nutritional_foods").select("food_name,unit").eq("school_id",currentSchoolId).eq("academic_year_id",activeYear.id).eq("class_group",selectedGroup).order("created_at",{ascending:true});
-  $("nutritionBody").innerHTML=nuts.length?nuts.map((x,i)=>`<tr><td>${i+1}</td><td>${esc(x.food_name)}</td><td class="blank-rate">ಖಾಲಿ</td><td>${esc(x.unit||"Nos")}</td><td class="blank-rate">ಹೊಸ ಪ್ರಮಾಣ ನಮೂದಿಸಿ</td><td><button class="edit" onclick='editDatedNutrition(${JSON.stringify(x)})'>✏️ Edit</button></td></tr>`).join(""): '<tr><td colspan="6">ಈ Classಗೆ ಪೌಷ್ಠಿಕ ಆಹಾರ ಇಲ್ಲ.</td></tr>';
-  show(`ಹೊಸ ${d} Version ಸಿದ್ಧವಾಗಿದೆ. ಈಗ values ಖಾಲಿ ಇವೆ. Edit ಮಾಡಿ Save ಮಾಡಿ.`,`info`);
+  const date=getEffectiveDate();
+  if(!date){show("ಜಾರಿಗೆ ಬರುವ ದಿನಾಂಕ ಆಯ್ಕೆ ಮಾಡಿ.","err");return;}
+  selectedEffectiveDate=date;
+  $("dateStatus").textContent="Date: "+date;
+  $("dateRateCard").style.display="block";
+
+  const {data:items,error}=await db.from("calculation_settings")
+    .select("id,item_name,quantity_per_student,unit")
+    .eq("school_id",currentSchoolId).eq("academic_year_id",activeYear.id)
+    .eq("class_group",selectedGroup).order("created_at",{ascending:true});
+  if(error){show("Date-wise Item load failed: "+error.message,"err");return;}
+
+  const {data:history,error:he}=await db.from("calculation_rate_history")
+    .select("item_name,rate_per_kg").eq("school_id",currentSchoolId)
+    .eq("academic_year_id",activeYear.id).eq("class_group",selectedGroup)
+    .eq("setting_type","item").eq("effective_date",date);
+  if(he){show("Date-wise History load failed: "+he.message,"err");return;}
+  const oldMap={}; (history||[]).forEach(x=>oldMap[x.item_name]=x.rate_per_kg);
+
+  $("dateRateBody").innerHTML=(items||[]).length ? items.map((x,i)=>`
+    <tr><td>${i+1}</td><td>${esc(x.item_name)}</td>
+    <td>${formatNutritionAmount(x.quantity_per_student)}</td><td>${esc(x.unit||"KG")}</td>
+    <td><input class="date-rate-input" data-item-name="${esc(x.item_name)}"
+      data-qty="${x.quantity_per_student??""}" data-unit="${esc(x.unit||"KG")}"
+      type="number" min="0" step="0.01" value="${oldMap[x.item_name]??""}" placeholder="ದರ ನಮೂದಿಸಿ"></td></tr>`).join("")
+    : '<tr><td colspan="5">ಈ Classಗೆ Item ಇಲ್ಲ.</td></tr>';
+  show("Date-wise Item rates ನಮೂದಿಸಲು ಸಿದ್ಧವಾಗಿದೆ.","info");
 }
-async function saveHistoryRecord(type,name,qty,unit,rate){
-  if(!selectedEffectiveDate){show("ಮೊದಲು Effective Date Load ಮಾಡಿ.","err");return false;}
-  const payload={school_id:currentSchoolId,academic_year_id:activeYear.id,class_group:selectedGroup,setting_type:type,item_name:name,quantity_per_student:qty===null?null:Number(qty),unit:unit||null,rate_per_kg:rate===null?null:Number(rate),effective_date:selectedEffectiveDate};
-  const {error}=await db.from("calculation_rate_history").upsert(payload,{onConflict:"school_id,academic_year_id,class_group,setting_type,item_name,effective_date"});
-  if(error){show("Dated Rate Save failed: "+error.message,"err");return false;}
-  await loadHistory(); return true;
+
+async function submitDateRates(){
+  if(!activeYear||!selectedGroup){show("ಮೊದಲು Class Group Load ಮಾಡಿ.","err");return;}
+  const date=getEffectiveDate();
+  if(!date){show("ಜಾರಿಗೆ ಬರುವ ದಿನಾಂಕ ಆಯ್ಕೆ ಮಾಡಿ.","err");return;}
+  const inputs=[...document.querySelectorAll(".date-rate-input")];
+  const rows=inputs.filter(i=>i.value!=="" && Number(i.value)>=0);
+  if(!rows.length){show("ಕನಿಷ್ಠ ಒಂದು Item ದರ ನಮೂದಿಸಿ.","err");return;}
+
+  const payload=rows.map(i=>({
+    school_id:currentSchoolId, academic_year_id:activeYear.id, class_group:selectedGroup,
+    setting_type:"item", item_name:i.dataset.itemName,
+    quantity_per_student:i.dataset.qty===""?null:Number(i.dataset.qty),
+    unit:i.dataset.unit||"KG", rate_per_kg:Number(i.value), effective_date:date,
+    updated_at:new Date().toISOString()
+  }));
+  const {error}=await db.from("calculation_rate_history").upsert(payload,{
+    onConflict:"school_id,academic_year_id,class_group,setting_type,item_name,effective_date"
+  });
+  if(error){show("Date-wise Rate Save failed: "+error.message,"err");return;}
+  show(date+" ರ ದಿನಾಂಕದ Item rates Save ಆಯಿತು.","ok");
+  await loadDateItems(); await loadRateHistory();
 }
-function editDatedItem(x){$("itemName").value=x.item_name||"";$("itemQty").value="";$("itemUnit").value=x.unit||"KG";editingItemId=null;$('itemSaveBtn').textContent="💾 ಹೊಸ ದರ Save";show(`📅 ${selectedEffectiveDate}: ${x.item_name}ಗೆ ಹೊಸ ಪ್ರಮಾಣ ನಮೂದಿಸಿ Save ಮಾಡಿ.` ,"info");}
-function editDatedIngredient(x){$("ingredientName").value=x.ingredient_name||"";$("ingredientAmount").value="";editingIngredientId=null;$('ingredientSaveBtn').textContent="💾 ಹೊಸ Amount Save";show(`📅 ${selectedEffectiveDate}: ${x.ingredient_name}ಗೆ ಹೊಸ Amount ನಮೂದಿಸಿ Save ಮಾಡಿ.` ,"info");}
-function editDatedNutrition(x){$("nutritionName").value=x.food_name||"";$("nutritionQty").value="";$("nutritionUnit").value=x.unit||"Nos";editingNutritionId=null;$('nutritionSaveBtn').textContent="💾 ಹೊಸ ಪ್ರಮಾಣ Save";show(`📅 ${selectedEffectiveDate}: ${x.food_name}ಗೆ ಹೊಸ ಪ್ರಮಾಣ ನಮೂದಿಸಿ Save ಮಾಡಿ.` ,"info");}
-function askDeleteHistory(id,date){pendingHistoryId=id;$("deleteText").textContent=`${date} dated record ಅಳಿಸಲು ಕೆಳಗೆ DELETE ಎಂದು type ಮಾಡಿ.`;$("deleteConfirmText").value="";$("deleteModal").style.display="flex";$("deleteConfirmText").focus();}
-async function confirmDeleteHistory(){
- if($("deleteConfirmText").value.trim()!=="DELETE"){alert("DELETE ಎಂದು ಸರಿಯಾಗಿ type ಮಾಡಿ.");return;}
- const q=await db.from("calculation_rate_history").select("effective_date").eq("id",pendingHistoryId).eq("school_id",currentSchoolId).eq("academic_year_id",activeYear.id).eq("class_group",selectedGroup).maybeSingle();
- if(q.error||!q.data){show("Date record ಕಂಡುಬಂದಿಲ್ಲ.","err");return;}
- const {error}=await db.from("calculation_rate_history").delete().eq("school_id",currentSchoolId).eq("academic_year_id",activeYear.id).eq("class_group",selectedGroup).eq("effective_date",q.data.effective_date);
- if(error){show("History Date Delete failed: "+error.message,"err");return;}
- $("deleteModal").style.display="none";pendingHistoryId=null;await loadHistory();show(`${q.data.effective_date} ದಿನಾಂಕದ ಎಲ್ಲಾ dated rates Delete ಆಯಿತು.`,"ok");
+
+async function loadRateHistory(){
+  if(!activeYear||!selectedGroup){show("ಮೊದಲು Class Group Load ಮಾಡಿ.","err");return;}
+  const {data,error}=await db.from("calculation_rate_history")
+    .select("effective_date,item_name,quantity_per_student,unit,rate_per_kg")
+    .eq("school_id",currentSchoolId).eq("academic_year_id",activeYear.id)
+    .eq("class_group",selectedGroup).eq("setting_type","item")
+    .order("effective_date",{ascending:false}).order("item_name",{ascending:true});
+  if(error){show("History load failed: "+error.message,"err");return;}
+  $("historyCard").style.display="block";
+  $("historyBody").innerHTML=(data||[]).length ? data.map(x=>`<tr>
+    <td><b>${esc(x.effective_date)}</b></td><td>${esc(x.item_name)}</td>
+    <td>${formatNutritionAmount(x.quantity_per_student)}</td><td>${esc(x.unit||"KG")}</td>
+    <td><b>₹ ${Number(x.rate_per_kg||0).toFixed(2)}</b></td>
+    <td><button class="danger" onclick="prepareDateDelete('${esc(x.effective_date)}')">🗑️ Delete Date</button></td>
+  </tr>`).join("") : '<tr><td colspan="6">ಯಾವುದೇ dated Item rate ಇಲ್ಲ.</td></tr>';
+}
+
+function prepareDateDelete(date){
+  selectedEffectiveDate=date; $("deleteDateConfirm").value="";
+  $("dateDeleteCard").style.display="block"; $("deleteDateConfirm").focus();
+  $("dateStatus").textContent="Delete ಮಾಡಲು ಆಯ್ಕೆ ಮಾಡಿದ Date: "+date;
+}
+
+async function deleteSelectedDate(){
+  const date=selectedEffectiveDate;
+  if(!date){show("ಮೊದಲು Historyಯಿಂದ Date ಆಯ್ಕೆ ಮಾಡಿ.","err");return;}
+  if($("deleteDateConfirm").value.trim()!=="DELETE"){show("Delete ಮಾಡಲು DELETE ಎಂದು type ಮಾಡಿ.","err");return;}
+  if(!confirm(date+" ದಿನಾಂಕದ ಎಲ್ಲಾ Item rates delete ಮಾಡಬೇಕೇ?"))return;
+  const {error}=await db.from("calculation_rate_history").delete()
+    .eq("school_id",currentSchoolId).eq("academic_year_id",activeYear.id)
+    .eq("class_group",selectedGroup).eq("setting_type","item").eq("effective_date",date);
+  if(error){show("Date Delete failed: "+error.message,"err");return;}
+  $("deleteDateConfirm").value=""; $("dateDeleteCard").style.display="none";
+  show(date+" ದಿನಾಂಕದ Item rates Delete ಆಯಿತು.","ok");
+  if(getEffectiveDate()===date) await loadDateItems();
+  await loadRateHistory();
+}
+
+/* =========================
+   CALCULATION ITEMS
+   ========================= */
+
+async function loadItems(){
+
+ if(!activeYear||!selectedGroup){
+  $("itemsBody").innerHTML=
+   '<tr><td colspan="6">Class ಆಯ್ಕೆ ಮಾಡಿ.</td></tr>';
+  return;
+ }
+
+ const {data,error}=await db
+  .from("calculation_settings")
+  .select("*")
+  .eq("school_id",currentSchoolId)
+  .eq("academic_year_id",activeYear.id)
+  .eq("class_group",selectedGroup)
+  .order("created_at",{ascending:true});
+
+ if(error){
+  show("Calculation item load failed: "+error.message,"err");
+  return;
+ }
+
+ $("itemsBody").innerHTML=(data||[]).length
+ ? (data||[]).map((x,i)=>{
+
+   const qty=Number(x.quantity_per_student||0);
+   const unit=x.unit||"KG";
+
+   const example=
+    unit==="Gram"
+    ? (qty*20).toFixed(3)+" Gram"
+    : (qty*20).toFixed(3)+" KG";
+
+   return `<tr>
+    <td>${i+1}</td>
+    <td>${esc(x.item_name)}</td>
+    <td>${formatNutritionAmount(qty)}</td>
+    <td>${esc(unit)}</td>
+    <td class="calc">
+     20 × ${qty.toFixed(3)} = ${example}
+    </td>
+    <td class="actions">
+     <button class="edit"
+      onclick='editItem(${JSON.stringify(x)})'>
+      ✏️ Edit
+     </button>
+
+     <button class="danger"
+      onclick="deleteItem('${x.id}')">
+      🗑️ Delete
+     </button>
+    </td>
+   </tr>`;
+  }).join("")
+ : '<tr><td colspan="6">ಈ Classಗೆ Item ಇಲ್ಲ.</td></tr>';
 }
 
 async function saveItem(){
@@ -666,11 +792,6 @@ async function saveItem(){
 
  if(qty===""||Number(qty)<0){
   show("ಅಳತೆ / Amount ನಮೂದಿಸಿ.","err");
-  return;
- }
- if(dateMode&&selectedEffectiveDate){
-  const ok=await saveHistoryRecord("item",name,Number(qty),unit,null);
-  if(ok){ resetItem(); await loadDatedVersion(); show(`📅 ${selectedEffectiveDate}: ${name} Save ಆಯಿತು.`,"ok"); }
   return;
  }
 
@@ -853,11 +974,6 @@ async function loadWheatSetting(){
 }
 
 async function saveWheatSetting(){
-  if(dateMode&&selectedEffectiveDate){
-    const qty=$("wheatQty").value, rate=$("wheatRate").value;
-    if(qty===""||rate===""||Number(qty)<0||Number(rate)<0){show("ಹೊಸ ಗೋಧಿ ಪ್ರಮಾಣ ಮತ್ತು Rate ನಮೂದಿಸಿ.","err");return;}
-    if(await saveHistoryRecord("wheat","ಗೋಧಿ",qty,"KG",rate)){show(`📅 ${selectedEffectiveDate} ಗೋಧಿ Rate Save ಆಯಿತು.` ,"ok");await loadHistory();} return;
-  }
   if(!activeYear||!selectedGroup){
     show("ಮೊದಲು Class Group Load ಮಾಡಿ.","err");
     return;
@@ -977,11 +1093,6 @@ async function saveIngredient(){
 
  if(amount===""||Number(amount)<0){
   show("Student 01 ಮೊತ್ತ ನಮೂದಿಸಿ.","err");
-  return;
- }
- if(dateMode&&selectedEffectiveDate){
-  const ok=await saveHistoryRecord("ingredient",name,Number(amount),"₹",Number(amount));
-  if(ok){ resetIngredient(); await loadDatedVersion(); show(`📅 ${selectedEffectiveDate}: ${name} Save ಆಯಿತು.`,"ok"); }
   return;
  }
 
@@ -1178,11 +1289,6 @@ async function saveNutrition(){
   show("ಅಳತೆ / Amount ನಮೂದಿಸಿ.","err");
   return;
  }
- if(dateMode&&selectedEffectiveDate){
-  const ok=await saveHistoryRecord("nutrition",name,Number(qty),unit,null);
-  if(ok){ resetNutrition(); await loadDatedVersion(); show(`📅 ${selectedEffectiveDate}: ${name} Save ಆಯಿತು.`,"ok"); }
-  return;
- }
 
  const payload={
   school_id:currentSchoolId,
@@ -1323,10 +1429,10 @@ function resetIngredient(){
 
 $("loadBtn").onclick=applySelection;
 $("editBtn").onclick=editSelection;
-$("dateLoadBtn").onclick=loadDatedVersion;
-$("historyBtn").onclick=openHistory;
-$("deleteCancelBtn").onclick=()=>{$("deleteModal").style.display="none";pendingHistoryId=null;};
-$("deleteConfirmBtn").onclick=confirmDeleteHistory;
+$("dateLoadBtn").onclick=loadDateItems;
+$("dateSubmitBtn").onclick=submitDateRates;
+$("historyBtn").onclick=loadRateHistory;
+$("deleteDateBtn").onclick=deleteSelectedDate;
 
 $("itemSaveBtn").onclick=saveItem;
 $("itemCancelBtn").onclick=resetItem;
