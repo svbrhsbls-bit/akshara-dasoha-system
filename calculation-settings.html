@@ -41,6 +41,8 @@ th{background:#eef2ef}
 #dateWiseCard{border:2px solid #d7e8dc}
 #dateWiseCard h2{color:#126b38}
 #dateWiseCard .actions button{margin:2px}
+#dateWiseCard .actions .edit{min-width:86px}
+#dateWiseCard .actions .danger{min-width:86px}
 
 </style>
 </head>
@@ -521,12 +523,9 @@ function updateCurrentDateBox(){
   }
 
   box.innerHTML=`
-    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
-      <div>
-        <div class="small">ಈಗ ಆಯ್ಕೆ ಮಾಡಿರುವ Calculation Date</div>
-        <b style="font-size:21px">${formatDateISO(selectedCalculationDate)}</b>
-      </div>
-      <button class="edit" onclick="editCalculationDate('${selectedCalculationDateId||""}')">✏️ Edit</button>
+    <div>
+      <div class="small">ಈಗ ಆಯ್ಕೆ ಮಾಡಿರುವ Calculation Date</div>
+      <b style="font-size:21px">${formatDateISO(selectedCalculationDate)}</b>
     </div>
   `;
 }
@@ -740,10 +739,9 @@ async function selectCalculationDate(dateRow){
 
   updateCurrentDateBox();
 
-  if(selectedSnapshot){
-    renderSnapshotIntoSettings(selectedSnapshot);
-    show("Calculation Date "+formatDateISO(selectedCalculationDate)+" loaded.","info");
-  }
+  // Do not open calculation forms automatically.
+  // They are shown only when the user presses Edit for a date.
+  hideCalculationForms();
 }
 
 function renderSnapshotIntoSettings(s){
@@ -965,15 +963,17 @@ async function addCalculationDate(){
     }
 
     await loadCalculationDates();
-    await selectCalculationDate(newRow);
-    show("ಹೊಸ Calculation Date "+formatDateISO(newDate)+" Add ಆಯಿತು. ಹಿಂದಿನ Dateನ settings copy ಆಗಿವೆ.","ok");
+    show("ಹೊಸ Calculation Date "+formatDateISO(newDate)+" Add ಆಯಿತು. ಹಿಂದಿನ Dateನ settings copy ಆಗಿವೆ. Edit ಒತ್ತಿದಾಗ settings ಕಾಣುತ್ತವೆ.","ok");
   };
 
   dateInput.click();
 }
 
 async function editCalculationDate(dateId){
-  if(!dateId)return;
+  if(!dateId){
+    show("Calculation Date ID ಸಿಗಲಿಲ್ಲ.","err");
+    return;
+  }
 
   const {data:dateRow,error}=await db
     .from("calculation_setting_dates")
@@ -984,17 +984,51 @@ async function editCalculationDate(dateId){
     .eq("class_group",selectedGroup)
     .maybeSingle();
 
-  if(error || !dateRow){
-    show("Calculation Date load failed.","err");
+  if(error){
+    show("Calculation Date load failed: "+error.message,"err");
     return;
   }
 
-  await selectCalculationDate(dateRow);
+  if(!dateRow){
+    show("Calculation Date ಸಿಗಲಿಲ್ಲ.","err");
+    return;
+  }
 
+  selectedCalculationDate=dateRow.effective_date;
+  selectedCalculationDateId=dateRow.id;
+  saveSelectedDate();
+
+  // First try the selected date's own snapshot.
+  selectedSnapshot=await getSnapshotByDateId(dateRow.id);
+
+  // If it does not exist, copy the previous applicable date's snapshot.
+  if(!selectedSnapshot){
+    selectedSnapshot=await copyPreviousSnapshotToDate(dateRow);
+  }
+
+  if(!selectedSnapshot){
+    show("ಈ Dateಗೆ settings ಸಿಗಲಿಲ್ಲ. ಮೊದಲು 01.06.2026 Base Settings ಪರಿಶೀಲಿಸಿ.","err");
+    return;
+  }
+
+  updateCurrentDateBox();
+
+  // IMPORTANT: only after Edit is pressed, show the existing calculation forms.
   showCalculationForms();
 
+  // Load every existing section from the selected date snapshot.
+  renderSnapshotIntoSettings(selectedSnapshot);
+
+  show(
+    `${formatDateISO(dateRow.effective_date)} Edit mode. ಹಿಂದಿನ settings ಈಗ ಕಾಣುತ್ತವೆ; ಬೇಕಾದ item/rate ಮಾತ್ರ ಬದಲಿಸಿ Save ಮಾಡಿ.`,
+    "info"
+  );
+
   const firstForm=document.querySelectorAll(".wrap > .card")[3];
-  window.scrollTo({top:firstForm?.offsetTop||0,behavior:"smooth"});
+  window.scrollTo({
+    top:Math.max(0,(firstForm?.offsetTop||0)-15),
+    behavior:"smooth"
+  });
 }
 
 async function deleteCalculationDate(dateId,dateText){
