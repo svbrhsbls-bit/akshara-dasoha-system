@@ -758,8 +758,10 @@ async function loadLegacySettingsForMigration(){
   // before Date-wise settings were introduced. Normal Date-wise
   // loading/saving continues to use calculation_setting_snapshots.
 
+  const normalizeGroup = v => String(v ?? "").replace(/\s+/g, "").replace(/–/g, "-").replace(/—/g, "-");
+
   const findRows = async (table, orderField="created_at") => {
-    // 1) Exact School + Academic Year + Class Group
+    // 1) Normal/current structure: School + Academic Year + Class Group.
     let q = db.from(table).select("*")
       .eq("school_id", currentSchoolId)
       .eq("academic_year_id", activeYear.id)
@@ -770,15 +772,21 @@ async function loadLegacySettingsForMigration(){
     if(r.error) throw r.error;
     if((r.data||[]).length) return r.data||[];
 
-    // 2) Some old rows may have been saved without the current
-    // academic_year_id. Keep School + Class Group isolation and recover them.
-    q = db.from(table).select("*")
-      .eq("school_id", currentSchoolId)
-      .eq("class_group", selectedGroup);
+    // 2) IMPORTANT LEGACY RECOVERY:
+    // Older records can have the same class group written as e.g.
+    // "8-10" / "8 - 10", or can belong to an older academic-year row.
+    // Read ONLY this school's rows and match the selected class group after
+    // normalising spaces. This never mixes another school's settings.
+    q = db.from(table).select("*").eq("school_id", currentSchoolId);
     if(orderField) q=q.order(orderField,{ascending:true});
     r=await q;
     if(r.error) throw r.error;
-    return r.data||[];
+
+    const wanted=normalizeGroup(selectedGroup);
+    const rows=(r.data||[]).filter(x => normalizeGroup(x.class_group)===wanted);
+    if(rows.length) return rows;
+
+    return [];
   };
 
   const [items,ingredients,nutrition]=await Promise.all([
