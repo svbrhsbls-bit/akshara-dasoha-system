@@ -36,6 +36,12 @@ th{background:#eef2ef}
 .calc{background:#f8fbf9;font-weight:700}
 .badge{display:inline-block;padding:4px 8px;border-radius:15px;font-size:12px;font-weight:700}
 @media(max-width:850px){.grid{grid-template-columns:1fr}}
+
+/* DATE-WISE CALCULATION UI */
+#dateWiseCard{border:2px solid #d7e8dc}
+#dateWiseCard h2{color:#126b38}
+#dateWiseCard .actions button{margin:2px}
+
 </style>
 </head>
 <body>
@@ -320,6 +326,7 @@ Daily date → Month → Daily students → Calculation Settings rate → Monthl
 
 </div>
 
+
 <script>
 const SUPABASE_URL="https://ezmudfrpcvjsgnjibvoq.supabase.co";
 const SUPABASE_KEY="sb_publishable__FYyH6NQaqgARaq2dvuovQ_rKmus0js";
@@ -331,456 +338,502 @@ let activeYear=null;
 let selectedGroup="";
 let currentSchoolId=null;
 let currentSchoolUserId=null;
+
+let selectedCalculationDate=null;
+let selectedCalculationDateId=null;
+let selectedSnapshot=null;
+
 let editingItemId=null;
 let editingIngredientId=null;
 let editingNutritionId=null;
 let wheatSettingId=null;
 
+/* =========================================================
+   HELPERS
+   ========================================================= */
+
 function esc(v){
- return String(v??"").replace(/[&<>"']/g,c=>({
-  "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
- }[c]));
+  return String(v??"").replace(/[&<>"']/g,c=>({
+    "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+  }[c]));
 }
 
 function show(text,type="ok"){
- $("msg").textContent=text;
- $("msg").className="msg "+type;
+  $("msg").textContent=text;
+  $("msg").className="msg "+type;
 }
 
 function groupLabel(g){
- return {
-  "1-5":"1 - 5",
-  "6-7":"6 - 7",
-  "8-10":"8 - 10",
-  "1-10":"1 - 10"
- }[g]||g;
+  return {
+    "1-5":"1 - 5",
+    "6-7":"6 - 7",
+    "8-10":"8 - 10",
+    "1-10":"1 - 10"
+  }[g]||g;
 }
 
-function setSelectionStatus(){
- if(selectedGroup){
-  $("selectionStatus").innerHTML="🔒 "+groupLabel(selectedGroup);
- }else{
-  $("selectionStatus").textContent="ಆಯ್ಕೆ ಮಾಡಿಲ್ಲ";
- }
+function formatDateISO(iso){
+  if(!iso) return "";
+  const p=String(iso).split("-");
+  return p.length===3 ? `${p[2]}.${p[1]}.${p[0]}` : iso;
+}
+
+function todayISO(){
+  const d=new Date();
+  const y=d.getFullYear();
+  const m=String(d.getMonth()+1).padStart(2,"0");
+  const day=String(d.getDate()).padStart(2,"0");
+  return `${y}-${m}-${day}`;
 }
 
 function selectionStorageKey(){
- return "calculation-settings-class-"+(currentSchoolId||"no-school")+"-"+(activeYear?.id||"");
+  return "calculation-settings-class-"+(currentSchoolId||"no-school")+"-"+(activeYear?.id||"");
+}
+
+function dateStorageKey(){
+  return "calculation-settings-date-"+(currentSchoolId||"no-school")+"-"+(activeYear?.id||"")+"-"+(selectedGroup||"");
 }
 
 function saveSelection(){
- localStorage.setItem(
-  selectionStorageKey(),
-  JSON.stringify({
-   classGroup:selectedGroup,
-   locked:true
-  })
- );
+  localStorage.setItem(
+    selectionStorageKey(),
+    JSON.stringify({classGroup:selectedGroup,locked:true})
+  );
+}
+
+function saveSelectedDate(){
+  if(selectedCalculationDate){
+    localStorage.setItem(dateStorageKey(),selectedCalculationDate);
+  }
+}
+
+function setSelectionStatus(){
+  $("selectionStatus").innerHTML=selectedGroup
+    ? "🔒 "+groupLabel(selectedGroup)
+    : "ಆಯ್ಕೆ ಮಾಡಿಲ್ಲ";
 }
 
 function lockSelection(){
- $("classGroup").disabled=true;
- $("loadBtn").style.display="none";
- $("editBtn").style.display="inline-block";
- setSelectionStatus();
+  $("classGroup").disabled=true;
+  $("loadBtn").style.display="none";
+  $("editBtn").style.display="inline-block";
+  setSelectionStatus();
 }
 
 function unlockSelection(){
- $("classGroup").disabled=false;
- $("loadBtn").style.display="inline-block";
- $("editBtn").style.display="none";
- setSelectionStatus();
+  $("classGroup").disabled=false;
+  $("loadBtn").style.display="inline-block";
+  $("editBtn").style.display="none";
+  setSelectionStatus();
 }
 
 function restoreSelection(){
- try{
-  const x=JSON.parse(localStorage.getItem(selectionStorageKey())||"null");
-
-  if(x?.locked && x.classGroup){
-   selectedGroup=x.classGroup;
-   $("classGroup").value=selectedGroup;
-   lockSelection();
-   loadItems();
-   loadIngredients();
-   loadNutrition();
-    loadWheatSetting();
-  }
- }catch(e){}
-}
-
-/*
- School Settingsನಲ್ಲಿ Active ಆಗಿರುವ Academic Year ಮಾತ್ರ.
- ಮೊದಲು academic_years.is_active=true ಅನ್ನು ಬಳಸಲಾಗುತ್ತದೆ.
-*/
-async function loadCurrentSchool(){
- try{
-  const {data:{user},error:userError}=await db.auth.getUser();
-  if(userError || !user){
-   window.location.href="login.html";
-   return false;
-  }
-  currentSchoolUserId=user.id;
-
-  const {data:su,error}=await db
-   .from("school_users")
-   .select("id,school_id,role,is_active")
-   .eq("user_id",user.id)
-   .eq("is_active",true)
-   .maybeSingle();
-
-  if(error || !su){
-   await db.auth.signOut();
-   window.location.href="login.html";
-   return false;
-  }
-
-  if(su.role==="admin"){
-   window.location.href="admin.html";
-   return false;
-  }
-
-  currentSchoolId=su.school_id;
-  return true;
- }catch(e){
-  console.error(e);
-  window.location.href="login.html";
+  try{
+    const x=JSON.parse(localStorage.getItem(selectionStorageKey())||"null");
+    if(x?.locked && x.classGroup){
+      selectedGroup=x.classGroup;
+      $("classGroup").value=selectedGroup;
+      lockSelection();
+      return true;
+    }
+  }catch(e){}
   return false;
- }
 }
 
-async function loadActiveYear(){
-
- const {data,error}=await db
-  .from("academic_years")
-  .select("id,year_name,is_active")
-  .eq("is_active",true)
-  .order("created_at",{ascending:false})
-  .limit(1)
-  .maybeSingle();
-
- if(error){
-  $("academicYear").textContent="Load failed";
-  show("Active Academic Year load failed: "+error.message,"err");
-  return false;
- }
-
- if(!data){
-  $("academicYear").textContent="Active Year ಇಲ್ಲ";
-  show("School Settingsನಲ್ಲಿ Active Academic Year ಹೊಂದಿಸಿ.","err");
-  return false;
- }
-
- activeYear=data;
- $("academicYear").textContent=data.year_name;
-
- return true;
+function isoToDateInput(v){
+  return v || "";
 }
 
-async function loadSchoolSettings(){
- try{
-  const {data,error}=await db
-   .from("school_settings")
-   .select("*")
-   .eq("school_id",currentSchoolId)
-   .limit(1)
-   .maybeSingle();
+/* =========================================================
+   DATE-WISE UI
+   ========================================================= */
 
-  if(error)throw error;
+function ensureDateUI(){
+  const existing=document.getElementById("dateWiseCard");
+  if(existing)return;
 
-  if(data){
-   $("departmentTitle").textContent=
-    data.department_name||"ಅಕ್ಷರ ದಾಸೋಹ ಕಾರ್ಯಕ್ರಮ";
+  const anchor=document.querySelector(".wrap");
+  const firstCard=anchor?.querySelector(".card");
+  if(!anchor || !firstCard)return;
 
-   $("schoolTitle").textContent=
-    data.school_name||"ಶಾಲೆಯ ಹೆಸರು";
-  }
- }catch(e){
-  console.warn(e.message);
- }
+  const card=document.createElement("div");
+  card.className="card";
+  card.id="dateWiseCard";
+  card.innerHTML=`
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
+      <div>
+        <h2 style="margin:0">📅 Calculation Date</h2>
+        <div class="small" style="margin-top:5px">
+          Date-wise calculation. ಹೊಸ Date ಸೇರಿಸಿದಾಗ ಹಿಂದಿನ Dateನ ಎಲ್ಲಾ settings copy ಆಗುತ್ತವೆ.
+        </div>
+      </div>
+      <button class="primary" id="addDateBtn">➕ Add Date</button>
+    </div>
+
+    <div id="currentDateBox" class="lockbox" style="margin-top:14px">
+      Class Group Load ಮಾಡಿದ ನಂತರ Calculation Dates ಇಲ್ಲಿ ಕಾಣುತ್ತವೆ.
+    </div>
+
+    <div class="table-wrap" style="margin-top:14px">
+      <table style="min-width:560px">
+        <thead>
+          <tr>
+            <th>Sl.No</th>
+            <th>Calculation Date</th>
+            <th>Type</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="datesBody">
+          <tr><td colspan="4">Class Group ಆಯ್ಕೆ ಮಾಡಿ.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  `;
+  anchor.insertBefore(card,firstCard);
+
+  $("addDateBtn").onclick=addCalculationDate;
 }
 
-async function applySelection(){
-
- if(!activeYear){
-  show("Active Academic Year ಇಲ್ಲ. School Settingsನಲ್ಲಿ Active Year ಹೊಂದಿಸಿ.","err");
-  return;
- }
-
- const g=$("classGroup").value;
-
- if(!g){
-  show("Class Group ಆಯ್ಕೆ ಮಾಡಿ.","err");
-  return;
- }
-
- selectedGroup=g;
-
- saveSelection();
- lockSelection();
-
- resetItem();
- resetIngredient();
-
- await loadItems();
- await loadIngredients();
- await loadNutrition();
-
- show("Class Group Load ಆಯಿತು. Selection Lock ಆಗಿದೆ.","ok");
+function hideCalculationForms(){
+  const cards=[...document.querySelectorAll(".wrap > .card")];
+  cards.forEach((card,index)=>{
+    // 0=date-wise card, 1=academic year, 2=class group.
+    // Existing calculation forms start from index 3.
+    if(index>=3 && index<=6) card.style.display="none";
+  });
 }
 
-function editSelection(){
- localStorage.removeItem(selectionStorageKey());
- unlockSelection();
- show("Class Group Edit mode.","info");
+function showCalculationForms(){
+  const cards=[...document.querySelectorAll(".wrap > .card")];
+  cards.forEach((card,index)=>{
+    if(index>=3 && index<=6) card.style.display="";
+  });
 }
 
-/* =========================
-   CALCULATION ITEMS
-   ========================= */
+function updateCurrentDateBox(){
+  const box=$("currentDateBox");
+  if(!box)return;
 
-async function loadItems(){
-
- if(!activeYear||!selectedGroup){
-  $("itemsBody").innerHTML=
-   '<tr><td colspan="6">Class ಆಯ್ಕೆ ಮಾಡಿ.</td></tr>';
-  return;
- }
-
- const {data,error}=await db
-  .from("calculation_settings")
-  .select("*")
-  .eq("school_id",currentSchoolId)
-  .eq("academic_year_id",activeYear.id)
-  .eq("class_group",selectedGroup)
-  .order("created_at",{ascending:true});
-
- if(error){
-  show("Calculation item load failed: "+error.message,"err");
-  return;
- }
-
- $("itemsBody").innerHTML=(data||[]).length
- ? (data||[]).map((x,i)=>{
-
-   const qty=Number(x.quantity_per_student||0);
-   const unit=x.unit||"KG";
-
-   const example=
-    unit==="Gram"
-    ? (qty*20).toFixed(3)+" Gram"
-    : (qty*20).toFixed(3)+" KG";
-
-   return `<tr>
-    <td>${i+1}</td>
-    <td>${esc(x.item_name)}</td>
-    <td>${formatNutritionAmount(qty)}</td>
-    <td>${esc(unit)}</td>
-    <td class="calc">
-     20 × ${qty.toFixed(3)} = ${example}
-    </td>
-    <td class="actions">
-     <button class="edit"
-      onclick='editItem(${JSON.stringify(x)})'>
-      ✏️ Edit
-     </button>
-
-     <button class="danger"
-      onclick="deleteItem('${x.id}')">
-      🗑️ Delete
-     </button>
-    </td>
-   </tr>`;
-  }).join("")
- : '<tr><td colspan="6">ಈ Classಗೆ Item ಇಲ್ಲ.</td></tr>';
-}
-
-async function saveItem(){
-
- if(!activeYear||!selectedGroup){
-  show("ಮೊದಲು Class Group Load ಮಾಡಿ.","err");
-  return;
- }
-
- const name=$("itemName").value.trim();
- const qty=$("itemQty").value;
- const unit=$("itemUnit").value;
-
- if(!name){
-  show("Item ನಮೂದಿಸಿ.","err");
-  return;
- }
-
- if(qty===""||Number(qty)<0){
-  show("ಅಳತೆ / Amount ನಮೂದಿಸಿ.","err");
-  return;
- }
-
- /*
-  Month ಇಲ್ಲ.
-  ಒಂದೇ Academic Year + Class Group + Item Name
-  ಇದ್ದರೆ Update, ಇಲ್ಲದಿದ್ದರೆ Insert.
- */
- const payload={
-  school_id:currentSchoolId,
-  academic_year_id:activeYear.id,
-  class_group:selectedGroup,
-  item_name:name,
-  quantity_per_student:Number(qty),
-  unit:unit,
-  is_enabled:true,
-  updated_at:new Date().toISOString()
- };
-
- let result;
-
- if(editingItemId){
-
-  result=await db
-   .from("calculation_settings")
-   .update(payload)
-   .eq("id",editingItemId)
-   .eq("school_id",currentSchoolId)
-   .eq("academic_year_id",activeYear.id)
-   .select()
-   .single();
-
- }else{
-
-  const {data:existing,error:findError}=await db
-   .from("calculation_settings")
-   .select("id")
-   .eq("school_id",currentSchoolId)
-   .eq("academic_year_id",activeYear.id)
-   .eq("class_group",selectedGroup)
-   .eq("item_name",name)
-   .maybeSingle();
-
-  if(findError){
-   show("Item check failed: "+findError.message,"err");
-   return;
+  if(!selectedCalculationDate){
+    box.textContent="Calculation Date ಆಯ್ಕೆ ಮಾಡಿ.";
+    return;
   }
 
-  if(existing){
-
-   result=await db
-    .from("calculation_settings")
-    .update(payload)
-    .eq("id",existing.id)
-    .eq("school_id",currentSchoolId)
-    .select()
-    .single();
-
-  }else{
-
-   result=await db
-    .from("calculation_settings")
-    .insert(payload)
-    .select()
-    .single();
-  }
- }
-
- if(result.error){
-  show("Item Save failed: "+result.error.message,"err");
-  return;
- }
-
- const wasEditing=!!editingItemId;
-
- resetItem();
- await loadItems();
-
- show(
-  wasEditing
-   ? "Item Update ಆಯಿತು."
-   : "Item Save ಆಯಿತು.",
-  "ok"
- );
+  box.innerHTML=`
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+      <div>
+        <div class="small">ಈಗ ಆಯ್ಕೆ ಮಾಡಿರುವ Calculation Date</div>
+        <b style="font-size:21px">${formatDateISO(selectedCalculationDate)}</b>
+      </div>
+      <button class="edit" onclick="editCalculationDate('${selectedCalculationDateId||""}')">✏️ Edit</button>
+    </div>
+  `;
 }
 
-function editItem(x){
-
- editingItemId=x.id;
-
- $("itemName").value=x.item_name||"";
- $("itemQty").value=x.quantity_per_student??"";
- $("itemUnit").value=x.unit==="Gram"?"Gram":"KG";
-
- $("itemSaveBtn").textContent="💾 Update";
- $("itemCancelBtn").style.display="inline-block";
-}
-
-async function deleteItem(id){
-
- if(!confirm("ಈ Item ಅಳಿಸಬೇಕೇ?"))return;
-
- const {error}=await db
-  .from("calculation_settings")
-  .delete()
-  .eq("id",id)
-  .eq("school_id",currentSchoolId)
-  .eq("academic_year_id",activeYear.id);
-
- if(error){
-  show("Item Delete failed: "+error.message,"err");
-  return;
- }
-
- await loadItems();
- show("Item Delete ಆಯಿತು.","ok");
-}
-
-function resetItem(){
-
- editingItemId=null;
-
- $("itemName").value="";
- $("itemQty").value="";
- $("itemUnit").value="KG";
-
- $("itemSaveBtn").textContent="💾 Save";
- $("itemCancelBtn").style.display="none";
-}
-
-
-/* =========================
-   WHEAT — SEPARATE RATE
-   ========================= */
-
-function updateWheatExample(){
-  const qty=Number($("wheatQty").value||0);
-  const rate=Number($("wheatRate").value||0);
-  $("wheatExample").textContent="₹"+(qty*20*rate).toFixed(2);
-}
-
-async function loadWheatSetting(){
-  if(!activeYear||!selectedGroup){
-    $("wheatBody").innerHTML='<tr><td colspan="5">Class ಆಯ್ಕೆ ಮಾಡಿ.</td></tr>';
+async function loadCalculationDates(){
+  if(!activeYear || !selectedGroup){
+    if($("datesBody"))
+      $("datesBody").innerHTML='<tr><td colspan="4">Class Group ಆಯ್ಕೆ ಮಾಡಿ.</td></tr>';
     return;
   }
 
   const {data,error}=await db
-    .from("wheat_rate_settings")
+    .from("calculation_setting_dates")
     .select("*")
+    .eq("school_id",currentSchoolId)
+    .eq("academic_year_id",activeYear.id)
+    .eq("class_group",selectedGroup)
+    .order("effective_date",{ascending:true});
+
+  if(error){
+    show("Calculation Date load failed: "+error.message,"err");
+    return;
+  }
+
+  let dates=data||[];
+
+  /*
+    Existing installation migration:
+    If this school/group has no history yet, create 01.06.2026
+    and take a snapshot from the existing current settings.
+  */
+  if(!dates.length){
+    const base=await createBaseDateAndSnapshot();
+    if(base){
+      dates=[base.dateRow];
+    }
+  }
+
+  if(!dates.length){
+    $("datesBody").innerHTML='<tr><td colspan="4">Calculation Date ಇಲ್ಲ.</td></tr>';
+    return;
+  }
+
+  $("datesBody").innerHTML=dates.map((d,i)=>`
+    <tr>
+      <td>${i+1}</td>
+      <td><b style="font-size:16px">${formatDateISO(d.effective_date)}</b></td>
+      <td>
+        ${d.is_base_date
+          ? '<span class="badge" style="background:#e5f6eb;color:#126b38">Base Date</span>'
+          : '<span class="badge" style="background:#eaf3ff;color:#175cd1">Added Date</span>'}
+      </td>
+      <td class="actions">
+        <button class="edit" onclick="editCalculationDate('${d.id}')">✏️ Edit</button>
+        ${d.is_base_date ? "" :
+          `<button class="danger" onclick="deleteCalculationDate('${d.id}','${esc(d.effective_date)}')">🗑️ Delete</button>`}
+      </td>
+    </tr>
+  `).join("");
+
+  const saved=localStorage.getItem(dateStorageKey());
+  let selected=dates.find(x=>x.effective_date===saved) || dates[dates.length-1];
+
+  await selectCalculationDate(selected);
+}
+
+async function createBaseDateAndSnapshot(){
+  const baseDate="2026-06-01";
+
+  /*
+    First create the date row. If it already exists because of a
+    partial previous operation, reuse it.
+  */
+  let {data:dateRow,error:dateError}=await db
+    .from("calculation_setting_dates")
+    .select("*")
+    .eq("school_id",currentSchoolId)
+    .eq("academic_year_id",activeYear.id)
+    .eq("class_group",selectedGroup)
+    .eq("effective_date",baseDate)
+    .maybeSingle();
+
+  if(dateError){
+    show("Base Date check failed: "+dateError.message,"err");
+    return null;
+  }
+
+  if(!dateRow){
+    const r=await db
+      .from("calculation_setting_dates")
+      .insert({
+        school_id:currentSchoolId,
+        academic_year_id:activeYear.id,
+        class_group:selectedGroup,
+        effective_date:baseDate,
+        is_base_date:true
+      })
+      .select()
+      .single();
+
+    if(r.error){
+      show("Base Date create failed: "+r.error.message,"err");
+      return null;
+    }
+    dateRow=r.data;
+  }
+
+  const snapshot=await buildSnapshotFromCurrentTables();
+
+  const s=await db
+    .from("calculation_setting_snapshots")
+    .upsert({
+      calculation_date_id:dateRow.id,
+      school_id:currentSchoolId,
+      academic_year_id:activeYear.id,
+      class_group:selectedGroup,
+      calculation_items:snapshot.calculation_items,
+      wheat_setting:snapshot.wheat_setting,
+      kitchen_ingredients:snapshot.kitchen_ingredients,
+      nutritional_foods:snapshot.nutritional_foods
+    },{onConflict:"calculation_date_id"})
+    .select()
+    .single();
+
+  if(s.error){
+    show("01.06.2026 snapshot create failed: "+s.error.message,"err");
+    return null;
+  }
+
+  return {dateRow,snapshot:s.data};
+}
+
+async function buildSnapshotFromCurrentTables(){
+  const [itemsR,wheatR,ingredientsR,nutritionR]=await Promise.all([
+    db.from("calculation_settings")
+      .select("*")
+      .eq("school_id",currentSchoolId)
+      .eq("academic_year_id",activeYear.id)
+      .eq("class_group",selectedGroup)
+      .order("created_at",{ascending:true}),
+
+    db.from("wheat_rate_settings")
+      .select("*")
+      .eq("school_id",currentSchoolId)
+      .eq("academic_year_id",activeYear.id)
+      .eq("class_group",selectedGroup)
+      .maybeSingle(),
+
+    db.from("kitchen_ingredients")
+      .select("*")
+      .eq("school_id",currentSchoolId)
+      .eq("academic_year_id",activeYear.id)
+      .eq("class_group",selectedGroup)
+      .order("created_at",{ascending:true}),
+
+    db.from("nutritional_foods")
+      .select("*")
+      .eq("school_id",currentSchoolId)
+      .eq("academic_year_id",activeYear.id)
+      .eq("class_group",selectedGroup)
+      .order("created_at",{ascending:true})
+  ]);
+
+  if(itemsR.error) throw itemsR.error;
+  if(wheatR.error) throw wheatR.error;
+  if(ingredientsR.error) throw ingredientsR.error;
+  if(nutritionR.error) throw nutritionR.error;
+
+  return {
+    calculation_items:itemsR.data||[],
+    wheat_setting:wheatR.data||{},
+    kitchen_ingredients:ingredientsR.data||[],
+    nutritional_foods:nutritionR.data||[]
+  };
+}
+
+async function getSnapshotByDateId(dateId){
+  const {data,error}=await db
+    .from("calculation_setting_snapshots")
+    .select("*")
+    .eq("calculation_date_id",dateId)
     .eq("school_id",currentSchoolId)
     .eq("academic_year_id",activeYear.id)
     .eq("class_group",selectedGroup)
     .maybeSingle();
 
   if(error){
-    $("wheatBody").innerHTML='<tr><td colspan="5">ಗೋಧಿ Setting table ಇನ್ನೂ ಸಿದ್ಧವಾಗಿಲ್ಲ.</td></tr>';
-    show("ಗೋಧಿ Setting load failed: "+error.message,"err");
-    return;
+    show("Calculation snapshot load failed: "+error.message,"err");
+    return null;
+  }
+  return data;
+}
+
+async function selectCalculationDate(dateRow){
+  if(!dateRow)return;
+
+  selectedCalculationDate=dateRow.effective_date;
+  selectedCalculationDateId=dateRow.id;
+  saveSelectedDate();
+
+  selectedSnapshot=await getSnapshotByDateId(dateRow.id);
+
+  /*
+    Safety for partially-created date rows:
+    create a snapshot by copying the latest applicable snapshot.
+  */
+  if(!selectedSnapshot){
+    const copied=await copyPreviousSnapshotToDate(dateRow);
+    if(copied) selectedSnapshot=copied;
   }
 
-  wheatSettingId=data?.id||null;
-  $("wheatQty").value=data?.quantity_per_student??"";
-  $("wheatRate").value=data?.rate_per_kg??"";
-  updateWheatExample();
+  updateCurrentDateBox();
 
-  if(data){
-    const qty=Number(data.quantity_per_student||0);
-    const rate=Number(data.rate_per_kg||0);
+  if(selectedSnapshot){
+    renderSnapshotIntoSettings(selectedSnapshot);
+    show("Calculation Date "+formatDateISO(selectedCalculationDate)+" loaded.","info");
+  }
+}
+
+function renderSnapshotIntoSettings(s){
+  const items=Array.isArray(s.calculation_items)?s.calculation_items:[];
+  const wheat=s.wheat_setting||{};
+  const ingredients=Array.isArray(s.kitchen_ingredients)?s.kitchen_ingredients:[];
+  const nutrition=Array.isArray(s.nutritional_foods)?s.nutritional_foods:[];
+
+  renderItemsFromArray(items);
+  renderIngredientsFromArray(ingredients);
+  renderNutritionFromArray(nutrition);
+
+  wheatSettingId=wheat.id||null;
+  $("wheatQty").value=wheat.quantity_per_student??"";
+  $("wheatRate").value=wheat.rate_per_kg??"";
+  updateWheatExample();
+  renderWheatFromObject(wheat);
+
+  resetItem();
+  resetIngredient();
+  resetNutrition();
+}
+
+function renderItemsFromArray(data){
+  $("itemsBody").innerHTML=data.length
+    ? data.map((x,i)=>{
+      const qty=Number(x.quantity_per_student||0);
+      const unit=x.unit||"KG";
+      const example=unit==="Gram"
+        ? (qty*20).toFixed(3)+" Gram"
+        : (qty*20).toFixed(3)+" KG";
+
+      return `<tr>
+        <td>${i+1}</td>
+        <td>${esc(x.item_name)}</td>
+        <td>${formatNutritionAmount(qty)}</td>
+        <td>${esc(unit)}</td>
+        <td class="calc">20 × ${qty.toFixed(3)} = ${example}</td>
+        <td class="actions">
+          <button class="edit" onclick='editSnapshotItem(${JSON.stringify(x)})'>✏️ Edit</button>
+          <button class="danger" onclick="deleteSnapshotItem('${x.id||""}')">🗑️ Delete</button>
+        </td>
+      </tr>`;
+    }).join("")
+    : '<tr><td colspan="6">ಈ Dateಗೆ Item ಇಲ್ಲ.</td></tr>';
+}
+
+function renderIngredientsFromArray(data){
+  $("ingredientsBody").innerHTML=data.length
+    ? data.map((x,i)=>{
+      const amount=Number(x.amount_per_student||0);
+      return `<tr>
+        <td>${i+1}</td>
+        <td>${esc(x.ingredient_name)}</td>
+        <td>₹ ${amount.toFixed(2)}</td>
+        <td class="calc">20 × ₹${amount.toFixed(2)} = ₹${(amount*20).toFixed(2)}</td>
+        <td class="actions">
+          <button class="edit" onclick='editSnapshotIngredient(${JSON.stringify(x)})'>✏️ Edit</button>
+          <button class="danger" onclick="deleteSnapshotIngredient('${x.id||""}')">🗑️ Delete</button>
+        </td>
+      </tr>`;
+    }).join("")
+    : '<tr><td colspan="5">ಈ Dateಗೆ ಅಡಿಗೆ ಪದಾರ್ಥ ಇಲ್ಲ.</td></tr>';
+}
+
+function renderNutritionFromArray(data){
+  $("nutritionBody").innerHTML=data.length
+    ? data.map((x,i)=>{
+      const qty=Number(x.quantity_per_student||0);
+      const unit=x.unit||"Nos";
+      const total=qty*20;
+      return `<tr>
+        <td>${i+1}</td>
+        <td>${esc(x.food_name)}</td>
+        <td>${formatNutritionAmount(qty)}</td>
+        <td>${esc(unit)}</td>
+        <td class="calc">20 × ${formatNutritionAmount(qty)} = ${formatNutritionAmount(total)} ${unit}</td>
+        <td class="actions">
+          <button class="edit" onclick='editSnapshotNutrition(${JSON.stringify(x)})'>✏️ Edit</button>
+          <button class="danger" onclick="deleteSnapshotNutrition('${x.id||""}')">🗑️ Delete</button>
+        </td>
+      </tr>`;
+    }).join("")
+    : '<tr><td colspan="6">ಈ Dateಗೆ ಪೌಷ್ಠಿಕ ಆಹಾರ ಇಲ್ಲ.</td></tr>';
+}
+
+function renderWheatFromObject(w){
+  if(w && Object.keys(w).length){
+    const qty=Number(w.quantity_per_student||0);
+    const rate=Number(w.rate_per_kg||0);
     $("wheatBody").innerHTML=`<tr>
       <td>${esc(groupLabel(selectedGroup))}</td>
       <td>${qty}</td>
@@ -789,29 +842,361 @@ async function loadWheatSetting(){
       <td>₹ ${(qty*20*rate).toFixed(2)}</td>
     </tr>`;
   }else{
-    $("wheatBody").innerHTML='<tr><td colspan="5">ಈ Classಗೆ ಗೋಧಿ Setting ಇಲ್ಲ.</td></tr>';
+    $("wheatBody").innerHTML='<tr><td colspan="5">ಈ Dateಗೆ ಗೋಧಿ Setting ಇಲ್ಲ.</td></tr>';
   }
 }
 
-async function saveWheatSetting(){
+async function copyPreviousSnapshotToDate(dateRow){
+  const {data:previousDate,error:dateError}=await db
+    .from("calculation_setting_dates")
+    .select("*")
+    .eq("school_id",currentSchoolId)
+    .eq("academic_year_id",activeYear.id)
+    .eq("class_group",selectedGroup)
+    .lt("effective_date",dateRow.effective_date)
+    .order("effective_date",{ascending:false})
+    .limit(1)
+    .maybeSingle();
+
+  if(dateError){
+    show("Previous Date check failed: "+dateError.message,"err");
+    return null;
+  }
+
+  if(!previousDate){
+    const base=await createBaseDateAndSnapshot();
+    if(!base)return null;
+    return getSnapshotByDateId(dateRow.id);
+  }
+
+  const previousSnapshot=await getSnapshotByDateId(previousDate.id);
+  if(!previousSnapshot)return null;
+
+  const payload={
+    calculation_date_id:dateRow.id,
+    school_id:currentSchoolId,
+    academic_year_id:activeYear.id,
+    class_group:selectedGroup,
+    calculation_items:previousSnapshot.calculation_items||[],
+    wheat_setting:previousSnapshot.wheat_setting||{},
+    kitchen_ingredients:previousSnapshot.kitchen_ingredients||[],
+    nutritional_foods:previousSnapshot.nutritional_foods||[]
+  };
+
+  const {data,error}=await db
+    .from("calculation_setting_snapshots")
+    .insert(payload)
+    .select()
+    .single();
+
+  if(error){
+    show("New Date snapshot create failed: "+error.message,"err");
+    return null;
+  }
+  return data;
+}
+
+async function addCalculationDate(){
   if(!activeYear||!selectedGroup){
     show("ಮೊದಲು Class Group Load ಮಾಡಿ.","err");
+    return;
+  }
+
+  const dateInput=document.createElement("input");
+  dateInput.type="date";
+  dateInput.style.position="fixed";
+  dateInput.style.left="-9999px";
+  document.body.appendChild(dateInput);
+
+  dateInput.onchange=async()=>{
+    const newDate=dateInput.value;
+    dateInput.remove();
+
+    if(!newDate)return;
+
+    if(newDate<"2026-06-01"){
+      show("Calculation Date 01.06.2026ಕ್ಕಿಂತ ಹಿಂದಿನ ದಿನಾಂಕ ಆಗಬಾರದು.","err");
+      return;
+    }
+
+    const {data:existing,error:findError}=await db
+      .from("calculation_setting_dates")
+      .select("id")
+      .eq("school_id",currentSchoolId)
+      .eq("academic_year_id",activeYear.id)
+      .eq("class_group",selectedGroup)
+      .eq("effective_date",newDate)
+      .maybeSingle();
+
+    if(findError){
+      show("Date check failed: "+findError.message,"err");
+      return;
+    }
+
+    if(existing){
+      show("ಈ Date ಈಗಾಗಲೇ ಇದೆ.","err");
+      return;
+    }
+
+    const {data:newRow,error}=await db
+      .from("calculation_setting_dates")
+      .insert({
+        school_id:currentSchoolId,
+        academic_year_id:activeYear.id,
+        class_group:selectedGroup,
+        effective_date:newDate,
+        is_base_date:false
+      })
+      .select()
+      .single();
+
+    if(error){
+      show("Date Add failed: "+error.message,"err");
+      return;
+    }
+
+    const copied=await copyPreviousSnapshotToDate(newRow);
+    if(!copied){
+      await db.from("calculation_setting_dates")
+        .delete()
+        .eq("id",newRow.id)
+        .eq("school_id",currentSchoolId);
+      return;
+    }
+
+    await loadCalculationDates();
+    await selectCalculationDate(newRow);
+    show("ಹೊಸ Calculation Date "+formatDateISO(newDate)+" Add ಆಯಿತು. ಹಿಂದಿನ Dateನ settings copy ಆಗಿವೆ.","ok");
+  };
+
+  dateInput.click();
+}
+
+async function editCalculationDate(dateId){
+  if(!dateId)return;
+
+  const {data:dateRow,error}=await db
+    .from("calculation_setting_dates")
+    .select("*")
+    .eq("id",dateId)
+    .eq("school_id",currentSchoolId)
+    .eq("academic_year_id",activeYear.id)
+    .eq("class_group",selectedGroup)
+    .maybeSingle();
+
+  if(error || !dateRow){
+    show("Calculation Date load failed.","err");
+    return;
+  }
+
+  await selectCalculationDate(dateRow);
+
+  showCalculationForms();
+
+  const firstForm=document.querySelectorAll(".wrap > .card")[3];
+  window.scrollTo({top:firstForm?.offsetTop||0,behavior:"smooth"});
+}
+
+async function deleteCalculationDate(dateId,dateText){
+  if(!confirm(`${formatDateISO(dateText)} Calculation Date ಅನ್ನು ಅಳಿಸಬೇಕೇ?\n\nಈ Dateನ ನಂತರದ calculationಗಳಿಗೆ ಹಿಂದಿನ valid Date ಬಳಸಲಾಗುತ್ತದೆ.`))
+    return;
+
+  const {data:row,error:findError}=await db
+    .from("calculation_setting_dates")
+    .select("id,is_base_date,effective_date")
+    .eq("id",dateId)
+    .eq("school_id",currentSchoolId)
+    .eq("academic_year_id",activeYear.id)
+    .eq("class_group",selectedGroup)
+    .maybeSingle();
+
+  if(findError || !row){
+    show("Date check failed.","err");
+    return;
+  }
+
+  if(row.is_base_date){
+    show("01.06.2026 Base Date ಅನ್ನು Delete ಮಾಡಲು ಸಾಧ್ಯವಿಲ್ಲ.","err");
+    return;
+  }
+
+  const {error}=await db
+    .from("calculation_setting_dates")
+    .delete()
+    .eq("id",dateId)
+    .eq("school_id",currentSchoolId)
+    .eq("academic_year_id",activeYear.id)
+    .eq("class_group",selectedGroup);
+
+  if(error){
+    show("Date Delete failed: "+error.message,"err");
+    return;
+  }
+
+  if(selectedCalculationDateId===dateId){
+    selectedCalculationDate=null;
+    selectedCalculationDateId=null;
+    selectedSnapshot=null;
+    localStorage.removeItem(dateStorageKey());
+  }
+
+  await loadCalculationDates();
+  show(formatDateISO(dateText)+" Delete ಆಯಿತು. ಈಗ ಆ ದಿನಕ್ಕೆ ಹಿಂದಿನ valid Dateನ settings ಅನ್ವಯವಾಗುತ್ತದೆ.","ok");
+}
+
+/* =========================================================
+   EXISTING CALCULATION SETTINGS
+   The visual structure is kept; edits now apply to the
+   selected date's snapshot instead of changing another date.
+   ========================================================= */
+
+async function updateSelectedSnapshot(patch){
+  if(!selectedCalculationDateId){
+    show("ಮೊದಲು Calculation Date Edit ಮಾಡಿ / ಆಯ್ಕೆ ಮಾಡಿ.","err");
+    return false;
+  }
+
+  const current=selectedSnapshot || await getSnapshotByDateId(selectedCalculationDateId);
+  if(!current){
+    show("ಈ Dateಗೆ calculation snapshot ಇಲ್ಲ.","err");
+    return false;
+  }
+
+  const payload={
+    calculation_date_id:selectedCalculationDateId,
+    school_id:currentSchoolId,
+    academic_year_id:activeYear.id,
+    class_group:selectedGroup,
+    calculation_items:patch.calculation_items ?? current.calculation_items ?? [],
+    wheat_setting:patch.wheat_setting ?? current.wheat_setting ?? {},
+    kitchen_ingredients:patch.kitchen_ingredients ?? current.kitchen_ingredients ?? [],
+    nutritional_foods:patch.nutritional_foods ?? current.nutritional_foods ?? []
+  };
+
+  const {data,error}=await db
+    .from("calculation_setting_snapshots")
+    .upsert(payload,{onConflict:"calculation_date_id"})
+    .select()
+    .single();
+
+  if(error){
+    show("Date-wise settings Save failed: "+error.message,"err");
+    return false;
+  }
+
+  selectedSnapshot=data;
+  return true;
+}
+
+function currentItems(){
+  return Array.isArray(selectedSnapshot?.calculation_items)
+    ? [...selectedSnapshot.calculation_items] : [];
+}
+
+function currentIngredients(){
+  return Array.isArray(selectedSnapshot?.kitchen_ingredients)
+    ? [...selectedSnapshot.kitchen_ingredients] : [];
+}
+
+function currentNutrition(){
+  return Array.isArray(selectedSnapshot?.nutritional_foods)
+    ? [...selectedSnapshot.nutritional_foods] : [];
+}
+
+async function saveItem(){
+  if(!selectedCalculationDateId){
+    show("ಮೊದಲು Calculation Date ಆಯ್ಕೆ ಮಾಡಿ.","err");
+    return;
+  }
+
+  const name=$("itemName").value.trim();
+  const qty=$("itemQty").value;
+  const unit=$("itemUnit").value;
+
+  if(!name){show("Item ನಮೂದಿಸಿ.","err");return;}
+  if(qty===""||Number(qty)<0){show("ಅಳತೆ / Amount ನಮೂದಿಸಿ.","err");return;}
+
+  let arr=currentItems();
+
+  if(editingItemId){
+    arr=arr.map(x=>String(x.id)===String(editingItemId)
+      ? {...x,item_name:name,quantity_per_student:Number(qty),unit,is_enabled:true,updated_at:new Date().toISOString()}
+      : x);
+  }else{
+    const same=arr.findIndex(x=>String(x.item_name||"").trim().toLowerCase()===name.toLowerCase());
+    if(same>=0){
+      arr[same]={...arr[same],item_name:name,quantity_per_student:Number(qty),unit,is_enabled:true,updated_at:new Date().toISOString()};
+    }else{
+      arr.push({
+        id:"local-"+Date.now()+"-"+Math.random().toString(36).slice(2),
+        school_id:currentSchoolId,
+        academic_year_id:activeYear.id,
+        class_group:selectedGroup,
+        item_name:name,
+        quantity_per_student:Number(qty),
+        unit,
+        is_enabled:true,
+        created_at:new Date().toISOString(),
+        updated_at:new Date().toISOString()
+      });
+    }
+  }
+
+  if(await updateSelectedSnapshot({calculation_items:arr})){
+    resetItem();
+    renderItemsFromArray(arr);
+    show(editingItemId?"Item Update ಆಯಿತು.":"Item Save ಆಯಿತು.","ok");
+  }
+}
+
+function editSnapshotItem(x){
+  editingItemId=x.id;
+  $("itemName").value=x.item_name||"";
+  $("itemQty").value=x.quantity_per_student??"";
+  $("itemUnit").value=x.unit==="Gram"?"Gram":"KG";
+  $("itemSaveBtn").textContent="💾 Update";
+  $("itemCancelBtn").style.display="inline-block";
+}
+
+async function deleteSnapshotItem(id){
+  if(!confirm("ಈ Dateಗೆ ಇರುವ Item ಅಳಿಸಬೇಕೇ?"))return;
+  const arr=currentItems().filter(x=>String(x.id)!==String(id));
+  if(await updateSelectedSnapshot({calculation_items:arr})){
+    renderItemsFromArray(arr);
+    show("ಈ Dateನ Item Delete ಆಯಿತು.","ok");
+  }
+}
+
+function resetItem(){
+  editingItemId=null;
+  $("itemName").value="";
+  $("itemQty").value="";
+  $("itemUnit").value="KG";
+  $("itemSaveBtn").textContent="💾 Save";
+  $("itemCancelBtn").style.display="none";
+}
+
+function updateWheatExample(){
+  const qty=Number($("wheatQty").value||0);
+  const rate=Number($("wheatRate").value||0);
+  $("wheatExample").textContent="₹"+(qty*20*rate).toFixed(2);
+}
+
+async function saveWheatSetting(){
+  if(!selectedCalculationDateId){
+    show("ಮೊದಲು Calculation Date ಆಯ್ಕೆ ಮಾಡಿ.","err");
     return;
   }
 
   const qty=$("wheatQty").value;
   const rate=$("wheatRate").value;
 
-  if(qty===""||Number(qty)<0){
-    show("ಗೋಧಿ ಪ್ರಮಾಣ ನಮೂದಿಸಿ.","err");
-    return;
-  }
-  if(rate===""||Number(rate)<0){
-    show("ಗೋಧಿ Rate ನಮೂದಿಸಿ.","err");
-    return;
-  }
+  if(qty===""||Number(qty)<0){show("ಗೋಧಿ ಪ್ರಮಾಣ ನಮೂದಿಸಿ.","err");return;}
+  if(rate===""||Number(rate)<0){show("ಗೋಧಿ Rate ನಮೂದಿಸಿ.","err");return;}
 
-  const payload={
+  const wheat={
+    ...(selectedSnapshot?.wheat_setting||{}),
+    id:wheatSettingId || "local-wheat-"+Date.now(),
     school_id:currentSchoolId,
     academic_year_id:activeYear.id,
     class_group:selectedGroup,
@@ -820,432 +1205,311 @@ async function saveWheatSetting(){
     updated_at:new Date().toISOString()
   };
 
-  let result;
-  if(wheatSettingId){
-    result=await db.from("wheat_rate_settings")
-      .update(payload)
-      .eq("id",wheatSettingId)
-      .eq("school_id",currentSchoolId)
-      .select().single();
-  }else{
-    result=await db.from("wheat_rate_settings")
-      .upsert(payload,{onConflict:"school_id,academic_year_id,class_group"})
-      .select().single();
+  if(await updateSelectedSnapshot({wheat_setting:wheat})){
+    selectedSnapshot.wheat_setting=wheat;
+    wheatSettingId=wheat.id;
+    renderWheatFromObject(wheat);
+    updateWheatExample();
+    show("ಗೋಧಿ ಪ್ರಮಾಣ ಮತ್ತು Rate Save ಆಯಿತು.","ok");
   }
-
-  if(result.error){
-    show("ಗೋಧಿ Rate Save failed: "+result.error.message,"err");
-    return;
-  }
-
-  wheatSettingId=result.data?.id||wheatSettingId;
-  await loadWheatSetting();
-  show("ಗೋಧಿ ಪ್ರಮಾಣ ಮತ್ತು Rate Save ಆಯಿತು.","ok");
-}
-
-/* =========================
-   KITCHEN INGREDIENTS
-   ========================= */
-
-async function loadIngredients(){
-
- if(!activeYear||!selectedGroup){
-  $("ingredientsBody").innerHTML=
-   '<tr><td colspan="5">Class ಆಯ್ಕೆ ಮಾಡಿ.</td></tr>';
-  return;
- }
-
- const {data,error}=await db
-  .from("kitchen_ingredients")
-  .select("*")
-  .eq("academic_year_id",activeYear.id)
-  .eq("class_group",selectedGroup)
-  .order("created_at",{ascending:true});
-
- if(error){
-  show("ಅಡಿಗೆ ಪದಾರ್ಥ load failed: "+error.message,"err");
-  return;
- }
-
- $("ingredientsBody").innerHTML=(data||[]).length
- ? (data||[]).map((x,i)=>{
-
-   const amount=Number(x.amount_per_student||0);
-
-   return `<tr>
-    <td>${i+1}</td>
-    <td>${esc(x.ingredient_name)}</td>
-    <td>₹ ${amount.toFixed(2)}</td>
-    <td class="calc">
-     20 × ₹${amount.toFixed(2)}
-     = ₹${(amount*20).toFixed(2)}
-    </td>
-    <td class="actions">
-     <button class="edit"
-      onclick='editIngredient(${JSON.stringify(x)})'>
-      ✏️ Edit
-     </button>
-
-     <button class="danger"
-      onclick="deleteIngredient('${x.id}')">
-      🗑️ Delete
-     </button>
-    </td>
-   </tr>`;
-  }).join("")
- : '<tr><td colspan="5">ಈ Classಗೆ ಅಡಿಗೆ ಪದಾರ್ಥ ಇಲ್ಲ.</td></tr>';
 }
 
 async function saveIngredient(){
-
- if(!activeYear||!selectedGroup){
-  show("ಮೊದಲು Class Group Load ಮಾಡಿ.","err");
-  return;
- }
-
- const name=$("ingredientName").value.trim();
- const amount=$("ingredientAmount").value;
-
- if(!name){
-  show("ಅಡಿಗೆ ಪದಾರ್ಥದ Item ನಮೂದಿಸಿ.","err");
-  return;
- }
-
- if(amount===""||Number(amount)<0){
-  show("Student 01 ಮೊತ್ತ ನಮೂದಿಸಿ.","err");
-  return;
- }
-
- const payload={
-  school_id:currentSchoolId,
-   academic_year_id:activeYear.id,
-  class_group:selectedGroup,
-  ingredient_name:name,
-  amount_per_student:Number(amount),
-  unit:"₹",
-  is_enabled:true,
-  updated_at:new Date().toISOString()
- };
-
- let result;
-
- if(editingIngredientId){
-
-  result=await db
-   .from("kitchen_ingredients")
-   .update(payload)
-   .eq("id",editingIngredientId)
-   .eq("academic_year_id",activeYear.id)
-   .select()
-   .single();
-
- }else{
-
-  const {data:existing,error:findError}=await db
-   .from("kitchen_ingredients")
-   .select("id")
-   .eq("academic_year_id",activeYear.id)
-   .eq("class_group",selectedGroup)
-   .eq("ingredient_name",name)
-   .maybeSingle();
-
-  if(findError){
-   show("ಅಡಿಗೆ ಪದಾರ್ಥ check failed: "+findError.message,"err");
-   return;
+  if(!selectedCalculationDateId){
+    show("ಮೊದಲು Calculation Date ಆಯ್ಕೆ ಮಾಡಿ.","err");
+    return;
   }
 
-  if(existing){
+  const name=$("ingredientName").value.trim();
+  const amount=$("ingredientAmount").value;
 
-   result=await db
-    .from("kitchen_ingredients")
-    .update(payload)
-    .eq("id",existing.id)
-    .select()
-    .single();
+  if(!name){show("ಅಡಿಗೆ ಪದಾರ್ಥದ Item ನಮೂದಿಸಿ.","err");return;}
+  if(amount===""||Number(amount)<0){show("Student 01 ಮೊತ್ತ ನಮೂದಿಸಿ.","err");return;}
 
+  let arr=currentIngredients();
+
+  if(editingIngredientId){
+    arr=arr.map(x=>String(x.id)===String(editingIngredientId)
+      ? {...x,ingredient_name:name,amount_per_student:Number(amount),unit:"₹",is_enabled:true,updated_at:new Date().toISOString()}
+      : x);
   }else{
-
-   result=await db
-    .from("kitchen_ingredients")
-    .insert(payload)
-    .select()
-    .single();
-  }
- }
-
- if(result.error){
-  show("ಅಡಿಗೆ ಪದಾರ್ಥ Save failed: "+result.error.message,"err");
-  return;
- }
-
- const wasEditing=!!editingIngredientId;
-
- resetIngredient();
- await loadIngredients();
-
- show(
-  wasEditing
-   ? "ಅಡಿಗೆ ಪದಾರ್ಥ Update ಆಯಿತು."
-   : "ಅಡಿಗೆ ಪದಾರ್ಥ Save ಆಯಿತು.",
-  "ok"
- );
-}
-
-function editIngredient(x){
-
- editingIngredientId=x.id;
-
- $("ingredientName").value=x.ingredient_name||"";
- $("ingredientAmount").value=x.amount_per_student??"";
-
- $("ingredientSaveBtn").textContent="💾 Update";
- $("ingredientCancelBtn").style.display="inline-block";
-}
-
-async function deleteIngredient(id){
-
- if(!confirm("ಈ ಅಡಿಗೆ ಪದಾರ್ಥ ಅಳಿಸಬೇಕೇ?"))return;
-
- const {error}=await db
-  .from("kitchen_ingredients")
-  .delete()
-  .eq("id",id)
-  .eq("academic_year_id",activeYear.id);
-
- if(error){
-  show("ಅಡಿಗೆ ಪದಾರ್ಥ Delete failed: "+error.message,"err");
-  return;
- }
-
- await loadIngredients();
- show("ಅಡಿಗೆ ಪದಾರ್ಥ Delete ಆಯಿತು.","ok");
-}
-
-
-/* =========================
-   NUTRITIONAL FOOD
-   ========================= */
-
-function formatNutritionAmount(value){
- const n = Number(value);
- if (!Number.isFinite(n)) return "0";
- return String(Number(n.toFixed(3)));
-}
-
-async function loadNutrition(){
-
- if(!activeYear||!selectedGroup){
-  $("nutritionBody").innerHTML=
-   '<tr><td colspan="6">Class ಆಯ್ಕೆ ಮಾಡಿ.</td></tr>';
-  return;
- }
-
- const {data,error}=await db
-  .from("nutritional_foods")
-  .select("*")
-   .eq("school_id",currentSchoolId)
-  .eq("academic_year_id",activeYear.id)
-  .eq("class_group",selectedGroup)
-  .order("created_at",{ascending:true});
-
- if(error){
-  show("ಪೌಷ್ಠಿಕ ಆಹಾರ load failed: "+error.message,"err");
-  return;
- }
-
- $("nutritionBody").innerHTML=(data||[]).length
- ? (data||[]).map((x,i)=>{
-
-   const qty=Number(x.quantity_per_student||0);
-   const unit=x.unit||"Nos";
-   const total=qty*20;
-
-   let totalText;
-   if(unit==="Gram") totalText=total.toFixed(3)+" Gram";
-   else if(unit==="KG") totalText=total.toFixed(3)+" KG";
-   else totalText=total.toFixed(3)+" Nos";
-
-   return `<tr>
-    <td>${i+1}</td>
-    <td>${esc(x.food_name)}</td>
-    <td>${formatNutritionAmount(qty)}</td>
-    <td>${esc(unit)}</td>
-    <td class="calc">
-     20 × ${formatNutritionAmount(qty)} = ${formatNutritionAmount(total)} ${unit}
-    </td>
-    <td class="actions">
-     <button class="edit"
-      onclick='editNutrition(${JSON.stringify(x)})'>
-      ✏️ Edit
-     </button>
-
-     <button class="danger"
-      onclick="deleteNutrition('${x.id}')">
-      🗑️ Delete
-     </button>
-    </td>
-   </tr>`;
-  }).join("")
- : '<tr><td colspan="6">ಈ Classಗೆ ಪೌಷ್ಠಿಕ ಆಹಾರ ಇಲ್ಲ.</td></tr>';
-}
-
-async function saveNutrition(){
-
- if(!activeYear||!selectedGroup){
-  show("ಮೊದಲು Class Group Load ಮಾಡಿ.","err");
-  return;
- }
-
- const name=$("nutritionName").value.trim();
- const qty=$("nutritionQty").value;
- const unit=$("nutritionUnit").value;
-
- if(!name){
-  show("ಪೌಷ್ಠಿಕ ಆಹಾರದ Item ನಮೂದಿಸಿ.","err");
-  return;
- }
-
- if(qty===""||Number(qty)<0){
-  show("ಅಳತೆ / Amount ನಮೂದಿಸಿ.","err");
-  return;
- }
-
- const payload={
-  school_id:currentSchoolId,
-   academic_year_id:activeYear.id,
-  class_group:selectedGroup,
-  food_name:name,
-  quantity_per_student:Number(qty),
-  unit:unit,
-  is_enabled:true,
-  updated_at:new Date().toISOString()
- };
-
- let result;
-
- if(editingNutritionId){
-
-  result=await db
-   .from("nutritional_foods")
-   .update(payload)
-   .eq("id",editingNutritionId)
-   .eq("school_id",currentSchoolId)
-   .eq("academic_year_id",activeYear.id)
-   .select()
-   .single();
-
- }else{
-
-  const {data:existing,error:findError}=await db
-   .from("nutritional_foods")
-   .select("id")
-   .eq("school_id",currentSchoolId)
-   .eq("academic_year_id",activeYear.id)
-   .eq("class_group",selectedGroup)
-   .eq("food_name",name)
-   .maybeSingle();
-
-  if(findError){
-   show("ಪೌಷ್ಠಿಕ ಆಹಾರ check failed: "+findError.message,"err");
-   return;
+    const same=arr.findIndex(x=>String(x.ingredient_name||"").trim().toLowerCase()===name.toLowerCase());
+    if(same>=0){
+      arr[same]={...arr[same],ingredient_name:name,amount_per_student:Number(amount),unit:"₹",is_enabled:true,updated_at:new Date().toISOString()};
+    }else{
+      arr.push({
+        id:"local-ing-"+Date.now()+"-"+Math.random().toString(36).slice(2),
+        school_id:currentSchoolId,
+        academic_year_id:activeYear.id,
+        class_group:selectedGroup,
+        ingredient_name:name,
+        amount_per_student:Number(amount),
+        unit:"₹",
+        is_enabled:true,
+        created_at:new Date().toISOString(),
+        updated_at:new Date().toISOString()
+      });
+    }
   }
 
-  if(existing){
-
-   result=await db
-    .from("nutritional_foods")
-    .update(payload)
-    .eq("id",existing.id)
-    .eq("school_id",currentSchoolId)
-    .select()
-    .single();
-
-  }else{
-
-   result=await db
-    .from("nutritional_foods")
-    .insert(payload)
-    .select()
-    .single();
+  if(await updateSelectedSnapshot({kitchen_ingredients:arr})){
+    resetIngredient();
+    renderIngredientsFromArray(arr);
+    show(editingIngredientId?"ಅಡಿಗೆ ಪದಾರ್ಥ Update ಆಯಿತು.":"ಅಡಿಗೆ ಪದಾರ್ಥ Save ಆಯಿತು.","ok");
   }
- }
-
- if(result.error){
-  show("ಪೌಷ್ಠಿಕ ಆಹಾರ Save failed: "+result.error.message,"err");
-  return;
- }
-
- const wasEditing=!!editingNutritionId;
-
- resetNutrition();
- await loadNutrition();
-
- show(
-  wasEditing
-   ? "ಪೌಷ್ಠಿಕ ಆಹಾರ Update ಆಯಿತು."
-   : "ಪೌಷ್ಠಿಕ ಆಹಾರ Save ಆಯಿತು.",
-  "ok"
- );
 }
 
-function editNutrition(x){
-
- editingNutritionId=x.id;
-
- $("nutritionName").value=x.food_name||"";
- $("nutritionQty").value=x.quantity_per_student??"";
- $("nutritionUnit").value=x.unit==="Gram"
-  ? "Gram"
-  : x.unit==="KG"
-   ? "KG"
-   : "Nos";
-
- $("nutritionSaveBtn").textContent="💾 Update";
- $("nutritionCancelBtn").style.display="inline-block";
+function editSnapshotIngredient(x){
+  editingIngredientId=x.id;
+  $("ingredientName").value=x.ingredient_name||"";
+  $("ingredientAmount").value=x.amount_per_student??"";
+  $("ingredientSaveBtn").textContent="💾 Update";
+  $("ingredientCancelBtn").style.display="inline-block";
 }
 
-async function deleteNutrition(id){
-
- if(!confirm("ಈ ಪೌಷ್ಠಿಕ ಆಹಾರ ಅಳಿಸಬೇಕೇ?"))return;
-
- const {error}=await db
-  .from("nutritional_foods")
-  .delete()
-  .eq("id",id)
-   .eq("school_id",currentSchoolId)
-  .eq("academic_year_id",activeYear.id);
-
- if(error){
-  show("ಪೌಷ್ಠಿಕ ಆಹಾರ Delete failed: "+error.message,"err");
-  return;
- }
-
- await loadNutrition();
- show("ಪೌಷ್ಠಿಕ ಆಹಾರ Delete ಆಯಿತು.","ok");
-}
-
-function resetNutrition(){
-
- editingNutritionId=null;
-
- $("nutritionName").value="";
- $("nutritionQty").value="";
- $("nutritionUnit").value="Nos";
-
- $("nutritionSaveBtn").textContent="💾 Save";
- $("nutritionCancelBtn").style.display="none";
+async function deleteSnapshotIngredient(id){
+  if(!confirm("ಈ Dateಗೆ ಇರುವ ಅಡಿಗೆ ಪದಾರ್ಥ ಅಳಿಸಬೇಕೇ?"))return;
+  const arr=currentIngredients().filter(x=>String(x.id)!==String(id));
+  if(await updateSelectedSnapshot({kitchen_ingredients:arr})){
+    renderIngredientsFromArray(arr);
+    show("ಈ Dateನ ಅಡಿಗೆ ಪದಾರ್ಥ Delete ಆಯಿತು.","ok");
+  }
 }
 
 function resetIngredient(){
-
- editingIngredientId=null;
-
- $("ingredientName").value="";
- $("ingredientAmount").value="";
-
- $("ingredientSaveBtn").textContent="💾 Save";
- $("ingredientCancelBtn").style.display="none";
+  editingIngredientId=null;
+  $("ingredientName").value="";
+  $("ingredientAmount").value="";
+  $("ingredientSaveBtn").textContent="💾 Save";
+  $("ingredientCancelBtn").style.display="none";
 }
+
+async function saveNutrition(){
+  if(!selectedCalculationDateId){
+    show("ಮೊದಲು Calculation Date ಆಯ್ಕೆ ಮಾಡಿ.","err");
+    return;
+  }
+
+  const name=$("nutritionName").value.trim();
+  const qty=$("nutritionQty").value;
+  const unit=$("nutritionUnit").value;
+
+  if(!name){show("ಪೌಷ್ಠಿಕ ಆಹಾರದ Item ನಮೂದಿಸಿ.","err");return;}
+  if(qty===""||Number(qty)<0){show("ಅಳತೆ / Amount ನಮೂದಿಸಿ.","err");return;}
+
+  let arr=currentNutrition();
+
+  if(editingNutritionId){
+    arr=arr.map(x=>String(x.id)===String(editingNutritionId)
+      ? {...x,food_name:name,quantity_per_student:Number(qty),unit,is_enabled:true,updated_at:new Date().toISOString()}
+      : x);
+  }else{
+    const same=arr.findIndex(x=>String(x.food_name||"").trim().toLowerCase()===name.toLowerCase());
+    if(same>=0){
+      arr[same]={...arr[same],food_name:name,quantity_per_student:Number(qty),unit,is_enabled:true,updated_at:new Date().toISOString()};
+    }else{
+      arr.push({
+        id:"local-nut-"+Date.now()+"-"+Math.random().toString(36).slice(2),
+        school_id:currentSchoolId,
+        academic_year_id:activeYear.id,
+        class_group:selectedGroup,
+        food_name:name,
+        quantity_per_student:Number(qty),
+        unit,
+        is_enabled:true,
+        created_at:new Date().toISOString(),
+        updated_at:new Date().toISOString()
+      });
+    }
+  }
+
+  if(await updateSelectedSnapshot({nutritional_foods:arr})){
+    resetNutrition();
+    renderNutritionFromArray(arr);
+    show(editingNutritionId?"ಪೌಷ್ಠಿಕ ಆಹಾರ Update ಆಯಿತು.":"ಪೌಷ್ಠಿಕ ಆಹಾರ Save ಆಯಿತು.","ok");
+  }
+}
+
+function editSnapshotNutrition(x){
+  editingNutritionId=x.id;
+  $("nutritionName").value=x.food_name||"";
+  $("nutritionQty").value=x.quantity_per_student??"";
+  $("nutritionUnit").value=x.unit==="Gram"
+    ? "Gram"
+    : x.unit==="KG" ? "KG" : "Nos";
+  $("nutritionSaveBtn").textContent="💾 Update";
+  $("nutritionCancelBtn").style.display="inline-block";
+}
+
+async function deleteSnapshotNutrition(id){
+  if(!confirm("ಈ Dateಗೆ ಇರುವ ಪೌಷ್ಠಿಕ ಆಹಾರ ಅಳಿಸಬೇಕೇ?"))return;
+  const arr=currentNutrition().filter(x=>String(x.id)!==String(id));
+  if(await updateSelectedSnapshot({nutritional_foods:arr})){
+    renderNutritionFromArray(arr);
+    show("ಈ Dateನ ಪೌಷ್ಠಿಕ ಆಹಾರ Delete ಆಯಿತು.","ok");
+  }
+}
+
+function resetNutrition(){
+  editingNutritionId=null;
+  $("nutritionName").value="";
+  $("nutritionQty").value="";
+  $("nutritionUnit").value="Nos";
+  $("nutritionSaveBtn").textContent="💾 Save";
+  $("nutritionCancelBtn").style.display="none";
+}
+
+/* aliases for inline handlers and compatibility */
+window.editCalculationDate=editCalculationDate;
+window.deleteCalculationDate=deleteCalculationDate;
+window.editSnapshotItem=editSnapshotItem;
+window.deleteSnapshotItem=deleteSnapshotItem;
+window.editSnapshotIngredient=editSnapshotIngredient;
+window.deleteSnapshotIngredient=deleteSnapshotIngredient;
+window.editSnapshotNutrition=editSnapshotNutrition;
+window.deleteSnapshotNutrition=deleteSnapshotNutrition;
+
+/* =========================================================
+   SCHOOL / ACADEMIC YEAR
+   ========================================================= */
+
+async function loadCurrentSchool(){
+  try{
+    const {data:{user},error:userError}=await db.auth.getUser();
+
+    if(userError || !user){
+      window.location.href="login.html";
+      return false;
+    }
+
+    currentSchoolUserId=user.id;
+
+    const {data:su,error}=await db
+      .from("school_users")
+      .select("id,school_id,role,is_active")
+      .eq("user_id",user.id)
+      .eq("is_active",true)
+      .maybeSingle();
+
+    if(error || !su){
+      await db.auth.signOut();
+      window.location.href="login.html";
+      return false;
+    }
+
+    if(su.role==="admin"){
+      window.location.href="admin.html";
+      return false;
+    }
+
+    currentSchoolId=su.school_id;
+    return true;
+  }catch(e){
+    console.error(e);
+    window.location.href="login.html";
+    return false;
+  }
+}
+
+async function loadActiveYear(){
+  const {data,error}=await db
+    .from("academic_years")
+    .select("id,year_name,is_active")
+    .eq("is_active",true)
+    .order("created_at",{ascending:false})
+    .limit(1)
+    .maybeSingle();
+
+  if(error){
+    $("academicYear").textContent="Load failed";
+    show("Active Academic Year load failed: "+error.message,"err");
+    return false;
+  }
+
+  if(!data){
+    $("academicYear").textContent="Active Year ಇಲ್ಲ";
+    show("School Settingsನಲ್ಲಿ Active Academic Year ಹೊಂದಿಸಿ.","err");
+    return false;
+  }
+
+  activeYear=data;
+  $("academicYear").textContent=data.year_name;
+  return true;
+}
+
+async function loadSchoolSettings(){
+  try{
+    const {data,error}=await db
+      .from("school_settings")
+      .select("*")
+      .eq("school_id",currentSchoolId)
+      .limit(1)
+      .maybeSingle();
+
+    if(error)throw error;
+
+    if(data){
+      $("departmentTitle").textContent=
+        data.department_name||"ಅಕ್ಷರ ದಾಸೋಹ ಕಾರ್ಯಕ್ರಮ";
+
+      $("schoolTitle").textContent=
+        data.school_name||"ಶಾಲೆಯ ಹೆಸರು";
+    }
+  }catch(e){
+    console.warn(e.message);
+  }
+}
+
+/* =========================================================
+   CLASS GROUP
+   ========================================================= */
+
+async function applySelection(){
+  if(!activeYear){
+    show("Active Academic Year ಇಲ್ಲ. School Settingsನಲ್ಲಿ Active Year ಹೊಂದಿಸಿ.","err");
+    return;
+  }
+
+  const g=$("classGroup").value;
+
+  if(!g){
+    show("Class Group ಆಯ್ಕೆ ಮಾಡಿ.","err");
+    return;
+  }
+
+  selectedGroup=g;
+  saveSelection();
+  lockSelection();
+
+  resetItem();
+  resetIngredient();
+  resetNutrition();
+
+  await loadCalculationDates();
+  hideCalculationForms();
+  show("Class Group Load ಆಯಿತು. Date-wise Calculation Settings ಸಿದ್ಧವಾಗಿದೆ.","ok");
+}
+
+function editSelection(){
+  localStorage.removeItem(selectionStorageKey());
+  unlockSelection();
+  selectedGroup="";
+  selectedCalculationDate=null;
+  selectedCalculationDateId=null;
+  selectedSnapshot=null;
+  setSelectionStatus();
+  hideCalculationForms();
+
+  if($("datesBody"))
+    $("datesBody").innerHTML='<tr><td colspan="4">Class Group ಆಯ್ಕೆ ಮಾಡಿ.</td></tr>';
+}
+
+/* =========================================================
+   EVENTS / INIT
+   ========================================================= */
+
+ensureDateUI();
+hideCalculationForms();
 
 $("loadBtn").onclick=applySelection;
 $("editBtn").onclick=editSelection;
@@ -1254,27 +1518,34 @@ $("itemSaveBtn").onclick=saveItem;
 $("itemCancelBtn").onclick=resetItem;
 
 $("ingredientSaveBtn").onclick=saveIngredient;
-$("wheatSaveBtn").onclick=saveWheatSetting;
-$("wheatQty").oninput=updateWheatExample;
-$("wheatRate").oninput=updateWheatExample;
 $("ingredientCancelBtn").onclick=resetIngredient;
 
 $("nutritionSaveBtn").onclick=saveNutrition;
 $("nutritionCancelBtn").onclick=resetNutrition;
 
+$("wheatSaveBtn").onclick=saveWheatSetting;
+$("wheatQty").oninput=updateWheatExample;
+$("wheatRate").oninput=updateWheatExample;
+
 (async function init(){
+  ensureDateUI();
 
- const schoolOk=await loadCurrentSchool();
- if(!schoolOk)return;
+  const schoolOk=await loadCurrentSchool();
+  if(!schoolOk)return;
 
- await loadSchoolSettings();
+  await loadSchoolSettings();
 
- const ok=await loadActiveYear();
+  const ok=await loadActiveYear();
 
- if(ok){
-  restoreSelection();
- }
+  if(ok){
+    if(restoreSelection()){
+      await loadCalculationDates();
+    }else{
+      setSelectionStatus();
+    }
+  }
 })();
 </script>
+
 </body>
 </html>
