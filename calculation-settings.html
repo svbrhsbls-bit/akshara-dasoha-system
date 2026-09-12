@@ -1372,6 +1372,7 @@ async function dwPutSnapshot(id,s){
     calculation_date_id:id,
     school_id:currentSchoolId,
     academic_year_id:activeYear.id,
+    class_group:"ALL",
     calculation_items:s.calculation_items||[],
     wheat_setting:s.wheat_setting||{},
     kitchen_ingredients:s.kitchen_ingredients||[],
@@ -1687,27 +1688,70 @@ async function dwAddDate(){
  }).select().single();
  if(error){dwShow("Date Save failed: "+error.message,"err");return;}
 
- // Build the new date from the previous valid date. For the base date,
- // migrate the four old class-group settings once, without changing them.
+ // Build the new date from the immediately previous valid date.
+ // Example: 01.10.2026 MUST inherit 15.09.2026, not 01.06.2026.
+ // The complete snapshot is copied, so any rate/quantity changed on the
+ // previous date is carried forward unchanged.
  let newSnap=null;
  const prev=dwPrevDate(iso);
+
  if(prev){
    if(prev.effective_date===DW_BASE){
-     newSnap=dwNorm(null,data.id);
-     for(const g of DW_GROUPS){
-       try{
-         const legacy=await dwReadLegacyGroup(g);
-         newSnap.calculation_items.push(...legacy.calculation_items);
-         if(legacy.wheat_setting[g])newSnap.wheat_setting[g]=legacy.wheat_setting[g];
-         newSnap.kitchen_ingredients.push(...legacy.kitchen_ingredients);
-         newSnap.nutritional_foods.push(...legacy.nutritional_foods);
-       }catch(e){console.warn("Legacy migration",g,e.message);}
+     // Base date is the original calculation_settings data.
+     dwDate=prev;
+     let ps=await dwGetSnapshot(prev.id);
+
+     if(!dwHasSnapshotData(ps)){
+       ps=dwNorm(null,prev.id);
+       for(const g of DW_GROUPS){
+         try{
+           const legacy=await dwReadLegacyGroup(g);
+           ps.calculation_items.push(...legacy.calculation_items);
+           if(legacy.wheat_setting[g])ps.wheat_setting[g]=legacy.wheat_setting[g];
+           ps.kitchen_ingredients.push(...legacy.kitchen_ingredients);
+           ps.nutritional_foods.push(...legacy.nutritional_foods);
+         }catch(e){console.warn("Legacy migration",g,e.message);}
+       }
+       await dwPutSnapshot(prev.id,ps);
      }
+     newSnap=dwNorm(ps,data.id);
    }else{
-     const ps=await dwGetSnapshot(prev.id);
-     if(ps)newSnap=dwNorm(ps,data.id);
+     // Always use the immediately previous Date.
+     let ps=await dwGetSnapshot(prev.id);
+
+     // If an older date was created before its snapshot existed, first
+     // materialize that previous date's inherited settings.
+     if(!dwHasSnapshotData(ps)){
+       dwDate=prev;
+       const older=dwPrevDate(prev.effective_date);
+       if(older){
+         let os=await dwGetSnapshot(older.id);
+         if(!dwHasSnapshotData(os)){
+           if(older.effective_date===DW_BASE){
+             os=dwNorm(null,older.id);
+             for(const g of DW_GROUPS){
+               try{
+                 const legacy=await dwReadLegacyGroup(g);
+                 os.calculation_items.push(...legacy.calculation_items);
+                 if(legacy.wheat_setting[g])os.wheat_setting[g]=legacy.wheat_setting[g];
+                 os.kitchen_ingredients.push(...legacy.kitchen_ingredients);
+                 os.nutritional_foods.push(...legacy.nutritional_foods);
+               }catch(e){console.warn("Legacy migration",g,e.message);}
+             }
+           }else{
+             os=dwNorm(os,older.id);
+           }
+           await dwPutSnapshot(older.id,os);
+         }
+         ps=dwNorm(os,prev.id);
+         await dwPutSnapshot(prev.id,ps);
+       }
+     }
+
+     if(ps) newSnap=dwNorm(ps,data.id);
    }
  }
+
  if(newSnap)await dwPutSnapshot(data.id,newSnap);
 
  dwDates.push(data);dwDates.sort((a,b)=>a.effective_date.localeCompare(b.effective_date));dwRenderDates();
