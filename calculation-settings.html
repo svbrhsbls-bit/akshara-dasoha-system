@@ -151,7 +151,7 @@ Academic Year ಅನ್ನು ಇಲ್ಲಿ ಆಯ್ಕೆ ಮಾಡುವು
 <tr>
 <th>Sl.No</th>
 <th>Item</th>
-<th>Student 01 / Rate</th>
+<th>Student 01 / Amount</th>
 <th>Unit</th>
 <th>20 Students ಉದಾಹರಣೆ</th>
 <th>Actions</th>
@@ -823,8 +823,18 @@ async function selectCalculationDate(dateRow){
   selectedSnapshot=await getSnapshotByDateId(dateRow.id);
 
   /*
-    Safety for partially-created date rows:
-    create a snapshot by copying the latest applicable snapshot.
+    IMPORTANT MIGRATION:
+    An older version could already have created a snapshot row with empty
+    JSON arrays/objects before the user's existing calculation settings were
+    copied. In that case the snapshot exists, so a simple null check is not
+    enough. Rebuild the protected base-date snapshot from the existing
+    calculation tables before the Edit screen is opened.
+  */
+  selectedSnapshot=await hydrateSnapshotFromExistingSettingsIfNeeded(dateRow,selectedSnapshot);
+
+  /*
+    Safety for partially-created added dates: if no snapshot exists, copy
+    the nearest earlier date.
   */
   if(!selectedSnapshot){
     const copied=await copyPreviousSnapshotToDate(dateRow);
