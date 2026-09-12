@@ -91,6 +91,7 @@ const groups={
 let activeYear=null,school=null,current=null,settings={items:[],ingredients:[],nutrition:[],wheat:null};
 let currentSchoolId=null,currentSchoolUserId=null;
 let receipts=new Map(),wheatDays=new Map(),openingMap=new Map(),closingMap=new Map(),editingWheatId=null;
+let dateWiseSettings=new Map(),dateWiseDates=[];
 let availabilityEvents=[];
 let savingOpening=false,savingReceipts=false;
 function esc(v){return String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]))}
@@ -152,7 +153,7 @@ function applicableSettingGroups(selected){
  return [selected];
 }
 function settingGroupFor(bucket,selected){if(selected==="8-10" && ["8","9","10"].includes(String(bucket)))return String(bucket);return String(bucket);}
-function itemRate(name,bucket){
+function itemRate(name,bucket,date){
  const sg=settingGroupFor(bucket,current.group),clean=String(name||"").trim();
  let row=settings.items.find(x=>String(x.class_group||"").trim()===sg&&String(x.item_name||"").trim()===clean&&x.is_enabled!==false);
  // Calculation Settingsನಲ್ಲಿ 8-10 Group ಒಂದೇ rate ಆಗಿದ್ದರೆ 8/9/10 ಎಲ್ಲವೂ ಅದನ್ನೇ ಬಳಸಬೇಕು.
@@ -161,7 +162,7 @@ function itemRate(name,bucket){
  }
  return num(row?.quantity_per_student);
 }
-function ingredientRate(name,bucket){
+function ingredientRate(name,bucket,date){
  const sg=settingGroupFor(bucket,current.group),clean=String(name||"").trim();
  let row=settings.ingredients.find(x=>String(x.class_group||"").trim()===sg&&String(x.ingredient_name||"").trim()===clean&&x.is_enabled!==false);
  // Calculation Settingsನಲ್ಲಿ 8-10 Group ಒಂದೇ rate ಆಗಿದ್ದರೆ 8/9/10 ಎಲ್ಲವೂ ಅದನ್ನೇ ಬಳಸಬೇಕು.
@@ -194,7 +195,7 @@ function namesFor(type){
  });
  return [...map.values()];
 }
-function nutritionRate(name,bucket){
+function nutritionRate(name,bucket,date){
  const clean=String(name||"").trim();
  const b=String(bucket||"");
  const preferred=(current.group==="8-10" && ["8","9","10"].includes(b)) ? b : (current.group==="1-10" && b==="8-10" ? "8-10" : b);
@@ -298,6 +299,112 @@ async function loadSettings(){
   settings.ingredients=[...ingredientMap.values()];
   settings.nutrition=[...nutritionMap.values()];
 }
+
+/*
+ * DATE-WISE CALCULATION SETTINGS
+ * Only the source of the existing rate values is changed here.
+ * Items-wise calculation, student counts, stock, opening/closing and all
+ * existing special-day rules remain unchanged.
+ */
+function dwHasData(s){
+  return !!(s && (
+    (Array.isArray(s.calculation_items) && s.calculation_items.length) ||
+    (Array.isArray(s.kitchen_ingredients) && s.kitchen_ingredients.length) ||
+    (Array.isArray(s.nutritional_foods) && s.nutritional_foods.length) ||
+    (s.wheat_setting && Object.keys(s.wheat_setting).length)
+  ));
+}
+
+function dwNormalizeSnapshot(s){
+  s=s||{};
+  return {
+    items:Array.isArray(s.calculation_items)?s.calculation_items:[],
+    ingredients:Array.isArray(s.kitchen_ingredients)?s.kitchen_ingredients:[],
+    nutrition:Array.isArray(s.nutritional_foods)?s.nutritional_foods:[],
+    wheatSetting:(s.wheat_setting && typeof s.wheat_setting==="object" && !Array.isArray(s.wheat_setting))
+      ? s.wheat_setting : {}
+  };
+}
+
+function dwWheatForCurrentGroup(s){
+  const w=s?.wheatSetting||{};
+  const g=String(current?.group||"").replace(/\s+/g,"");
+  if(w[g])return w[g];
+  if(w[current?.group])return w[current.group];
+  if(g==="8-10")return w["8-10"]||w["8"]||w["9"]||w["10"]||null;
+  if(g==="1-7")return w["1-7"]||w["1-5"]||w["6-7"]||null;
+  if(g==="1-10")return w["1-10"]||w["8-10"]||null;
+  return null;
+}
+
+async function loadDateWiseSettings(){
+  dateWiseSettings.clear();
+  dateWiseDates=[];
+
+  const {data:dateRows,error:dateError}=await db.from("calculation_setting_dates")
+    .select("id,effective_date,is_base_date")
+    .eq("school_id",currentSchoolId)
+    .eq("academic_year_id",activeYear.id)
+    .order("effective_date",{ascending:true});
+
+  if(dateError)throw new Error("Calculation Date load failed: "+dateError.message);
+
+  dateWiseDates=(dateRows||[]).sort((a,b)=>
+    String(a.effective_date||"").localeCompare(String(b.effective_date||""))
+  );
+
+  // No date records = keep the old working behavior.
+  if(!dateWiseDates.length)return;
+
+  const ids=dateWiseDates.map(x=>x.id).filter(Boolean);
+  const snapshotMap=new Map();
+
+  if(ids.length){
+    const {data:sRows,error:sError}=await db.from("calculation_setting_snapshots")
+      .select("calculation_date_id,calculation_items,wheat_setting,kitchen_ingredients,nutritional_foods")
+      .eq("school_id",currentSchoolId)
+      .eq("academic_year_id",activeYear.id)
+      .in("calculation_date_id",ids);
+
+    if(sError)throw new Error("Date-wise Calculation Settings load failed: "+sError.message);
+    (sRows||[]).forEach(s=>snapshotMap.set(String(s.calculation_date_id),dwNormalizeSnapshot(s)));
+  }
+
+  const days=new Date(current.year,current.month,0).getDate();
+
+  for(let d=1;d<=days;d++){
+    const date=iso(current.year,current.month,d);
+    let applicable=null;
+
+    for(const row of dateWiseDates){
+      const effective=String(row.effective_date||"").slice(0,10);
+      if(effective<=date)applicable=row;
+      else break;
+    }
+
+    // Before the first Calculation Date: retain current legacy settings.
+    if(!applicable){
+      dateWiseSettings.set(date,settings);
+      continue;
+    }
+
+    const snap=dwNormalizeSnapshot(snapshotMap.get(String(applicable.id)));
+
+    if(dwHasData(snap)){
+      dateWiseSettings.set(date,{
+        items:snap.items,
+        ingredients:snap.ingredients,
+        nutrition:snap.nutrition,
+        wheat:dwWheatForCurrentGroup(snap)
+      });
+    }else{
+      // If a snapshot has not yet been created, safely use the existing
+      // Calculation Settings values instead of breaking the current page.
+      dateWiseSettings.set(date,settings);
+    }
+  }
+}
+
 function addDailyCount(map,date,key,count){if(!map[date])map[date]={};map[date][key]=(map[date][key]||0)+num(count)}
 async function loadDaily(){
   const m=num($("month").value),y=reportYear(m),start=iso(y,m,1),end=iso(y,m,new Date(y,m,0).getDate());
@@ -501,7 +608,7 @@ function expense(type,name,date){
 
     // calculation-settings.htmlನ ಪ್ರತ್ಯೇಕ “ಗೋಧಿ — ಪ್ರತ್ಯೇಕ ಪರಿವರ್ತನೆ / Rate”
     // settingನ್ನೇ ಬಳಸಬೇಕು. kitchen_ingredients amount_per_student ಬಳಸಬಾರದು.
-    const wheatSetting=settings.wheat;
+    const wheatSetting=(dateWiseSettings.get(String(date).slice(0,10))||settings).wheat;
     if(!wheatSetting)return 0;
 
     const qtyPerStudent=num(wheatSetting.quantity_per_student);
@@ -515,7 +622,7 @@ function expense(type,name,date){
   let total=0;
   bs.forEach(b=>{
     let count=bucketCount(date,b);
-    const rate=type==="item"?itemRate(name,b.key):(type==="ingredient"?ingredientRate(name,b.key):nutritionRate(name,b.key));
+    const rate=type==="item"?itemRate(name,b.key,date):(type==="ingredient"?ingredientRate(name,b.key,date):nutritionRate(name,b.key,date));
 
     if(type==="nutrition"){
       count=bucketCount(date,b);
@@ -610,7 +717,7 @@ function nutritionLedger(name){
   let used=0;
   if(!current.holidays.has(date)){
     (groups[current.group]||[]).forEach(b=>{
-      used += bucketCount(date,b)*nutritionRate(name,b.key);
+      used += bucketCount(date,b)*nutritionRate(name,b.key,date);
     });
   }
   const close=bal+stock-used;
@@ -820,7 +927,7 @@ function nutritionExpenseForDate(name,date){
  if(!kind)return 0;
  const m=current?.nutritionCounts?.[String(date).slice(0,10)]||{};
  const classes=(current.group==="8-10")?["8","9","10"]:[];
- return classes.reduce((sum,c)=>sum + num(m[`${kind}|${c}`])*nutritionRate(name,c),0);
+ return classes.reduce((sum,c)=>sum + num(m[`${kind}|${c}`])*nutritionRate(name,c,date),0);
 }
 function nutritionTotalCountForDate(date,kind){
  return nutritionStudentCountForDate(date,kind);
@@ -1109,6 +1216,7 @@ async function loadAll(){
   if(!activeYear)throw new Error("Active Academic Year ಇಲ್ಲ.");
   current={group:$("classGroup").value,month:num($("month").value),year:reportYear(num($("month").value))};
   await loadSettings();
+  await loadDateWiseSettings();
   await loadDaily();
   // These three reads depend only on current month/academic year, so load them together.
   await Promise.all([loadReceipts(),loadWheat(),loadOpening(),loadItemAvailability()]);
