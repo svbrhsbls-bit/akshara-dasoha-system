@@ -49,6 +49,11 @@ th{background:#eef2ef}
 .date-modal-backdrop{position:absolute;inset:0;background:#0007;display:flex;align-items:center;justify-content:center;padding:20px}
 .date-modal-box{width:min(430px,100%);background:#fff;border-radius:12px;padding:20px;box-shadow:0 10px 35px #0004}
 
+
+.date-edit-panel{margin-top:15px;border-top:2px solid #cfe4d6;padding-top:15px}
+.date-edit-title{background:#eef7f1;border:1px solid #cfe4d6;border-radius:8px;padding:12px;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+.date-edit-title b{font-size:18px;color:#126b38}
+
 </style>
 </head>
 <body>
@@ -135,6 +140,7 @@ Academic Year ಅನ್ನು ಇಲ್ಲಿ ಆಯ್ಕೆ ಮಾಡುವು
 </div>
 
 <div class="small" style="margin-top:8px">
+ಈ Dateಗೆ ಈಗಾಗಲೇ save ಆಗಿರುವ Item quantity / rate value ಇಲ್ಲಿ ಮೊದಲು ಕಾಣುತ್ತದೆ. ಹೊಸ Date ಸೇರಿಸಿದಾಗ ಹಿಂದಿನ Dateನ value copy ಆಗುತ್ತದೆ.<br>
 ಉದಾ: Student 01 = 0.150 KG. Daily Food Distributionನಲ್ಲಿ 20 students ಇದ್ದರೆ
 20 × 0.150 = <b>3.000 KG</b>.
 </div>
@@ -145,7 +151,7 @@ Academic Year ಅನ್ನು ಇಲ್ಲಿ ಆಯ್ಕೆ ಮಾಡುವು
 <tr>
 <th>Sl.No</th>
 <th>Item</th>
-<th>Student 01</th>
+<th>Student 01 / Rate</th>
 <th>Unit</th>
 <th>20 Students ಉದಾಹರಣೆ</th>
 <th>Actions</th>
@@ -499,6 +505,11 @@ function ensureDateUI(){
 
   anchor.insertBefore(card,firstCard);
 
+  // Mark the existing calculation forms so they can stay hidden until
+  // a date is explicitly edited.
+  const allCards=[...anchor.querySelectorAll(".card")];
+  allCards.slice(3,7).forEach(c=>c.classList.add("calculation-form-card"));
+
   // Real visible modal/input. Programmatically clicking a hidden input
   // was unreliable in some browsers, so Add Date now uses a visible dialog.
   const modal=document.createElement("div");
@@ -543,19 +554,57 @@ function closeDateModal(){
 }
 
 function hideCalculationForms(){
-  const cards=[...document.querySelectorAll(".wrap > .card")];
-  cards.forEach((card,index)=>{
-    // 0=date-wise card, 1=academic year, 2=class group.
-    // Existing calculation forms start from index 3.
-    if(index>=3 && index<=6) card.style.display="none";
+  document.querySelectorAll(".calculation-form-card").forEach(card=>{
+    card.style.display="none";
   });
+  const panel=document.getElementById("dateEditPanel");
+  if(panel) panel.style.display="none";
 }
 
 function showCalculationForms(){
-  const cards=[...document.querySelectorAll(".wrap > .card")];
-  cards.forEach((card,index)=>{
-    if(index>=3 && index<=6) card.style.display="";
+  document.querySelectorAll(".calculation-form-card").forEach(card=>{
+    card.style.display="";
   });
+  const panel=document.getElementById("dateEditPanel");
+  if(panel) panel.style.display="block";
+}
+
+function moveCalculationFormsIntoDatePanel(){
+  const dateCard=document.getElementById("dateWiseCard");
+  if(!dateCard)return;
+
+  let panel=document.getElementById("dateEditPanel");
+  if(!panel){
+    panel=document.createElement("div");
+    panel.id="dateEditPanel";
+    panel.className="date-edit-panel";
+    panel.innerHTML=`
+      <div class="date-edit-title">
+        <div>
+          <b id="dateEditHeading">Calculation Settings</b>
+          <div class="small">ಈ Dateಗೆ ಸಂಬಂಧಿಸಿದ ಎಲ್ಲಾ Items / Rates / Amounts</div>
+        </div>
+        <button type="button" class="secondary" id="closeDateEditBtn">✕ Close</button>
+      </div>
+      <div id="dateEditForms"></div>
+    `;
+    dateCard.appendChild(panel);
+    $("closeDateEditBtn").onclick=()=>{
+      hideCalculationForms();
+      window.scrollTo({top:dateCard.offsetTop,behavior:"smooth"});
+    };
+  }
+
+  const formsBox=$("dateEditForms");
+  document.querySelectorAll(".calculation-form-card").forEach(card=>{
+    if(card.parentElement!==formsBox) formsBox.appendChild(card);
+  });
+
+  panel.style.display="block";
+  $("dateEditHeading").textContent=
+    selectedCalculationDate
+      ? `${formatDateISO(selectedCalculationDate)} — Calculation Settings`
+      : "Calculation Settings";
 }
 
 function updateCurrentDateBox(){
@@ -787,6 +836,51 @@ async function selectCalculationDate(dateRow){
   // Do not open calculation forms automatically.
   // They are shown only when the user presses Edit for a date.
   hideCalculationForms();
+}
+
+async function hydrateSnapshotFromExistingSettingsIfNeeded(dateRow,snapshot){
+  const items=Array.isArray(snapshot?.calculation_items)?snapshot.calculation_items:[];
+  const ingredients=Array.isArray(snapshot?.kitchen_ingredients)?snapshot.kitchen_ingredients:[];
+  const nutrition=Array.isArray(snapshot?.nutritional_foods)?snapshot.nutritional_foods:[];
+  const wheat=snapshot?.wheat_setting && typeof snapshot.wheat_setting==="object"
+    ? snapshot.wheat_setting : {};
+
+  // For the protected base date, if the snapshot is empty but the old
+  // current tables have data, migrate those exact values into the snapshot.
+  const looksEmpty=!items.length && !ingredients.length && !nutrition.length && !Object.keys(wheat).length;
+  if(dateRow?.is_base_date && looksEmpty){
+    try{
+      const raw=await buildSnapshotFromCurrentTables();
+      const hasData=
+        raw.calculation_items.length ||
+        raw.kitchen_ingredients.length ||
+        raw.nutritional_foods.length ||
+        Object.keys(raw.wheat_setting).length;
+
+      if(hasData){
+        const r=await db
+          .from("calculation_setting_snapshots")
+          .upsert({
+            calculation_date_id:dateRow.id,
+            school_id:currentSchoolId,
+            academic_year_id:activeYear.id,
+            class_group:selectedGroup,
+            calculation_items:raw.calculation_items,
+            wheat_setting:raw.wheat_setting,
+            kitchen_ingredients:raw.kitchen_ingredients,
+            nutritional_foods:raw.nutritional_foods
+          },{onConflict:"calculation_date_id"})
+          .select()
+          .single();
+
+        if(!r.error && r.data) return r.data;
+      }
+    }catch(e){
+      console.error("Base snapshot hydration failed:",e);
+    }
+  }
+
+  return snapshot;
 }
 
 function renderSnapshotIntoSettings(s){
@@ -1069,6 +1163,10 @@ async function editCalculationDate(dateId){
     selectedSnapshot=await copyPreviousSnapshotToDate(dateRow);
   }
 
+  // If the base snapshot exists but is empty, hydrate it from the
+  // existing current settings. This preserves the old rates/amounts.
+  selectedSnapshot=await hydrateSnapshotFromExistingSettingsIfNeeded(dateRow,selectedSnapshot);
+
   // Last-resort migration for the base date: build snapshot directly
   // from the existing current tables and save it.
   if(!selectedSnapshot){
@@ -1104,6 +1202,9 @@ async function editCalculationDate(dateId){
   }
 
   updateCurrentDateBox();
+
+  // Put all calculation forms INSIDE the selected date's edit area.
+  moveCalculationFormsIntoDatePanel();
   showCalculationForms();
 
   // This is the important part: render ALL existing settings
@@ -1115,10 +1216,9 @@ async function editCalculationDate(dateId){
     "info"
   );
 
-  const forms=document.querySelectorAll(".wrap > .card");
-  const firstForm=forms[3];
+  const panel=document.getElementById("dateEditPanel");
   window.scrollTo({
-    top:Math.max(0,(firstForm?.offsetTop||0)-15),
+    top:Math.max(0,(panel?.offsetTop||0)-15),
     behavior:"smooth"
   });
 }
