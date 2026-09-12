@@ -349,65 +349,99 @@ async function loadDateWiseSettings(){
   dateWiseSettings.clear();
   dateWiseDates=[];
 
+  // Calculation Settings Date rows are the ONLY source that decides which
+  // rate is applicable on a particular calendar date.
   const {data:dateRows,error:dateError}=await db.from("calculation_setting_dates")
-    .select("id,effective_date,is_base_date")
+    .select("id,effective_date,is_base_date,school_id,academic_year_id")
     .eq("school_id",currentSchoolId)
     .eq("academic_year_id",activeYear.id)
     .order("effective_date",{ascending:true});
 
   if(dateError)throw new Error("Calculation Date load failed: "+dateError.message);
 
-  dateWiseDates=(dateRows||[]).sort((a,b)=>
-    String(a.effective_date||"").localeCompare(String(b.effective_date||""))
-  );
+  dateWiseDates=(dateRows||[]).map(r=>({
+    ...r,
+    id:String(r.id),
+    effective_date:String(r.effective_date||"").slice(0,10)
+  })).filter(r=>r.effective_date).sort((a,b)=>a.effective_date.localeCompare(b.effective_date));
 
-  // No date records = keep the old working behavior.
   if(!dateWiseDates.length)return;
 
-  const ids=dateWiseDates.map(x=>x.id).filter(Boolean);
+  // IMPORTANT: fetch snapshots by calculation_date_id itself. Do not let
+  // another filter make a valid 15.09 snapshot disappear and then fall back
+  // to the old 01.06 settings.
+  const ids=dateWiseDates.map(r=>r.id);
   const snapshotMap=new Map();
+  const {data:sRows,error:sError}=await db.from("calculation_setting_snapshots")
+    .select("calculation_date_id,school_id,academic_year_id,calculation_items,wheat_setting,kitchen_ingredients,nutritional_foods")
+    .in("calculation_date_id",ids);
 
-  if(ids.length){
-    const {data:sRows,error:sError}=await db.from("calculation_setting_snapshots")
-      .select("calculation_date_id,calculation_items,wheat_setting,kitchen_ingredients,nutritional_foods")
-      .eq("school_id",currentSchoolId)
-      .eq("academic_year_id",activeYear.id)
-      .in("calculation_date_id",ids);
+  if(sError)throw new Error("Date-wise Calculation Settings load failed: "+sError.message);
+  (sRows||[]).forEach(s=>snapshotMap.set(String(s.calculation_date_id),dwNormalizeSnapshot(s)));
 
-    if(sError)throw new Error("Date-wise Calculation Settings load failed: "+sError.message);
-    (sRows||[]).forEach(s=>snapshotMap.set(String(s.calculation_date_id),dwNormalizeSnapshot(s)));
-  }
+  // The legacy Calculation Settings are used only as the starting/base data.
+  // Every effective date then overrides that data with its own saved snapshot.
+  // Therefore a changed rate on 15.09.2026 can never be replaced by 01.06.2026.
+  let inherited={
+    items:Array.isArray(settings.items)?settings.items.map(x=>({...x})):[],
+    ingredients:Array.isArray(settings.ingredients)?settings.ingredients.map(x=>({...x})):[],
+    nutrition:Array.isArray(settings.nutrition)?settings.nutrition.map(x=>({...x})):[],
+    wheat:settings.wheat?{...settings.wheat}:null
+  };
+
+  const replaceByKey=(base,updates,nameField)=>{
+    const out=Array.isArray(base)?base.map(x=>({...x})):[];
+    const index=new Map();
+    out.forEach((x,i)=>index.set(`${String(x.class_group||"").trim()}|${String(x[nameField]||"").trim()}`,i));
+    (Array.isArray(updates)?updates:[]).forEach(x=>{
+      const key=`${String(x.class_group||"").trim()}|${String(x[nameField]||"").trim()}`;
+      if(index.has(key)) out[index.get(key)]={...out[index.get(key)],...x};
+      else { index.set(key,out.length); out.push({...x}); }
+    });
+    return out;
+  };
+
+  const applySnapshot=(base,snap)=>{
+    if(!snap)return base;
+    const next={...base};
+    // Snapshot contains the complete copied settings for that date. Use it
+    // as the authoritative value for that date and preserve old entries only
+    // when the snapshot does not contain that particular key.
+    next.items=replaceByKey(base.items,snap.items,"item_name");
+    next.ingredients=replaceByKey(base.ingredients,snap.ingredients,"ingredient_name");
+    next.nutrition=replaceByKey(base.nutrition,snap.nutrition,"food_name");
+    if(snap.wheatSetting && Object.keys(snap.wheatSetting).length){
+      next.wheatSetting=snap.wheatSetting;
+      next.wheat=dwWheatForCurrentGroup({wheatSetting:snap.wheatSetting});
+    }
+    return next;
+  };
 
   const days=new Date(current.year,current.month,0).getDate();
+  let effectiveIndex=-1;
+  let running=inherited;
 
   for(let d=1;d<=days;d++){
     const date=iso(current.year,current.month,d);
-    let applicable=null;
 
-    for(const row of dateWiseDates){
-      const effective=String(row.effective_date||"").slice(0,10);
-      if(effective<=date)applicable=row;
-      else break;
+    while(effectiveIndex+1<dateWiseDates.length && dateWiseDates[effectiveIndex+1].effective_date<=date){
+      effectiveIndex++;
+      const row=dateWiseDates[effectiveIndex];
+      const snap=snapshotMap.get(String(row.id));
+      if(snap){
+        running=applySnapshot(running,snap);
+      }
     }
 
-    // Before the first Calculation Date: retain current legacy settings.
-    if(!applicable){
-      dateWiseSettings.set(date,settings);
-      continue;
-    }
-
-    const snap=dwNormalizeSnapshot(snapshotMap.get(String(applicable.id)));
-
-    if(dwHasData(snap)){
+    if(effectiveIndex>=0){
+      const src=running;
       dateWiseSettings.set(date,{
-        items:snap.items,
-        ingredients:snap.ingredients,
-        nutrition:snap.nutrition,
-        wheat:dwWheatForCurrentGroup(snap)
+        items:src.items||[],
+        ingredients:src.ingredients||[],
+        nutrition:src.nutrition||[],
+        wheat:src.wheat||null
       });
     }else{
-      // If a snapshot has not yet been created, safely use the existing
-      // Calculation Settings values instead of breaking the current page.
       dateWiseSettings.set(date,settings);
     }
   }
