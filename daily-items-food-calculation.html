@@ -804,7 +804,9 @@ async function saveCurrentMonthClosings(){
 }
 let editingOpeningBalances=new Set();
 function renderOpening(){
- const all=[...namesFor("item"),...namesFor("ingredient"),...namesFor("nutrition")];
+ // Opening Balance shows only the type currently selected in the Information dropdown.
+ const selectedType = $("reportType")?.value || "item";
+ const all = namesFor(selectedType);
  let h=`<div class="table-wrap"><table><thead><tr><th>ಪ್ರಕಾರ</th><th>Item / ಅಡುಗೆ ಪದಾರ್ಥ</th><th>Unit</th><th>Opening Balance</th><th>ಸ್ಥಿತಿ</th><th class="no-print">Action</th></tr></thead><tbody>`;
  if(!all.length)h+=`<tr><td colspan="6">Calculation Settingsನಲ್ಲಿ ಯಾವುದೇ Item / ಅಡುಗೆ ಪದಾರ್ಥ / ಪೌಷ್ಠಿಕ ಆಹಾರ ಇಲ್ಲ.</td></tr>`;
  all.forEach(x=>{
@@ -1643,7 +1645,10 @@ $("classGroup").onchange = function(){
 };
 
 $("reportType").onchange = () => {
-  if(current) renderReport();
+  if(current){
+    renderOpening();
+    renderReport();
+  }
 };
  
 (async function(){
