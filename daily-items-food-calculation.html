@@ -310,11 +310,16 @@ async function loadSettings(){
  * existing special-day rules remain unchanged.
  */
 function dwHasData(s){
+  // dwNormalizeSnapshot() converts the database snapshot fields to the
+  // calculation-side names below.  Check those normalized fields here.
+  // The previous version checked calculation_items/kitchen_ingredients/etc.
+  // after normalization, so every snapshot looked empty and the page always
+  // fell back to the old 01.06.2026 settings.
   return !!(s && (
-    (Array.isArray(s.calculation_items) && s.calculation_items.length) ||
-    (Array.isArray(s.kitchen_ingredients) && s.kitchen_ingredients.length) ||
-    (Array.isArray(s.nutritional_foods) && s.nutritional_foods.length) ||
-    (s.wheat_setting && Object.keys(s.wheat_setting).length)
+    (Array.isArray(s.items) && s.items.length) ||
+    (Array.isArray(s.ingredients) && s.ingredients.length) ||
+    (Array.isArray(s.nutrition) && s.nutrition.length) ||
+    (s.wheatSetting && Object.keys(s.wheatSetting).length)
   ));
 }
 
