@@ -610,6 +610,23 @@ function wheatStudentsForDate(date){
   // ಗೋಧಿ ವಿಶೇಷ ದಿನದಲ್ಲಿ Save ಮಾಡಿದ ಸಂಖ್ಯೆಯನ್ನೇ ಬಳಸಬೇಕು.
   return num(r.wheat_students);
 }
+
+// ಗೋಧಿ ಪರಿವರ್ತನೆಗೆ Calculation Settingsನ ಪ್ರತ್ಯೇಕ Wheat Rate ಮಾತ್ರ ಬಳಸಬೇಕು.
+// ಲೆಕ್ಕ = ಆ ದಿನ Wheat Day ವಿದ್ಯಾರ್ಥಿಗಳು × Quantity per Student × Rate per KG.
+function wheatConversionExpense(date){
+  const day=String(date||"").slice(0,10);
+  if(!wheatDays.has(day))return 0;
+  const students=wheatStudentsForDate(day);
+  if(students<=0)return 0;
+  const source=dateWiseSettings.get(day)||settings;
+  const wheatSetting=source?.wheat||settings?.wheat||null;
+  if(!wheatSetting)return 0;
+  const quantityPerStudent=num(wheatSetting.quantity_per_student);
+  const ratePerKg=num(wheatSetting.rate_per_kg);
+  if(quantityPerStudent<=0 || ratePerKg<=0)return 0;
+  return students*quantityPerStudent*ratePerKg;
+}
+
 function expense(type,name,date){
   if(current.holidays.has(date))return 0;
   // Item Availability: only the availability rules are applied here.
@@ -638,26 +655,10 @@ function expense(type,name,date){
     if(day===6)return 0;
   }
 
-  // ಅಡುಗೆ ಪದಾರ್ಥದಲ್ಲಿರುವ ಗೋಧಿ ಪರಿವರ್ತನೆ:
-  // Calculation Settings ಅನ್ನು ಬದಲಾಯಿಸದೆ, ಅಲ್ಲಿ ಇರುವ ಗೋಧಿ
-  // amount_per_student value ನ್ನೇ ಬಳಸಬೇಕು.
-  // ಖರ್ಚು = ಗೋಧಿ ವಿಶೇಷ ದಿನದಲ್ಲಿ Save ಮಾಡಿದ ವಿದ್ಯಾರ್ಥಿಗಳ ಸಂಖ್ಯೆ × ಗೋಧಿ rate.
+  // ಅಡುಗೆ ಪದಾರ್ಥದಲ್ಲಿರುವ “ಗೋಧಿ ಪರಿವರ್ತನೆ”ಗೆ ಸಾಮಾನ್ಯ kitchen ingredient rate ಬಳಸಬಾರದು.
+  // Calculation Settings → ಗೋಧಿ — ಪ್ರತ್ಯೇಕ ಪರಿವರ್ತನೆ / Rate ಆಧಾರದಲ್ಲೇ ಲೆಕ್ಕ.
   if(wheatIngredient){
-    if(!wheatDay)return 0;
-
-    const savedStudents=wheatStudentsForDate(date);
-    if(savedStudents<=0)return 0;
-
-    // calculation-settings.htmlನ ಪ್ರತ್ಯೇಕ “ಗೋಧಿ — ಪ್ರತ್ಯೇಕ ಪರಿವರ್ತನೆ / Rate”
-    // settingನ್ನೇ ಬಳಸಬೇಕು. kitchen_ingredients amount_per_student ಬಳಸಬಾರದು.
-    const wheatSetting=(dateWiseSettings.get(String(date).slice(0,10))||settings).wheat;
-    if(!wheatSetting)return 0;
-
-    const qtyPerStudent=num(wheatSetting.quantity_per_student);
-    const ratePerKg=num(wheatSetting.rate_per_kg);
-
-    // Save ಮಾಡಿದ Wheat-Day student number × Wheat quantity/student × Government Rate.
-    return savedStudents*qtyPerStudent*ratePerKg;
+    return wheatConversionExpense(date);
   }
 
   // Wheat-day rules apply ONLY to the existing Items logic below.
@@ -1160,7 +1161,8 @@ function renderReport(){
     // ಅಡುಗೆ ಪದಾರ್ಥ report even when kitchen_ingredients has no separate
     // "ಗೋಧಿ" row. If a real wheat row exists, keep its name.
     wheatName=allNames.find(x=>normalizeItemName(x.name).includes("ಗೋಧಿ"))?.name||null;
-    if(!wheatName && settings.wheat){
+    const hasWheatSetting=!!(settings.wheat || [...dateWiseSettings.values()].some(x=>x?.wheat));
+    if(!wheatName && hasWheatSetting){
       wheatName="ಗೋಧಿ ಪರಿವರ್ತನೆ";
     }
   }
