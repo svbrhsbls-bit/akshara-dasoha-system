@@ -44,6 +44,11 @@ th{background:#eef2ef}
 #dateWiseCard .actions .edit{min-width:86px}
 #dateWiseCard .actions .danger{min-width:86px}
 
+
+#dateModal{display:none;position:fixed;inset:0;z-index:9999}
+.date-modal-backdrop{position:absolute;inset:0;background:#0007;display:flex;align-items:center;justify-content:center;padding:20px}
+.date-modal-box{width:min(430px,100%);background:#fff;border-radius:12px;padding:20px;box-shadow:0 10px 35px #0004}
+
 </style>
 </head>
 <body>
@@ -451,8 +456,7 @@ function isoToDateInput(v){
    ========================================================= */
 
 function ensureDateUI(){
-  const existing=document.getElementById("dateWiseCard");
-  if(existing)return;
+  if(document.getElementById("dateWiseCard"))return;
 
   const anchor=document.querySelector(".wrap");
   const firstCard=anchor?.querySelector(".card");
@@ -469,7 +473,7 @@ function ensureDateUI(){
           Date-wise calculation. ಹೊಸ Date ಸೇರಿಸಿದಾಗ ಹಿಂದಿನ Dateನ ಎಲ್ಲಾ settings copy ಆಗುತ್ತವೆ.
         </div>
       </div>
-      <button class="primary" id="addDateBtn">➕ Add Date</button>
+      <button type="button" class="primary" id="addDateBtn">➕ Add Date</button>
     </div>
 
     <div id="currentDateBox" class="lockbox" style="margin-top:14px">
@@ -492,9 +496,50 @@ function ensureDateUI(){
       </table>
     </div>
   `;
+
   anchor.insertBefore(card,firstCard);
 
-  $("addDateBtn").onclick=addCalculationDate;
+  // Real visible modal/input. Programmatically clicking a hidden input
+  // was unreliable in some browsers, so Add Date now uses a visible dialog.
+  const modal=document.createElement("div");
+  modal.id="dateModal";
+  modal.innerHTML=`
+    <div class="date-modal-backdrop">
+      <div class="date-modal-box">
+        <h3 style="margin:0 0 12px">➕ Add Calculation Date</h3>
+        <label for="newCalculationDate">Calculation Date</label>
+        <input id="newCalculationDate" type="date" min="2026-06-01">
+        <div class="small" style="margin-top:7px">
+          01.06.2026ಕ್ಕಿಂತ ಹಿಂದಿನ Date ಆಯ್ಕೆ ಮಾಡಲು ಸಾಧ್ಯವಿಲ್ಲ.
+        </div>
+        <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:16px">
+          <button type="button" class="secondary" id="cancelDateBtn">Cancel</button>
+          <button type="button" class="primary" id="saveDateBtn">💾 Add Date</button>
+        </div>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+
+  $("addDateBtn").onclick=()=>openDateModal();
+  $("cancelDateBtn").onclick=closeDateModal;
+  $("saveDateBtn").onclick=saveNewCalculationDate;
+
+  modal.addEventListener("click",e=>{
+    if(e.target.classList.contains("date-modal-backdrop")) closeDateModal();
+  });
+}
+
+function openDateModal(){
+  const modal=$("dateModal");
+  if(!modal)return;
+  $("newCalculationDate").value="";
+  modal.style.display="block";
+  setTimeout(()=>$("newCalculationDate").focus(),50);
+}
+
+function closeDateModal(){
+  if($("dateModal")) $("dateModal").style.display="none";
 }
 
 function hideCalculationForms(){
@@ -713,10 +758,10 @@ async function getSnapshotByDateId(dateId){
     .maybeSingle();
 
   if(error){
-    show("Calculation snapshot load failed: "+error.message,"err");
+    console.error("Calculation snapshot load failed:",error);
     return null;
   }
-  return data;
+  return data||null;
 }
 
 async function selectCalculationDate(dateRow){
@@ -894,84 +939,102 @@ async function copyPreviousSnapshotToDate(dateRow){
   return data;
 }
 
-async function addCalculationDate(){
+async function saveNewCalculationDate(){
   if(!activeYear||!selectedGroup){
+    closeDateModal();
     show("ಮೊದಲು Class Group Load ಮಾಡಿ.","err");
     return;
   }
 
-  const dateInput=document.createElement("input");
-  dateInput.type="date";
-  dateInput.style.position="fixed";
-  dateInput.style.left="-9999px";
-  document.body.appendChild(dateInput);
+  const newDate=$("newCalculationDate")?.value||"";
+  if(!newDate){
+    show("Calculation Date ಆಯ್ಕೆ ಮಾಡಿ.","err");
+    return;
+  }
 
-  dateInput.onchange=async()=>{
-    const newDate=dateInput.value;
-    dateInput.remove();
+  if(newDate<"2026-06-01"){
+    show("Calculation Date 01.06.2026ಕ್ಕಿಂತ ಹಿಂದಿನ ದಿನಾಂಕ ಆಗಬಾರದು.","err");
+    return;
+  }
 
-    if(!newDate)return;
+  const {data:existing,error:findError}=await db
+    .from("calculation_setting_dates")
+    .select("id")
+    .eq("school_id",currentSchoolId)
+    .eq("academic_year_id",activeYear.id)
+    .eq("class_group",selectedGroup)
+    .eq("effective_date",newDate)
+    .maybeSingle();
 
-    if(newDate<"2026-06-01"){
-      show("Calculation Date 01.06.2026ಕ್ಕಿಂತ ಹಿಂದಿನ ದಿನಾಂಕ ಆಗಬಾರದು.","err");
-      return;
-    }
+  if(findError){
+    show("Date check failed: "+findError.message,"err");
+    return;
+  }
 
-    const {data:existing,error:findError}=await db
-      .from("calculation_setting_dates")
-      .select("id")
-      .eq("school_id",currentSchoolId)
-      .eq("academic_year_id",activeYear.id)
-      .eq("class_group",selectedGroup)
-      .eq("effective_date",newDate)
-      .maybeSingle();
+  if(existing){
+    show("ಈ Date ಈಗಾಗಲೇ ಇದೆ.","err");
+    return;
+  }
 
-    if(findError){
-      show("Date check failed: "+findError.message,"err");
-      return;
-    }
+  const {data:newRow,error}=await db
+    .from("calculation_setting_dates")
+    .insert({
+      school_id:currentSchoolId,
+      academic_year_id:activeYear.id,
+      class_group:selectedGroup,
+      effective_date:newDate,
+      is_base_date:false
+    })
+    .select()
+    .single();
 
-    if(existing){
-      show("ಈ Date ಈಗಾಗಲೇ ಇದೆ.","err");
-      return;
-    }
+  if(error){
+    show("Date Add failed: "+error.message,"err");
+    return;
+  }
 
-    const {data:newRow,error}=await db
-      .from("calculation_setting_dates")
-      .insert({
-        school_id:currentSchoolId,
-        academic_year_id:activeYear.id,
-        class_group:selectedGroup,
-        effective_date:newDate,
-        is_base_date:false
-      })
-      .select()
-      .single();
+  // Copy the nearest earlier date. If no history exists yet,
+  // create the 01.06.2026 base snapshot from existing settings.
+  const copied=await copyPreviousSnapshotToDate(newRow);
 
-    if(error){
-      show("Date Add failed: "+error.message,"err");
-      return;
-    }
+  if(!copied){
+    await db.from("calculation_setting_dates")
+      .delete()
+      .eq("id",newRow.id)
+      .eq("school_id",currentSchoolId);
+    show("ಈ Dateಗೆ ಹಿಂದಿನ settings copy ಮಾಡಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ. Date add cancel ಮಾಡಲಾಗಿದೆ.","err");
+    return;
+  }
 
-    const copied=await copyPreviousSnapshotToDate(newRow);
-    if(!copied){
-      await db.from("calculation_setting_dates")
-        .delete()
-        .eq("id",newRow.id)
-        .eq("school_id",currentSchoolId);
-      return;
-    }
+  closeDateModal();
+  await loadCalculationDates();
 
-    await loadCalculationDates();
-    show("ಹೊಸ Calculation Date "+formatDateISO(newDate)+" Add ಆಯಿತು. ಹಿಂದಿನ Dateನ settings copy ಆಗಿವೆ. Edit ಒತ್ತಿದಾಗ settings ಕಾಣುತ್ತವೆ.","ok");
-  };
+  // Select the new date, but keep forms closed until Edit is pressed.
+  selectedCalculationDate=newRow.effective_date;
+  selectedCalculationDateId=newRow.id;
+  selectedSnapshot=copied;
+  saveSelectedDate();
+  updateCurrentDateBox();
+  hideCalculationForms();
 
-  dateInput.click();
+  show(
+    `ಹೊಸ Calculation Date ${formatDateISO(newDate)} Add ಆಯಿತು. ಹಿಂದಿನ Dateನ ಎಲ್ಲಾ settings copy ಆಗಿವೆ. Edit ಒತ್ತಿ ಬದಲಾವಣೆ ಮಾಡಿ.`,
+    "ok"
+  );
+}
+
+async function addCalculationDate(){
+  openDateModal();
 }
 
 async function editCalculationDate(dateId){
   if(!dateId){
     show("Calculation Date ID ಸಿಗಲಿಲ್ಲ.","err");
+    return;
+  }
+
+  if(!activeYear||!selectedGroup||!currentSchoolId){
+    show("School / Academic Year / Class Group ಸಿದ್ಧವಾಗಿಲ್ಲ.","err");
     return;
   }
 
@@ -998,33 +1061,62 @@ async function editCalculationDate(dateId){
   selectedCalculationDateId=dateRow.id;
   saveSelectedDate();
 
-  // First try the selected date's own snapshot.
+  // Load this date's snapshot.
   selectedSnapshot=await getSnapshotByDateId(dateRow.id);
 
-  // If it does not exist, copy the previous applicable date's snapshot.
+  // If missing, copy the nearest earlier snapshot.
   if(!selectedSnapshot){
     selectedSnapshot=await copyPreviousSnapshotToDate(dateRow);
   }
 
+  // Last-resort migration for the base date: build snapshot directly
+  // from the existing current tables and save it.
   if(!selectedSnapshot){
-    show("ಈ Dateಗೆ settings ಸಿಗಲಿಲ್ಲ. ಮೊದಲು 01.06.2026 Base Settings ಪರಿಶೀಲಿಸಿ.","err");
+    try{
+      const raw=await buildSnapshotFromCurrentTables();
+      const r=await db
+        .from("calculation_setting_snapshots")
+        .upsert({
+          calculation_date_id:dateRow.id,
+          school_id:currentSchoolId,
+          academic_year_id:activeYear.id,
+          class_group:selectedGroup,
+          calculation_items:raw.calculation_items,
+          wheat_setting:raw.wheat_setting,
+          kitchen_ingredients:raw.kitchen_ingredients,
+          nutritional_foods:raw.nutritional_foods
+        },{onConflict:"calculation_date_id"})
+        .select()
+        .single();
+
+      if(!r.error) selectedSnapshot=r.data;
+    }catch(e){
+      console.error("Snapshot migration error:",e);
+    }
+  }
+
+  if(!selectedSnapshot){
+    show(
+      "ಈ Dateಗೆ settings load ಆಗಲಿಲ್ಲ. Browser Consoleನಲ್ಲಿ error ಪರಿಶೀಲಿಸಬೇಕು.",
+      "err"
+    );
     return;
   }
 
   updateCurrentDateBox();
-
-  // IMPORTANT: only after Edit is pressed, show the existing calculation forms.
   showCalculationForms();
 
-  // Load every existing section from the selected date snapshot.
+  // This is the important part: render ALL existing settings
+  // from the selected date snapshot.
   renderSnapshotIntoSettings(selectedSnapshot);
 
   show(
-    `${formatDateISO(dateRow.effective_date)} Edit mode. ಹಿಂದಿನ settings ಈಗ ಕಾಣುತ್ತವೆ; ಬೇಕಾದ item/rate ಮಾತ್ರ ಬದಲಿಸಿ Save ಮಾಡಿ.`,
+    `${formatDateISO(dateRow.effective_date)} Edit mode. ಹಿಂದಿನ Dateನ ಎಲ್ಲಾ settings ಕಾಣುತ್ತಿವೆ; ಬೇಕಾದ item/rate ಮಾತ್ರ ಬದಲಿಸಿ Save ಮಾಡಿ.`,
     "info"
   );
 
-  const firstForm=document.querySelectorAll(".wrap > .card")[3];
+  const forms=document.querySelectorAll(".wrap > .card");
+  const firstForm=forms[3];
   window.scrollTo({
     top:Math.max(0,(firstForm?.offsetTop||0)-15),
     behavior:"smooth"
@@ -1394,6 +1486,7 @@ function resetNutrition(){
 }
 
 /* aliases for inline handlers and compatibility */
+window.addCalculationDate=addCalculationDate;
 window.editCalculationDate=editCalculationDate;
 window.deleteCalculationDate=deleteCalculationDate;
 window.editSnapshotItem=editSnapshotItem;
