@@ -140,7 +140,7 @@ Academic Year ಅನ್ನು ಇಲ್ಲಿ ಆಯ್ಕೆ ಮಾಡುವು
 </div>
 
 <div class="small" style="margin-top:8px">
-ಈ Dateಗೆ ಈಗಾಗಲೇ save ಆಗಿರುವ Item quantity / rate value ಇಲ್ಲಿ ಮೊದಲು ಕಾಣುತ್ತದೆ. ಹೊಸ Date ಸೇರಿಸಿದಾಗ ಹಿಂದಿನ Dateನ value copy ಆಗುತ್ತದೆ.<br>
+ಈ Dateಗೆ ಈಗಾಗಲೇ save ಆಗಿರುವ Item quantity / rate value ಇಲ್ಲಿ ಮೊದಲು ಕಾಣುತ್ತದೆ. Date-wise systemಗೆ ಬರುವ ಮೊದಲು save ಮಾಡಿದ್ದ Items ಕೂಡ 01.06.2026ಗೆ ಯಥಾಪ್ರಕಾರ restore ಆಗುತ್ತವೆ. ಹೊಸ Date ಸೇರಿಸಿದಾಗ ಹಿಂದಿನ Dateನ value copy ಆಗುತ್ತದೆ.<br>
 ಉದಾ: Student 01 = 0.150 KG. Daily Food Distributionನಲ್ಲಿ 20 students ಇದ್ದರೆ
 20 × 0.150 = <b>3.000 KG</b>.
 </div>
@@ -151,7 +151,7 @@ Academic Year ಅನ್ನು ಇಲ್ಲಿ ಆಯ್ಕೆ ಮಾಡುವು
 <tr>
 <th>Sl.No</th>
 <th>Item</th>
-<th>Student 01 / Amount</th>
+<th>Student 01 / Rate</th>
 <th>Unit</th>
 <th>20 Students ಉದಾಹರಣೆ</th>
 <th>Actions</th>
@@ -752,48 +752,70 @@ async function createBaseDateAndSnapshot(){
   return {dateRow,snapshot:s.data};
 }
 
-async function buildSnapshotFromCurrentTables(){
-  const [itemsR,wheatR,ingredientsR,nutritionR]=await Promise.all([
-    db.from("calculation_settings")
-      .select("*")
-      .eq("school_id",currentSchoolId)
-      .eq("academic_year_id",activeYear.id)
-      .eq("class_group",selectedGroup)
-      .order("created_at",{ascending:true}),
+async function loadLegacySettingsForMigration(){
+  // IMPORTANT:
+  // This function is ONLY used to migrate the settings that existed
+  // before Date-wise settings were introduced. Normal Date-wise
+  // loading/saving continues to use calculation_setting_snapshots.
 
-    db.from("wheat_rate_settings")
-      .select("*")
-      .eq("school_id",currentSchoolId)
-      .eq("academic_year_id",activeYear.id)
-      .eq("class_group",selectedGroup)
-      .maybeSingle(),
+  const findRows = async (table, orderField="created_at") => {
+    // 1) Exact School + Academic Year + Class Group
+    let q = db.from(table).select("*")
+      .eq("school_id", currentSchoolId)
+      .eq("academic_year_id", activeYear.id)
+      .eq("class_group", selectedGroup);
 
-    db.from("kitchen_ingredients")
-      .select("*")
-      .eq("school_id",currentSchoolId)
-      .eq("academic_year_id",activeYear.id)
-      .eq("class_group",selectedGroup)
-      .order("created_at",{ascending:true}),
+    if(orderField) q=q.order(orderField,{ascending:true});
+    let r=await q;
+    if(r.error) throw r.error;
+    if((r.data||[]).length) return r.data||[];
 
-    db.from("nutritional_foods")
-      .select("*")
-      .eq("school_id",currentSchoolId)
-      .eq("academic_year_id",activeYear.id)
-      .eq("class_group",selectedGroup)
-      .order("created_at",{ascending:true})
+    // 2) Some old rows may have been saved without the current
+    // academic_year_id. Keep School + Class Group isolation and recover them.
+    q = db.from(table).select("*")
+      .eq("school_id", currentSchoolId)
+      .eq("class_group", selectedGroup);
+    if(orderField) q=q.order(orderField,{ascending:true});
+    r=await q;
+    if(r.error) throw r.error;
+    return r.data||[];
+  };
+
+  const [items,ingredients,nutrition]=await Promise.all([
+    findRows("calculation_settings"),
+    findRows("kitchen_ingredients"),
+    findRows("nutritional_foods")
   ]);
 
-  if(itemsR.error) throw itemsR.error;
+  // Wheat is normally one row per School + Year + Class Group.
+  let wheatR=await db.from("wheat_rate_settings").select("*")
+    .eq("school_id",currentSchoolId)
+    .eq("academic_year_id",activeYear.id)
+    .eq("class_group",selectedGroup)
+    .maybeSingle();
+
   if(wheatR.error) throw wheatR.error;
-  if(ingredientsR.error) throw ingredientsR.error;
-  if(nutritionR.error) throw nutritionR.error;
+
+  if(!wheatR.data){
+    wheatR=await db.from("wheat_rate_settings").select("*")
+      .eq("school_id",currentSchoolId)
+      .eq("class_group",selectedGroup)
+      .order("updated_at",{ascending:false})
+      .limit(1)
+      .maybeSingle();
+    if(wheatR.error) throw wheatR.error;
+  }
 
   return {
-    calculation_items:itemsR.data||[],
+    calculation_items:items,
     wheat_setting:wheatR.data||{},
-    kitchen_ingredients:ingredientsR.data||[],
-    nutritional_foods:nutritionR.data||[]
+    kitchen_ingredients:ingredients,
+    nutritional_foods:nutrition
   };
+}
+
+async function buildSnapshotFromCurrentTables(){
+  return await loadLegacySettingsForMigration();
 }
 
 async function getSnapshotByDateId(dateId){
@@ -823,18 +845,8 @@ async function selectCalculationDate(dateRow){
   selectedSnapshot=await getSnapshotByDateId(dateRow.id);
 
   /*
-    IMPORTANT MIGRATION:
-    An older version could already have created a snapshot row with empty
-    JSON arrays/objects before the user's existing calculation settings were
-    copied. In that case the snapshot exists, so a simple null check is not
-    enough. Rebuild the protected base-date snapshot from the existing
-    calculation tables before the Edit screen is opened.
-  */
-  selectedSnapshot=await hydrateSnapshotFromExistingSettingsIfNeeded(dateRow,selectedSnapshot);
-
-  /*
-    Safety for partially-created added dates: if no snapshot exists, copy
-    the nearest earlier date.
+    Safety for partially-created date rows:
+    create a snapshot by copying the latest applicable snapshot.
   */
   if(!selectedSnapshot){
     const copied=await copyPreviousSnapshotToDate(dateRow);
@@ -849,45 +861,70 @@ async function selectCalculationDate(dateRow){
 }
 
 async function hydrateSnapshotFromExistingSettingsIfNeeded(dateRow,snapshot){
-  const items=Array.isArray(snapshot?.calculation_items)?snapshot.calculation_items:[];
-  const ingredients=Array.isArray(snapshot?.kitchen_ingredients)?snapshot.kitchen_ingredients:[];
-  const nutrition=Array.isArray(snapshot?.nutritional_foods)?snapshot.nutritional_foods:[];
-  const wheat=snapshot?.wheat_setting && typeof snapshot.wheat_setting==="object"
-    ? snapshot.wheat_setting : {};
+  if(!dateRow || !snapshot) return snapshot;
 
-  // For the protected base date, if the snapshot is empty but the old
-  // current tables have data, migrate those exact values into the snapshot.
-  const looksEmpty=!items.length && !ingredients.length && !nutrition.length && !Object.keys(wheat).length;
-  if(dateRow?.is_base_date && looksEmpty){
-    try{
-      const raw=await buildSnapshotFromCurrentTables();
-      const hasData=
-        raw.calculation_items.length ||
-        raw.kitchen_ingredients.length ||
-        raw.nutritional_foods.length ||
-        Object.keys(raw.wheat_setting).length;
+  const current={
+    calculation_items:Array.isArray(snapshot.calculation_items)?snapshot.calculation_items:[],
+    wheat_setting:snapshot.wheat_setting && typeof snapshot.wheat_setting==="object" ? snapshot.wheat_setting : {},
+    kitchen_ingredients:Array.isArray(snapshot.kitchen_ingredients)?snapshot.kitchen_ingredients:[],
+    nutritional_foods:Array.isArray(snapshot.nutritional_foods)?snapshot.nutritional_foods:[]
+  };
 
-      if(hasData){
-        const r=await db
-          .from("calculation_setting_snapshots")
-          .upsert({
-            calculation_date_id:dateRow.id,
-            school_id:currentSchoolId,
-            academic_year_id:activeYear.id,
-            class_group:selectedGroup,
-            calculation_items:raw.calculation_items,
-            wheat_setting:raw.wheat_setting,
-            kitchen_ingredients:raw.kitchen_ingredients,
-            nutritional_foods:raw.nutritional_foods
-          },{onConflict:"calculation_date_id"})
-          .select()
-          .single();
+  // Do NOT require the whole snapshot to be empty.
+  // An earlier attempt could have saved Wheat/Nutrition while Items was
+  // still empty. In that case only the missing section must be restored.
+  const needItems=current.calculation_items.length===0;
+  const needWheat=Object.keys(current.wheat_setting).length===0;
+  const needIngredients=current.kitchen_ingredients.length===0;
+  const needNutrition=current.nutritional_foods.length===0;
 
-        if(!r.error && r.data) return r.data;
-      }
-    }catch(e){
-      console.error("Base snapshot hydration failed:",e);
+  if(!needItems && !needWheat && !needIngredients && !needNutrition){
+    return snapshot;
+  }
+
+  try{
+    const legacy=await loadLegacySettingsForMigration();
+
+    let changed=false;
+
+    if(needItems && legacy.calculation_items.length){
+      current.calculation_items=legacy.calculation_items;
+      changed=true;
     }
+    if(needWheat && Object.keys(legacy.wheat_setting||{}).length){
+      current.wheat_setting=legacy.wheat_setting;
+      changed=true;
+    }
+    if(needIngredients && legacy.kitchen_ingredients.length){
+      current.kitchen_ingredients=legacy.kitchen_ingredients;
+      changed=true;
+    }
+    if(needNutrition && legacy.nutritional_foods.length){
+      current.nutritional_foods=legacy.nutritional_foods;
+      changed=true;
+    }
+
+    if(changed){
+      const r=await db.from("calculation_setting_snapshots")
+        .upsert({
+          calculation_date_id:dateRow.id,
+          school_id:currentSchoolId,
+          academic_year_id:activeYear.id,
+          class_group:selectedGroup,
+          calculation_items:current.calculation_items,
+          wheat_setting:current.wheat_setting,
+          kitchen_ingredients:current.kitchen_ingredients,
+          nutritional_foods:current.nutritional_foods
+        },{onConflict:"calculation_date_id"})
+        .select()
+        .single();
+
+      if(r.error) throw r.error;
+      return r.data;
+    }
+  }catch(e){
+    console.error("Legacy settings migration failed:",e);
+    show("ಹಳೆಯ Items/Rate restore ಆಗಲಿಲ್ಲ: "+(e.message||e),"err");
   }
 
   return snapshot;
