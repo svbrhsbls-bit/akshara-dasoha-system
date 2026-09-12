@@ -154,20 +154,22 @@ function applicableSettingGroups(selected){
 }
 function settingGroupFor(bucket,selected){if(selected==="8-10" && ["8","9","10"].includes(String(bucket)))return String(bucket);return String(bucket);}
 function itemRate(name,bucket,date){
+ const source=(dateWiseSettings.get(String(date||current?.start||"").slice(0,10))||settings);
  const sg=settingGroupFor(bucket,current.group),clean=String(name||"").trim();
- let row=settings.items.find(x=>String(x.class_group||"").trim()===sg&&String(x.item_name||"").trim()===clean&&x.is_enabled!==false);
+ let row=(source.items||[]).find(x=>String(x.class_group||"").trim()===sg&&String(x.item_name||"").trim()===clean&&x.is_enabled!==false);
  // Calculation Settingsನಲ್ಲಿ 8-10 Group ಒಂದೇ rate ಆಗಿದ್ದರೆ 8/9/10 ಎಲ್ಲವೂ ಅದನ್ನೇ ಬಳಸಬೇಕು.
  if(!row && current.group==="8-10" && ["8","9","10"].includes(String(bucket))){
-   row=settings.items.find(x=>String(x.class_group||"").trim()==="8-10"&&String(x.item_name||"").trim()===clean&&x.is_enabled!==false);
+   row=(source.items||[]).find(x=>String(x.class_group||"").trim()==="8-10"&&String(x.item_name||"").trim()===clean&&x.is_enabled!==false);
  }
  return num(row?.quantity_per_student);
 }
 function ingredientRate(name,bucket,date){
+ const source=(dateWiseSettings.get(String(date||current?.start||"").slice(0,10))||settings);
  const sg=settingGroupFor(bucket,current.group),clean=String(name||"").trim();
- let row=settings.ingredients.find(x=>String(x.class_group||"").trim()===sg&&String(x.ingredient_name||"").trim()===clean&&x.is_enabled!==false);
+ let row=(source.ingredients||[]).find(x=>String(x.class_group||"").trim()===sg&&String(x.ingredient_name||"").trim()===clean&&x.is_enabled!==false);
  // Calculation Settingsನಲ್ಲಿ 8-10 Group ಒಂದೇ rate ಆಗಿದ್ದರೆ 8/9/10 ಎಲ್ಲವೂ ಅದನ್ನೇ ಬಳಸಬೇಕು.
  if(!row && current.group==="8-10" && ["8","9","10"].includes(String(bucket))){
-   row=settings.ingredients.find(x=>String(x.class_group||"").trim()==="8-10"&&String(x.ingredient_name||"").trim()===clean&&x.is_enabled!==false);
+   row=(source.ingredients||[]).find(x=>String(x.class_group||"").trim()==="8-10"&&String(x.ingredient_name||"").trim()===clean&&x.is_enabled!==false);
  }
  return num(row?.amount_per_student);
 }
@@ -196,11 +198,12 @@ function namesFor(type){
  return [...map.values()];
 }
 function nutritionRate(name,bucket,date){
+ const source=(dateWiseSettings.get(String(date||current?.start||"").slice(0,10))||settings);
  const clean=String(name||"").trim();
  const b=String(bucket||"");
  const preferred=(current.group==="8-10" && ["8","9","10"].includes(b)) ? b : (current.group==="1-10" && b==="8-10" ? "8-10" : b);
- let row=settings.nutrition.find(x=>String(x.class_group||"").trim()===preferred && String(x.food_name||"").trim()===clean && x.is_enabled!==false);
- if(!row && current.group==="8-10") row=settings.nutrition.find(x=>["8-10","8","9","10"].includes(String(x.class_group||"").trim()) && String(x.food_name||"").trim()===clean && x.is_enabled!==false);
+ let row=(source.nutrition||[]).find(x=>String(x.class_group||"").trim()===preferred && String(x.food_name||"").trim()===clean && x.is_enabled!==false);
+ if(!row && current.group==="8-10") row=(source.nutrition||[]).find(x=>["8-10","8","9","10"].includes(String(x.class_group||"").trim()) && String(x.food_name||"").trim()===clean && x.is_enabled!==false);
  return num(row?.quantity_per_student);
 }
 function fmt(v,unit){
