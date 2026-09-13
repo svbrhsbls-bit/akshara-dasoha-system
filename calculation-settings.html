@@ -1324,6 +1324,7 @@ let dwDates=[];
 let dwDate=null;
 let dwSnapshot=null;
 let dwOriginalHandlers={};
+ let dwInheritedIds=new Set();
 
 function dwShow(text,type="ok"){
   const e=document.getElementById("dateWiseMsg");
@@ -1468,7 +1469,88 @@ async function dwMigrateGroupIfNeeded(g){
   dwSnapshot=await dwPutSnapshot(dwDate.id,merged);
 }
 
+async function dwFindPreviousAcademicYear(){
+  const name=String(activeYear?.year_name||"").trim();
+  const m=name.match(/^(\d{4})[-\/](\d{2,4})$/);
+  if(!m)return null;
+  const prevStart=Number(m[1])-1;
+  const prevEnd=String(Number(m[1])-1+1).slice(-2);
+  const candidates=[`${prevStart}-${prevEnd}`,`${prevStart}-${String(Number(m[2])-1).padStart(2,"0")}`];
+  for(const n of candidates){
+    const {data,error}=await db.from("academic_years").select("id,year_name")
+      .eq("year_name",n).limit(1).maybeSingle();
+    if(error)throw error;
+    if(data)return data;
+  }
+  return null;
+}
+
+async function dwReadLegacyGroupForYear(g,yearId,dateId){
+  const out=dwNorm(null,dateId);
+  out.academic_year_id=yearId;
+
+  const {data:items,error:ie}=await db.from("calculation_settings").select("*")
+    .eq("school_id",currentSchoolId).eq("academic_year_id",yearId).eq("class_group",g)
+    .order("created_at",{ascending:true});
+  if(ie)throw ie;
+  out.calculation_items=(items||[]).map(x=>({
+    id:x.id,class_group:x.class_group,item_name:x.item_name,
+    quantity_per_student:x.quantity_per_student,unit:x.unit,is_enabled:x.is_enabled!==false
+  }));
+
+  const {data:wheat,error:we}=await db.from("wheat_rate_settings").select("*")
+    .eq("school_id",currentSchoolId).eq("academic_year_id",yearId).eq("class_group",g).maybeSingle();
+  if(we)throw we;
+  if(wheat)out.wheat_setting[g]={
+    id:wheat.id,class_group:g,quantity_per_student:wheat.quantity_per_student,rate_per_kg:wheat.rate_per_kg
+  };
+
+  let ingRes=await db.from("kitchen_ingredients").select("*")
+    .eq("school_id",currentSchoolId).eq("academic_year_id",yearId)
+    .eq("class_group",g).order("created_at",{ascending:true});
+  if(ingRes.error && /column .*school_id|does not exist/i.test(ingRes.error.message)){
+    ingRes=await db.from("kitchen_ingredients").select("*")
+      .eq("academic_year_id",yearId).eq("class_group",g).order("created_at",{ascending:true});
+  }
+  if(ingRes.error)throw ingRes.error;
+  out.kitchen_ingredients=(ingRes.data||[]).map(x=>({
+    id:x.id,school_id:x.school_id,class_group:x.class_group,
+    ingredient_name:x.ingredient_name,amount_per_student:x.amount_per_student,
+    unit:x.unit,is_enabled:x.is_enabled!==false
+  }));
+
+  const {data:nut,error:ne}=await db.from("nutritional_foods").select("*")
+    .eq("school_id",currentSchoolId).eq("academic_year_id",yearId)
+    .eq("class_group",g).order("created_at",{ascending:true});
+  if(ne)throw ne;
+  out.nutritional_foods=(nut||[]).map(x=>({
+    id:x.id,school_id:x.school_id,class_group:x.class_group,
+    food_name:x.food_name,quantity_per_student:x.quantity_per_student,
+    unit:x.unit,is_enabled:x.is_enabled!==false
+  }));
+  return out;
+}
+
+async function dwBuildPreviousYearSnapshot(prevYear,prevDate){
+  let ps=await db.from("calculation_setting_snapshots").select("*")
+    .eq("calculation_date_id",prevDate.id).maybeSingle();
+  if(ps.error)throw ps.error;
+  if(ps.data && dwHasSnapshotData(ps.data))return dwNorm(ps.data,prevDate.id);
+
+  const out=dwNorm(null,prevDate.id);
+  out.academic_year_id=prevYear.id;
+  for(const g of DW_GROUPS){
+    const legacy=await dwReadLegacyGroupForYear(g,prevYear.id,prevDate.id);
+    out.calculation_items.push(...legacy.calculation_items);
+    if(legacy.wheat_setting?.[g])out.wheat_setting[g]=legacy.wheat_setting[g];
+    out.kitchen_ingredients.push(...legacy.kitchen_ingredients);
+    out.nutritional_foods.push(...legacy.nutritional_foods);
+  }
+  return out;
+}
+
 async function dwLoadDates(){
+  dwInheritedIds=new Set();
   const {data,error}=await db.from("calculation_setting_dates").select("*")
     .eq("school_id",currentSchoolId).eq("academic_year_id",activeYear.id)
     .order("effective_date",{ascending:true});
@@ -1481,15 +1563,47 @@ async function dwLoadDates(){
   }
   dwDates=[...map.values()].sort((a,b)=>a.effective_date.localeCompare(b.effective_date));
 
-  if(!dwDates.some(x=>x.effective_date===DW_BASE)){
-    const {data:base,error:be}=await db.from("calculation_setting_dates").insert({
-      school_id:currentSchoolId,academic_year_id:activeYear.id,
-      effective_date:DW_BASE,class_group:"ALL",is_base_date:true
-    }).select().single();
-    if(be)throw be;
-    dwDates.push(base);
-    dwDates.sort((a,b)=>a.effective_date.localeCompare(b.effective_date));
+  // For every new Academic Year, carry forward ONLY the last Date from the
+  // immediately previous Academic Year. Keep that Date undeletable and copy
+  // its complete settings snapshot. The Date itself is intentionally NOT shifted.
+  if(!dwDates.length){
+    const prevYear=await dwFindPreviousAcademicYear();
+    if(prevYear){
+      const {data:prevDates,error:pe}=await db.from("calculation_setting_dates").select("*")
+        .eq("school_id",currentSchoolId).eq("academic_year_id",prevYear.id)
+        .order("effective_date",{ascending:false}).limit(1);
+      if(pe)throw pe;
+      const prevDate=prevDates?.[0];
+      if(prevDate){
+        const {data:created,error:ce}=await db.from("calculation_setting_dates").insert({
+          school_id:currentSchoolId,academic_year_id:activeYear.id,
+          class_group:"ALL",effective_date:prevDate.effective_date,is_base_date:false
+        }).select().single();
+        if(ce)throw ce;
+        dwDates=[created];
+        dwInheritedIds.add(created.id);
+
+        const ps=await dwBuildPreviousYearSnapshot(prevYear,prevDate);
+        const copy=dwNorm(ps,created.id);
+        copy.academic_year_id=activeYear.id;
+        await dwPutSnapshot(created.id,copy);
+      }
+    }
   }
+
+  // Preserve the original first-year base date behaviour when there is no
+  // previous Academic Year from which a Date can be inherited.
+  if(!dwDates.length){
+    if(String(activeYear?.year_name||"").trim()==="2026-27" || !await dwFindPreviousAcademicYear()){
+      const {data:base,error:be}=await db.from("calculation_setting_dates").insert({
+        school_id:currentSchoolId,academic_year_id:activeYear.id,
+        effective_date:DW_BASE,class_group:"ALL",is_base_date:true
+      }).select().single();
+      if(be)throw be;
+      dwDates.push(base);
+    }
+  }
+  dwDates.sort((a,b)=>a.effective_date.localeCompare(b.effective_date));
   dwRenderDates();
 }
 
@@ -1500,7 +1614,7 @@ function dwRenderDates(){
       <div class="dw-date-name">${dwDateText(r.effective_date)}</div>
       <div class="dw-date-actions">
         <button class="edit" onclick="window.dwOpenDate('${r.id}')">✏️ Edit</button>
-        ${r.is_base_date?"":`<button class="danger" onclick="window.dwDeleteDate('${r.id}')">🗑 Delete</button>`}
+        ${(r.is_base_date||dwInheritedIds.has(r.id))?"":`<button class="danger" onclick="window.dwDeleteDate('${r.id}')">🗑 Delete</button>`}
       </div>
     </div>`).join("");
 }
@@ -1668,7 +1782,7 @@ window.dwDeleteNutrition=async id=>{if(!confirm("ಈ ಪೌಷ್ಠಿಕ ಆ�
 
 window.dwOpenDate=dwOpenDate;
 window.dwDeleteDate=async function(id){
- const row=dwDates.find(x=>x.id===id);if(!row||row.is_base_date)return;
+ const row=dwDates.find(x=>x.id===id);if(!row||row.is_base_date||dwInheritedIds.has(id))return;
  if(!confirm(`${dwDateText(row.effective_date)} Date ಅಳಿಸಬೇಕೇ?`))return;
  const {error}=await db.from("calculation_setting_dates").delete()
   .eq("id",id).eq("school_id",currentSchoolId).eq("academic_year_id",activeYear.id);
