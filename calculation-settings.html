@@ -1324,8 +1324,6 @@ let dwDates=[];
 let dwDate=null;
 let dwSnapshot=null;
 let dwOriginalHandlers={};
-let dwInheritedDateId=null;
- let dwInheritedIds=new Set();
 
 function dwShow(text,type="ok"){
   const e=document.getElementById("dateWiseMsg");
@@ -1364,102 +1362,79 @@ function dwNorm(s,id){
 }
 
 async function dwGetSnapshot(id){
-  const {data,error}=await db.from("calculation_setting_snapshots").select("*").eq("calculation_date_id",id).maybeSingle();
+  const {data,error}=await db.from("calculation_setting_snapshots")
+    .select("*").eq("calculation_date_id",id).maybeSingle();
   if(error)throw error;
   return data?dwNorm(data,id):null;
 }
 async function dwPutSnapshot(id,s){
-  const payload={calculation_date_id:id,school_id:currentSchoolId,academic_year_id:activeYear.id,class_group:"ALL",
-    calculation_items:s?.calculation_items||[],wheat_setting:s?.wheat_setting||{},
-    kitchen_ingredients:s?.kitchen_ingredients||[],nutritional_foods:s?.nutritional_foods||[]};
-  const {data,error}=await db.from("calculation_setting_snapshots").upsert(payload,{onConflict:"calculation_date_id"}).select().single();
+  const payload={
+    calculation_date_id:id,
+    school_id:currentSchoolId,
+    academic_year_id:activeYear.id,
+    class_group:"ALL",
+    calculation_items:s.calculation_items||[],
+    wheat_setting:s.wheat_setting||{},
+    kitchen_ingredients:s.kitchen_ingredients||[],
+    nutritional_foods:s.nutritional_foods||[]
+  };
+  const {data,error}=await db.from("calculation_setting_snapshots")
+    .upsert(payload,{onConflict:"calculation_date_id"}).select().single();
   if(error)throw error;
   return dwNorm(data,id);
 }
-async function dwPutSnapshotForYear(id,yearId,s){
-  const payload={calculation_date_id:id,school_id:currentSchoolId,academic_year_id:yearId,class_group:"ALL",
-    calculation_items:s?.calculation_items||[],wheat_setting:s?.wheat_setting||{},
-    kitchen_ingredients:s?.kitchen_ingredients||[],nutritional_foods:s?.nutritional_foods||[]};
-  const {data,error}=await db.from("calculation_setting_snapshots").upsert(payload,{onConflict:"calculation_date_id"}).select().single();
-  if(error)throw error;
-  return data;
-}
 
-/* Read legacy settings for a specific academic year. */
-async function dwReadLegacyGroupForYear(g,yearId,dateId){
-  const out={calculation_date_id:dateId||null,school_id:currentSchoolId,academic_year_id:yearId,
-    calculation_items:[],wheat_setting:{},kitchen_ingredients:[],nutritional_foods:[]};
-  const {data:items,error:ie}=await db.from("calculation_settings").select("*")
-    .eq("school_id",currentSchoolId).eq("academic_year_id",yearId).eq("class_group",g).order("created_at",{ascending:true});
+/* Read the old working tables exactly as the original page did.
+   This is the important recovery path for the user's already-entered Items. */
+async function dwReadLegacyGroup(g){
+  const out=dwNorm(null,dwDate.id);
+
+  const {data:items,error:ie}=await db.from("calculation_settings")
+    .select("*").eq("school_id",currentSchoolId)
+    .eq("academic_year_id",activeYear.id).eq("class_group",g)
+    .order("created_at",{ascending:true});
   if(ie)throw ie;
-  out.calculation_items=(items||[]).map(x=>({id:x.id,class_group:x.class_group,item_name:x.item_name,
-    quantity_per_student:x.quantity_per_student,unit:x.unit,is_enabled:x.is_enabled!==false}));
+  out.calculation_items=(items||[]).map(x=>({
+    id:x.id,class_group:x.class_group,item_name:x.item_name,
+    quantity_per_student:x.quantity_per_student,unit:x.unit,is_enabled:x.is_enabled!==false
+  }));
 
-  const {data:wheat,error:we}=await db.from("wheat_rate_settings").select("*")
-    .eq("school_id",currentSchoolId).eq("academic_year_id",yearId).eq("class_group",g).maybeSingle();
+  const {data:wheat,error:we}=await db.from("wheat_rate_settings")
+    .select("*").eq("school_id",currentSchoolId)
+    .eq("academic_year_id",activeYear.id).eq("class_group",g).maybeSingle();
   if(we)throw we;
-  if(wheat)out.wheat_setting[g]={id:wheat.id,class_group:g,quantity_per_student:wheat.quantity_per_student,rate_per_kg:wheat.rate_per_kg};
+  if(wheat)out.wheat_setting[g]={
+    id:wheat.id,class_group:g,quantity_per_student:wheat.quantity_per_student,rate_per_kg:wheat.rate_per_kg
+  };
 
-  let ingRes=await db.from("kitchen_ingredients").select("*").eq("school_id",currentSchoolId)
-    .eq("academic_year_id",yearId).eq("class_group",g).order("created_at",{ascending:true});
+  // Some old installations did not have school_id on kitchen_ingredients.
+  // Try the school-isolated query first, then the original query only if schema
+  // rejects school_id. This prevents cross-school mixing when school_id exists.
+  let ingRes=await db.from("kitchen_ingredients").select("*")
+    .eq("school_id",currentSchoolId).eq("academic_year_id",activeYear.id)
+    .eq("class_group",g).order("created_at",{ascending:true});
   if(ingRes.error && /column .*school_id|does not exist/i.test(ingRes.error.message)){
-    ingRes=await db.from("kitchen_ingredients").select("*").eq("academic_year_id",yearId).eq("class_group",g).order("created_at",{ascending:true});
+    ingRes=await db.from("kitchen_ingredients").select("*")
+      .eq("academic_year_id",activeYear.id).eq("class_group",g)
+      .order("created_at",{ascending:true});
   }
   if(ingRes.error)throw ingRes.error;
-  out.kitchen_ingredients=(ingRes.data||[]).map(x=>({id:x.id,school_id:x.school_id,class_group:x.class_group,
-    ingredient_name:x.ingredient_name,amount_per_student:x.amount_per_student,unit:x.unit,is_enabled:x.is_enabled!==false}));
+  out.kitchen_ingredients=(ingRes.data||[]).map(x=>({
+    id:x.id,school_id:x.school_id,class_group:x.class_group,
+    ingredient_name:x.ingredient_name,amount_per_student:x.amount_per_student,
+    unit:x.unit,is_enabled:x.is_enabled!==false
+  }));
 
-  const {data:nut,error:ne}=await db.from("nutritional_foods").select("*").eq("school_id",currentSchoolId)
-    .eq("academic_year_id",yearId).eq("class_group",g).order("created_at",{ascending:true});
+  const {data:nut,error:ne}=await db.from("nutritional_foods").select("*")
+    .eq("school_id",currentSchoolId).eq("academic_year_id",activeYear.id)
+    .eq("class_group",g).order("created_at",{ascending:true});
   if(ne)throw ne;
-  out.nutritional_foods=(nut||[]).map(x=>({id:x.id,school_id:x.school_id,class_group:x.class_group,
-    food_name:x.food_name,quantity_per_student:x.quantity_per_student,unit:x.unit,is_enabled:x.is_enabled!==false}));
+  out.nutritional_foods=(nut||[]).map(x=>({
+    id:x.id,school_id:x.school_id,class_group:x.class_group,
+    food_name:x.food_name,quantity_per_student:x.quantity_per_student,
+    unit:x.unit,is_enabled:x.is_enabled!==false
+  }));
   return out;
-}
-
-async function dwReadLegacyGroup(g){
-  return dwReadLegacyGroupForYear(g,activeYear.id,dwDate?.id||null);
-}
-
-/* Create a complete snapshot for a date from the immediately previous date.
-   This is the core rule: every new date copies the LAST saved date in the
-   SAME academic year, including Items, Wheat, Ingredients and Nutrition. */
-async function dwMaterializeDateSnapshot(row,seen=new Set()){
-  if(!row)return null;
-  if(seen.has(row.id))return null;
-  seen.add(row.id);
-  let snap=await dwGetSnapshot(row.id);
-  if(snap && dwHasSnapshotData(snap))return snap;
-
-  const prev=dwPrevDateFromList(row.effective_date,dwDates);
-  if(prev){
-    let ps=await dwMaterializeDateSnapshot(prev,seen);
-    if(ps && dwHasSnapshotData(ps)){
-      const copied=dwNorm(ps,row.id);
-      return await dwPutSnapshot(row.id,copied);
-    }
-  }
-
-  /* Only the original 01.06.2026 base date reads legacy tables. */
-  if(row.effective_date===DW_BASE && row.is_base_date){
-    const base=dwNorm(null,row.id);
-    for(const g of DW_GROUPS){
-      const legacy=await dwReadLegacyGroupForYear(g,activeYear.id,row.id);
-      base.calculation_items.push(...legacy.calculation_items);
-      if(legacy.wheat_setting[g])base.wheat_setting[g]=legacy.wheat_setting[g];
-      base.kitchen_ingredients.push(...legacy.kitchen_ingredients);
-      base.nutritional_foods.push(...legacy.nutritional_foods);
-    }
-    if(dwHasSnapshotData(base))return await dwPutSnapshot(row.id,base);
-  }
-  return null;
-}
-
-async function dwLegacyGroupHasData(g){
-  const {data,error}=await db.from("calculation_settings").select("id").eq("school_id",currentSchoolId)
-    .eq("academic_year_id",activeYear.id).eq("class_group",g).limit(1);
-  if(error)throw error;
-  return !!(data&&data.length);
 }
 
 async function dwLegacyGroupHasData(g){
@@ -1493,181 +1468,182 @@ async function dwMigrateGroupIfNeeded(g){
   dwSnapshot=await dwPutSnapshot(dwDate.id,merged);
 }
 
-async function dwFindPreviousAcademicYear(){
+
+async function dwPreviousAcademicYear(){
   const name=String(activeYear?.year_name||"").trim();
-  const m=name.match(/^(\d{4})[-\/](\d{2,4})$/);
+  const m=name.match(/^(\d{4})\s*[-–\/]\s*(\d{2,4})$/);
   if(!m)return null;
-  const prevStart=Number(m[1])-1;
-  const prevEnd=String(Number(m[1])-1+1).slice(-2);
-  const candidates=[`${prevStart}-${prevEnd}`,`${prevStart}-${String(Number(m[2])-1).padStart(2,"0")}`];
-  for(const n of candidates){
-    const {data,error}=await db.from("academic_years").select("id,year_name")
-      .eq("year_name",n).limit(1).maybeSingle();
-    if(error)throw error;
-    if(data)return data;
+  const start=Number(m[1]);
+  const prevStart=start-1;
+  const {data,error}=await db.from("academic_years")
+    .select("id,year_name,created_at")
+    .order("created_at",{ascending:true});
+  if(error)throw error;
+  return (data||[]).find(y=>{
+    const mm=String(y.year_name||"").match(/^(\d{4})\s*[-–\/]\s*(\d{2,4})$/);
+    return mm && Number(mm[1])===prevStart;
+  })||null;
+}
+
+async function dwLegacySnapshotForYear(yearId){
+  const out={
+    calculation_date_id:null,
+    school_id:currentSchoolId,
+    academic_year_id:yearId,
+    calculation_items:[],
+    wheat_setting:{},
+    kitchen_ingredients:[],
+    nutritional_foods:[]
+  };
+
+  for(const g of DW_GROUPS){
+    const {data:items,error:ie}=await db.from("calculation_settings").select("*")
+      .eq("school_id",currentSchoolId).eq("academic_year_id",yearId)
+      .eq("class_group",g).order("created_at",{ascending:true});
+    if(ie)throw ie;
+    out.calculation_items.push(...(items||[]).map(x=>({
+      id:x.id,class_group:x.class_group,item_name:x.item_name,
+      quantity_per_student:x.quantity_per_student,unit:x.unit,is_enabled:x.is_enabled!==false
+    })));
+
+    const {data:wheat,error:we}=await db.from("wheat_rate_settings").select("*")
+      .eq("school_id",currentSchoolId).eq("academic_year_id",yearId)
+      .eq("class_group",g).maybeSingle();
+    if(we)throw we;
+    if(wheat)out.wheat_setting[g]={
+      id:wheat.id,class_group:g,
+      quantity_per_student:wheat.quantity_per_student,
+      rate_per_kg:wheat.rate_per_kg
+    };
+
+    let ir=await db.from("kitchen_ingredients").select("*")
+      .eq("school_id",currentSchoolId).eq("academic_year_id",yearId)
+      .eq("class_group",g).order("created_at",{ascending:true});
+    if(ir.error && /column .*school_id|does not exist/i.test(ir.error.message)){
+      ir=await db.from("kitchen_ingredients").select("*")
+        .eq("academic_year_id",yearId).eq("class_group",g)
+        .order("created_at",{ascending:true});
+    }
+    if(ir.error)throw ir.error;
+    out.kitchen_ingredients.push(...(ir.data||[]).map(x=>({
+      id:x.id,school_id:x.school_id,class_group:x.class_group,
+      ingredient_name:x.ingredient_name,amount_per_student:x.amount_per_student,
+      unit:x.unit,is_enabled:x.is_enabled!==false
+    })));
+
+    const {data:nut,error:ne}=await db.from("nutritional_foods").select("*")
+      .eq("school_id",currentSchoolId).eq("academic_year_id",yearId)
+      .eq("class_group",g).order("created_at",{ascending:true});
+    if(ne)throw ne;
+    out.nutritional_foods.push(...(nut||[]).map(x=>({
+      id:x.id,school_id:x.school_id,class_group:x.class_group,
+      food_name:x.food_name,quantity_per_student:x.quantity_per_student,
+      unit:x.unit,is_enabled:x.is_enabled!==false
+    })));
   }
+  return out;
+}
+
+async function dwGetPreviousYearLastSnapshot(prevYear){
+  const {data:dates,error}=await db.from("calculation_setting_dates").select("*")
+    .eq("school_id",currentSchoolId).eq("academic_year_id",prevYear.id)
+    .order("effective_date",{ascending:false}).limit(1);
+  if(error)throw error;
+  const last=dates?.[0];
+  if(!last)return null;
+
+  let {data:snap,error:se}=await db.from("calculation_setting_snapshots").select("*")
+    .eq("calculation_date_id",last.id).maybeSingle();
+  if(se)throw se;
+
+  if(snap){
+    const normalized={
+      calculation_date_id:null,
+      school_id:currentSchoolId,
+      academic_year_id:activeYear.id,
+      calculation_items:Array.isArray(snap.calculation_items)?snap.calculation_items:[],
+      wheat_setting:(snap.wheat_setting&&typeof snap.wheat_setting==="object"&&!Array.isArray(snap.wheat_setting))?snap.wheat_setting:{},
+      kitchen_ingredients:Array.isArray(snap.kitchen_ingredients)?snap.kitchen_ingredients:[],
+      nutritional_foods:Array.isArray(snap.nutritional_foods)?snap.nutritional_foods:[]
+    };
+    if(dwHasSnapshotData(normalized))return {date:last,snapshot:normalized};
+  }
+
+  // The first/base date uses the original working tables.
+  // This keeps the existing 2026-27 behaviour untouched.
+  const legacy=await dwLegacySnapshotForYear(prevYear.id);
+  if(dwHasSnapshotData(legacy))return {date:last,snapshot:legacy};
+
   return null;
 }
 
-async function dwReadLegacyGroupForYear(g,yearId,dateId){
-  const out=dwNorm(null,dateId);
-  out.academic_year_id=yearId;
-
-  const {data:items,error:ie}=await db.from("calculation_settings").select("*")
-    .eq("school_id",currentSchoolId).eq("academic_year_id",yearId).eq("class_group",g)
-    .order("created_at",{ascending:true});
-  if(ie)throw ie;
-  out.calculation_items=(items||[]).map(x=>({
-    id:x.id,class_group:x.class_group,item_name:x.item_name,
-    quantity_per_student:x.quantity_per_student,unit:x.unit,is_enabled:x.is_enabled!==false
-  }));
-
-  const {data:wheat,error:we}=await db.from("wheat_rate_settings").select("*")
-    .eq("school_id",currentSchoolId).eq("academic_year_id",yearId).eq("class_group",g).maybeSingle();
-  if(we)throw we;
-  if(wheat)out.wheat_setting[g]={
-    id:wheat.id,class_group:g,quantity_per_student:wheat.quantity_per_student,rate_per_kg:wheat.rate_per_kg
-  };
-
-  let ingRes=await db.from("kitchen_ingredients").select("*")
-    .eq("school_id",currentSchoolId).eq("academic_year_id",yearId)
-    .eq("class_group",g).order("created_at",{ascending:true});
-  if(ingRes.error && /column .*school_id|does not exist/i.test(ingRes.error.message)){
-    ingRes=await db.from("kitchen_ingredients").select("*")
-      .eq("academic_year_id",yearId).eq("class_group",g).order("created_at",{ascending:true});
-  }
-  if(ingRes.error)throw ingRes.error;
-  out.kitchen_ingredients=(ingRes.data||[]).map(x=>({
-    id:x.id,school_id:x.school_id,class_group:x.class_group,
-    ingredient_name:x.ingredient_name,amount_per_student:x.amount_per_student,
-    unit:x.unit,is_enabled:x.is_enabled!==false
-  }));
-
-  const {data:nut,error:ne}=await db.from("nutritional_foods").select("*")
-    .eq("school_id",currentSchoolId).eq("academic_year_id",yearId)
-    .eq("class_group",g).order("created_at",{ascending:true});
-  if(ne)throw ne;
-  out.nutritional_foods=(nut||[]).map(x=>({
-    id:x.id,school_id:x.school_id,class_group:x.class_group,
-    food_name:x.food_name,quantity_per_student:x.quantity_per_student,
-    unit:x.unit,is_enabled:x.is_enabled!==false
-  }));
-  return out;
-}
-
-async function dwBuildPreviousYearSnapshot(prevYear,prevDate){
-  let ps=await db.from("calculation_setting_snapshots").select("*")
-    .eq("calculation_date_id",prevDate.id).maybeSingle();
-  if(ps.error)throw ps.error;
-  if(ps.data && dwHasSnapshotData(ps.data))return dwNorm(ps.data,prevDate.id);
-
-  const out=dwNorm(null,prevDate.id);
-  out.academic_year_id=prevYear.id;
-  for(const g of DW_GROUPS){
-    const legacy=await dwReadLegacyGroupForYear(g,prevYear.id,prevDate.id);
-    out.calculation_items.push(...legacy.calculation_items);
-    if(legacy.wheat_setting?.[g])out.wheat_setting[g]=legacy.wheat_setting[g];
-    out.kitchen_ingredients.push(...legacy.kitchen_ingredients);
-    out.nutritional_foods.push(...legacy.nutritional_foods);
-  }
-  return out;
-}
-
-function dwPrevDateFromList(iso,list){
-  return [...(list||[])].filter(x=>x.effective_date<iso).sort((a,b)=>b.effective_date.localeCompare(a.effective_date))[0]||null;
-}
-function dwPrevDate(iso){return dwPrevDateFromList(iso,dwDates);}
-
-function dwYearParts(name){
-  const m=String(name||"").match(/(\d{4})\s*[-–]\s*(\d{2,4})/);
-  if(!m)return null;
-  const y=Number(m[1]);
-  return {start:y,prev:`${y-1}-${String(y%100).padStart(2,"0")}`};
-}
-async function dwGetPreviousAcademicYear(){
-  const {data,error}=await db.from("academic_years").select("id,year_name,created_at").order("created_at",{ascending:true});
-  if(error)throw error;
-  const parts=dwYearParts(activeYear?.year_name);
-  if(!parts)return null;
-  return (data||[]).find(y=>String(y.year_name).trim()===parts.prev)||null;
-}
-async function dwGetLastYearDate(yearId){
-  if(!yearId)return null;
-  const {data,error}=await db.from("calculation_setting_dates").select("*").eq("school_id",currentSchoolId)
-    .eq("academic_year_id",yearId).order("effective_date",{ascending:false}).limit(1).maybeSingle();
-  if(error)throw error;
-  return data||null;
-}
-async function dwBuildPreviousYearSnapshot(row,yearId,seen=new Set()){
-  if(!row||!yearId)return null;
-  if(seen.has(row.id))return null;
-  seen.add(row.id);
-  const {data,error}=await db.from("calculation_setting_snapshots").select("*").eq("calculation_date_id",row.id).maybeSingle();
-  if(error)throw error;
-  if(data && dwHasSnapshotData(dwNorm(data,row.id)))return dwNorm(data,row.id);
-
-  const {data:dates,error:de}=await db.from("calculation_setting_dates").select("*").eq("school_id",currentSchoolId)
-    .eq("academic_year_id",yearId).lt("effective_date",row.effective_date).order("effective_date",{ascending:false}).limit(1).maybeSingle();
-  if(de)throw de;
-  if(dates){
-    const ps=await dwBuildPreviousYearSnapshot(dates,yearId,seen);
-    if(ps)return ps;
-  }
-
-  const base=dwNorm(null,row.id);base.academic_year_id=yearId;
-  for(const g of DW_GROUPS){
-    const legacy=await dwReadLegacyGroupForYear(g,yearId,row.id);
-    base.calculation_items.push(...legacy.calculation_items);
-    if(legacy.wheat_setting[g])base.wheat_setting[g]=legacy.wheat_setting[g];
-    base.kitchen_ingredients.push(...legacy.kitchen_ingredients);
-    base.nutritional_foods.push(...legacy.nutritional_foods);
-  }
-  return dwHasSnapshotData(base)?base:null;
-}
-
 async function dwLoadDates(){
-  const {data,error}=await db.from("calculation_setting_dates").select("*").eq("school_id",currentSchoolId)
-    .eq("academic_year_id",activeYear.id).order("effective_date",{ascending:true});
+  const {data,error}=await db.from("calculation_setting_dates").select("*")
+    .eq("school_id",currentSchoolId).eq("academic_year_id",activeYear.id)
+    .order("effective_date",{ascending:true});
   if(error)throw error;
+
   const map=new Map();
   for(const r of (data||[])){
     const old=map.get(r.effective_date);
     if(!old || (!old.is_base_date&&r.is_base_date))map.set(r.effective_date,r);
   }
   dwDates=[...map.values()].sort((a,b)=>a.effective_date.localeCompare(b.effective_date));
-  dwInheritedDateId=null;
 
-  /* 2026-27 is the original/base year. Only this year gets 01.06.2026. */
-  if(String(activeYear?.year_name||"").trim()==="2026-27"){
-    if(!dwDates.some(x=>x.effective_date===DW_BASE)){
-      const {data:base,error:be}=await db.from("calculation_setting_dates").insert({school_id:currentSchoolId,
-        academic_year_id:activeYear.id,effective_date:DW_BASE,class_group:"ALL",is_base_date:true}).select().single();
+  /*
+   * IMPORTANT:
+   * 2026-27 keeps the original working Base Date behaviour.
+   * From the NEXT academic year onward, do NOT create 01.06.2026.
+   * Instead copy the LAST Calculation Date of the immediately previous
+   * academic year, with its complete settings.
+   */
+  const currentName=String(activeYear?.year_name||"");
+  const cm=currentName.match(/^(\d{4})\s*[-–\/]\s*(\d{2,4})$/);
+  const isFirstAcademicYear=cm && Number(cm[1])===2026;
+
+  if(dwDates.length===0){
+    if(isFirstAcademicYear){
+      const {data:base,error:be}=await db.from("calculation_setting_dates").insert({
+        school_id:currentSchoolId,academic_year_id:activeYear.id,
+        effective_date:DW_BASE,class_group:"ALL",is_base_date:true
+      }).select().single();
       if(be)throw be;
-      dwDates.push(base);
-      dwDates.sort((a,b)=>a.effective_date.localeCompare(b.effective_date));
-    }
-  }else{
-    /* Every later academic year starts from the LAST date of the previous
-       academic year. Keep the exact same date and full settings. */
-    const prevYear=await dwGetPreviousAcademicYear();
-    if(prevYear){
-      const sourceDate=await dwGetLastYearDate(prevYear.id);
-      if(sourceDate){
-        let target=dwDates.find(x=>x.effective_date===sourceDate.effective_date)||null;
-        if(!target){
-          const {data:ins,error:ie}=await db.from("calculation_setting_dates").insert({school_id:currentSchoolId,
-            academic_year_id:activeYear.id,effective_date:sourceDate.effective_date,class_group:"ALL",is_base_date:false}).select().single();
+      dwDates=[base];
+    }else{
+      const prevYear=await dwPreviousAcademicYear();
+      if(prevYear){
+        const source=await dwGetPreviousYearLastSnapshot(prevYear);
+        if(source){
+          const {data:inherited,error:ie}=await db.from("calculation_setting_dates").insert({
+            school_id:currentSchoolId,
+            academic_year_id:activeYear.id,
+            class_group:"ALL",
+            effective_date:source.date.effective_date,
+            is_base_date:true
+          }).select().single();
           if(ie)throw ie;
-          target=ins;dwDates.push(target);
+
+          const snapPayload={
+            calculation_date_id:inherited.id,
+            school_id:currentSchoolId,
+            academic_year_id:activeYear.id,
+            class_group:"ALL",
+            calculation_items:source.snapshot.calculation_items||[],
+            wheat_setting:source.snapshot.wheat_setting||{},
+            kitchen_ingredients:source.snapshot.kitchen_ingredients||[],
+            nutritional_foods:source.snapshot.nutritional_foods||[]
+          };
+          const {error:pe}=await db.from("calculation_setting_snapshots")
+            .upsert(snapPayload,{onConflict:"calculation_date_id"});
+          if(pe)throw pe;
+
+          dwDates=[inherited];
         }
-        dwInheritedDateId=target.id;
-        const sourceSnap=await dwBuildPreviousYearSnapshot(sourceDate,prevYear.id);
-        if(sourceSnap)await dwPutSnapshotForYear(target.id,activeYear.id,sourceSnap);
       }
     }
-    dwDates=dwDates.filter(x=>x.effective_date!==DW_BASE || String(activeYear?.year_name||"").trim()==="2026-27");
-    dwDates.sort((a,b)=>a.effective_date.localeCompare(b.effective_date));
   }
+
+  dwDates.sort((a,b)=>a.effective_date.localeCompare(b.effective_date));
   dwRenderDates();
 }
 
@@ -1678,39 +1654,73 @@ function dwRenderDates(){
       <div class="dw-date-name">${dwDateText(r.effective_date)}</div>
       <div class="dw-date-actions">
         <button class="edit" onclick="window.dwOpenDate('${r.id}')">✏️ Edit</button>
-        ${r.is_base_date||r.id===dwInheritedDateId?"":`<button class="danger" onclick="window.dwDeleteDate('${r.id}')">🗑 Delete</button>`}
+        ${r.is_base_date?"":`<button class="danger" onclick="window.dwDeleteDate('${r.id}')">🗑 Delete</button>`}
       </div>
     </div>`).join("");
 }
 
 async function dwOpenDate(id){
-  const row=dwDates.find(x=>x.id===id);if(!row)return;
+  const row=dwDates.find(x=>x.id===id);
+  if(!row)return;
   try{
     dwDate=row;
-    if(row.effective_date===DW_BASE && row.is_base_date){
+
+    if(row.effective_date===DW_BASE){
+      // Base date: original tables are authoritative.
       dwSnapshot=null;
     }else{
-      dwSnapshot=await dwMaterializeDateSnapshot(row);
-      if(!dwSnapshot)dwSnapshot=dwNorm(null,row.id);
+      dwSnapshot=await dwGetSnapshot(row.id);
+      if(!dwSnapshot){
+        const prev=dwPrevDate(row.effective_date);
+        if(prev){
+          let ps=prev.effective_date===DW_BASE?null:await dwGetSnapshot(prev.id);
+          if(ps && dwHasSnapshotData(ps)){
+            dwSnapshot=dwNorm(ps,row.id);
+          }else{
+            dwSnapshot=dwNorm(null,row.id);
+          }
+        }else dwSnapshot=dwNorm(null,row.id);
+        await dwPutSnapshot(row.id,dwSnapshot);
+      }
     }
+
     document.getElementById("dateWiseCard").style.display="none";
     document.getElementById("dateEditPanel").classList.add("active");
 
-    let saved=null;try{saved=JSON.parse(localStorage.getItem(selectionStorageKey())||"null");}catch(e){}
+    // Original Class Group behaviour:
+    // keep the previous school/year selection; otherwise choose the first
+    // group that actually has old data (8-10 first, which is the user's current group).
+    let saved=null;
+    try{saved=JSON.parse(localStorage.getItem(selectionStorageKey())||"null");}catch(e){}
     let g=saved?.classGroup||"";
-    if(!g){for(const candidate of ["8-10","1-5","6-7","1-10"]){if(await dwLegacyGroupHasData(candidate)){g=candidate;break;}}
+    if(!g){
+      for(const candidate of ["8-10","1-5","6-7","1-10"]){
+        if(await dwLegacyGroupHasData(candidate)){g=candidate;break;}
+      }
     }
     if(!g)g="8-10";
-    $("classGroup").value=g;selectedGroup=g;lockSelection();
 
-    if(row.effective_date===DW_BASE && row.is_base_date){
-      await loadItems();await loadIngredients();await loadNutrition();await loadWheatSetting();
+    $("classGroup").value=g;
+    selectedGroup=g;
+    lockSelection();
+
+    // Load the selected group immediately. User does NOT have to choose it again.
+    if(row.effective_date===DW_BASE){
+      await loadItems();
+      await loadIngredients();
+      await loadNutrition();
+      await loadWheatSetting();
     }else{
+      await dwMigrateGroupIfNeeded(g);
       await dwRenderSnapshotGroup(g);
     }
-    dwShow(`${dwDateText(row.effective_date)} → ${groupLabel(g)} settings loaded.` ,"ok");
+
+    dwShow(`${dwDateText(row.effective_date)} → ${groupLabel(g)} settings loaded.`,"ok");
     window.scrollTo({top:0,behavior:"smooth"});
-  }catch(e){console.error(e);dwShow("Date Edit load failed: "+e.message,"err");}
+  }catch(e){
+    console.error(e);
+    dwShow("Date Edit load failed: "+e.message,"err");
+  }
 }
 
 async function dwRenderSnapshotGroup(g){
@@ -1812,7 +1822,7 @@ window.dwDeleteNutrition=async id=>{if(!confirm("ಈ ಪೌಷ್ಠಿಕ ಆ�
 
 window.dwOpenDate=dwOpenDate;
 window.dwDeleteDate=async function(id){
- const row=dwDates.find(x=>x.id===id);if(!row||row.is_base_date||dwInheritedIds.has(id))return;
+ const row=dwDates.find(x=>x.id===id);if(!row||row.is_base_date)return;
  if(!confirm(`${dwDateText(row.effective_date)} Date ಅಳಿಸಬೇಕೇ?`))return;
  const {error}=await db.from("calculation_setting_dates").delete()
   .eq("id",id).eq("school_id",currentSchoolId).eq("academic_year_id",activeYear.id);
@@ -1821,26 +1831,85 @@ window.dwDeleteDate=async function(id){
 };
 
 async function dwAddDate(){
-  const v=prompt("Calculation Date ನಮೂದಿಸಿ (DD.MM.YYYY):");if(!v)return;
-  const m=String(v).trim().match(/^(\d{1,2})[.\-\/](\d{1,2})[.\-\/](\d{4})$/);
-  if(!m){dwShow("ಸರಿಯಾದ Date ನಮೂದಿಸಿ. ಉದಾ: 01.09.2026","err");return;}
-  const iso=`${m[3]}-${String(m[2]).padStart(2,"0")}-${String(m[1]).padStart(2,"0")}`;
-  if(String(activeYear?.year_name||"").trim()==="2026-27" && iso<DW_BASE){dwShow("01.06.2026ಕ್ಕಿಂತ ಹಿಂದಿನ Date ಸೇರಿಸಲಾಗುವುದಿಲ್ಲ.","err");return;}
-  if(dwDates.some(x=>x.effective_date===iso)){dwShow("ಈ Date ಈಗಾಗಲೇ ಇದೆ.","err");return;}
-  const {data,error}=await db.from("calculation_setting_dates").insert({school_id:currentSchoolId,academic_year_id:activeYear.id,
-    class_group:"ALL",effective_date:iso,is_base_date:false}).select().single();
-  if(error){dwShow("Date Save failed: "+error.message,"err");return;}
-  dwDates.push(data);dwDates.sort((a,b)=>a.effective_date.localeCompare(b.effective_date));
+ const v=prompt("Calculation Date ನಮೂದಿಸಿ (DD.MM.YYYY):");if(!v)return;
+ const m=String(v).trim().match(/^(\d{1,2})[.\-\/](\d{1,2})[.\-\/](\d{4})$/);
+ if(!m){dwShow("ಸರಿಯಾದ Date ನಮೂದಿಸಿ. ಉದಾ: 01.09.2026","err");return;}
+ const iso=`${m[3]}-${String(m[2]).padStart(2,"0")}-${String(m[1]).padStart(2,"0")}`;
+ if(iso<DW_BASE){dwShow("01.06.2026ಕ್ಕಿಂತ ಹಿಂದಿನ Date ಸೇರಿಸಲಾಗುವುದಿಲ್ಲ.","err");return;}
+ if(dwDates.some(x=>x.effective_date===iso)){dwShow("ಈ Date ಈಗಾಗಲೇ ಇದೆ.","err");return;}
+ const {data,error}=await db.from("calculation_setting_dates").insert({
+  school_id:currentSchoolId,academic_year_id:activeYear.id,class_group:"ALL",effective_date:iso,is_base_date:false
+ }).select().single();
+ if(error){dwShow("Date Save failed: "+error.message,"err");return;}
 
-  /* New date ALWAYS inherits the immediately previous date in the current
-     academic year. This also works for 01.06.2026 -> first added date. */
-  const prev=dwPrevDate(iso);
-  if(prev){
-    const ps=await dwMaterializeDateSnapshot(prev);
-    if(ps)await dwPutSnapshot(data.id,ps);
-  }
-  dwRenderDates();
-  dwShow("ಹೊಸ Calculation Date ಸೇರಿಸಲಾಗಿದೆ. ಹಿಂದಿನ Date settings copy ಆಗಿವೆ.","ok");
+ // Build the new date from the immediately previous valid date.
+ // Example: 01.10.2026 MUST inherit 15.09.2026, not 01.06.2026.
+ // The complete snapshot is copied, so any rate/quantity changed on the
+ // previous date is carried forward unchanged.
+ let newSnap=null;
+ const prev=dwPrevDate(iso);
+
+ if(prev){
+   if(prev.effective_date===DW_BASE){
+     // Base date is the original calculation_settings data.
+     dwDate=prev;
+     let ps=await dwGetSnapshot(prev.id);
+
+     if(!dwHasSnapshotData(ps)){
+       ps=dwNorm(null,prev.id);
+       for(const g of DW_GROUPS){
+         try{
+           const legacy=await dwReadLegacyGroup(g);
+           ps.calculation_items.push(...legacy.calculation_items);
+           if(legacy.wheat_setting[g])ps.wheat_setting[g]=legacy.wheat_setting[g];
+           ps.kitchen_ingredients.push(...legacy.kitchen_ingredients);
+           ps.nutritional_foods.push(...legacy.nutritional_foods);
+         }catch(e){console.warn("Legacy migration",g,e.message);}
+       }
+       await dwPutSnapshot(prev.id,ps);
+     }
+     newSnap=dwNorm(ps,data.id);
+   }else{
+     // Always use the immediately previous Date.
+     let ps=await dwGetSnapshot(prev.id);
+
+     // If an older date was created before its snapshot existed, first
+     // materialize that previous date's inherited settings.
+     if(!dwHasSnapshotData(ps)){
+       dwDate=prev;
+       const older=dwPrevDate(prev.effective_date);
+       if(older){
+         let os=await dwGetSnapshot(older.id);
+         if(!dwHasSnapshotData(os)){
+           if(older.effective_date===DW_BASE){
+             os=dwNorm(null,older.id);
+             for(const g of DW_GROUPS){
+               try{
+                 const legacy=await dwReadLegacyGroup(g);
+                 os.calculation_items.push(...legacy.calculation_items);
+                 if(legacy.wheat_setting[g])os.wheat_setting[g]=legacy.wheat_setting[g];
+                 os.kitchen_ingredients.push(...legacy.kitchen_ingredients);
+                 os.nutritional_foods.push(...legacy.nutritional_foods);
+               }catch(e){console.warn("Legacy migration",g,e.message);}
+             }
+           }else{
+             os=dwNorm(os,older.id);
+           }
+           await dwPutSnapshot(older.id,os);
+         }
+         ps=dwNorm(os,prev.id);
+         await dwPutSnapshot(prev.id,ps);
+       }
+     }
+
+     if(ps) newSnap=dwNorm(ps,data.id);
+   }
+ }
+
+ if(newSnap)await dwPutSnapshot(data.id,newSnap);
+
+ dwDates.push(data);dwDates.sort((a,b)=>a.effective_date.localeCompare(b.effective_date));dwRenderDates();
+ dwShow("ಹೊಸ Calculation Date ಸೇರಿಸಲಾಗಿದೆ. ಹಿಂದಿನ Date settings copy ಆಗಿವೆ.","ok");
 }
 
 function dwCloseDate(){
