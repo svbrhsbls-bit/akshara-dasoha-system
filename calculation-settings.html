@@ -1689,16 +1689,44 @@ async function dwLoadDates(){
 
   const prevYear=await dwFindPreviousAcademicYear();
 
-  /* If a future year already contains its inherited date, keep that date.
-     When it is the sole inherited date, refresh its snapshot from the exact
-     previous-year last valid date so old/base-rate copies cannot leak in. */
+  /* Future years: the inherited Date must always follow the CURRENT
+     last valid Date of the immediately previous academic year.
+
+     Important: if the previous year's last Date was later deleted, an older
+     version of this page may already have copied that deleted Date into the
+     future year. When the future year contains only that inherited Date,
+     replace its Date and snapshot with the newly-current previous-year
+     source. Never delete a protected Base Date while doing this. */
   if(dwDates.length){
     if(prevYear && dwDates.length===1){
       const source=await dwGetPreviousYearSource(prevYear);
-      if(source && source.date.effective_date===dwDates[0].effective_date){
-        await dwSyncFutureInheritedDate(dwDates[0],prevYear,source);
+      const existing=dwDates[0];
+
+      if(source){
+        if(existing.effective_date!==source.date.effective_date){
+          const {error:ue}=await db.from("calculation_setting_dates")
+            .update({
+              effective_date:source.date.effective_date,
+              is_base_date:false
+            })
+            .eq("id",existing.id)
+            .eq("school_id",currentSchoolId)
+            .eq("academic_year_id",activeYear.id);
+          if(ue)throw ue;
+
+          const copy=dwNorm(source.snapshot,existing.id);
+          copy.academic_year_id=activeYear.id;
+          await dwPutSnapshot(existing.id,copy);
+
+          existing.effective_date=source.date.effective_date;
+          existing.is_base_date=false;
+        }else{
+          await dwSyncFutureInheritedDate(existing,prevYear,source);
+        }
+        dwInheritedIds.add(existing.id);
       }
     }
+    dwDates.sort((a,b)=>a.effective_date.localeCompare(b.effective_date));
     dwRenderDates();
     return;
   }
