@@ -1318,7 +1318,14 @@ $("nutritionCancelBtn").onclick=resetNutrition;
 (function(){
 "use strict";
 
-const DW_BASE="2026-06-01";
+// Base date is always 01.06 of the currently active academic year.
+// 2026-27 → 01.06.2026, 2027-28 → 01.06.2027, etc.
+function dwBaseDate(){
+  const name=String(activeYear?.year_name||"");
+  const m=name.match(/(20\d{2})/);
+  const y=m?Number(m[1]):2026;
+  return `${y}-06-01`;
+}
 const DW_GROUPS=["1-5","6-7","8-10","1-10"];
 let dwDates=[];
 let dwDate=null;
@@ -1446,7 +1453,7 @@ async function dwLegacyGroupHasData(g){
 }
 
 async function dwMigrateGroupIfNeeded(g){
-  if(dwDate.effective_date===DW_BASE){
+  if(dwDate.effective_date===dwBaseDate()){
     // Base date always reads the original tables. Never replace the user's
     // original records with an empty snapshot.
     return;
@@ -1479,15 +1486,19 @@ async function dwLoadDates(){
     const old=map.get(r.effective_date);
     if(!old || (!old.is_base_date&&r.is_base_date))map.set(r.effective_date,r);
   }
-  dwDates=[...map.values()].sort((a,b)=>a.effective_date.localeCompare(b.effective_date));
+  // Only show dates from the current academic year's 01.06 onward.
+  const base=dwBaseDate();
+  dwDates=[...map.values()]
+    .filter(x=>x.effective_date>=base)
+    .sort((a,b)=>a.effective_date.localeCompare(b.effective_date));
 
-  if(!dwDates.some(x=>x.effective_date===DW_BASE)){
-    const {data:base,error:be}=await db.from("calculation_setting_dates").insert({
+  if(!dwDates.some(x=>x.effective_date===base)){
+    const {data:baseRow,error:be}=await db.from("calculation_setting_dates").insert({
       school_id:currentSchoolId,academic_year_id:activeYear.id,
-      effective_date:DW_BASE,class_group:"ALL",is_base_date:true
+      effective_date:base,class_group:"ALL",is_base_date:true
     }).select().single();
     if(be)throw be;
-    dwDates.push(base);
+    dwDates.push(baseRow);
     dwDates.sort((a,b)=>a.effective_date.localeCompare(b.effective_date));
   }
   dwRenderDates();
@@ -1511,7 +1522,7 @@ async function dwOpenDate(id){
   try{
     dwDate=row;
 
-    if(row.effective_date===DW_BASE){
+    if(row.effective_date===dwBaseDate()){
       // Base date: original tables are authoritative.
       dwSnapshot=null;
     }else{
@@ -1519,7 +1530,7 @@ async function dwOpenDate(id){
       if(!dwSnapshot){
         const prev=dwPrevDate(row.effective_date);
         if(prev){
-          let ps=prev.effective_date===DW_BASE?null:await dwGetSnapshot(prev.id);
+          let ps=prev.effective_date===dwBaseDate()?null:await dwGetSnapshot(prev.id);
           if(ps && dwHasSnapshotData(ps)){
             dwSnapshot=dwNorm(ps,row.id);
           }else{
@@ -1551,7 +1562,7 @@ async function dwOpenDate(id){
     lockSelection();
 
     // Load the selected group immediately. User does NOT have to choose it again.
-    if(row.effective_date===DW_BASE){
+    if(row.effective_date===dwBaseDate()){
       await loadItems();
       await loadIngredients();
       await loadNutrition();
@@ -1603,7 +1614,7 @@ async function dwRenderSnapshotGroup(g){
 /* Non-base date save functions. Base date keeps the original working save
    functions so existing records continue to save in the original tables. */
 async function dwSaveItem(){
-  if(dwDate.effective_date===DW_BASE){return window.__dwOrigItemSave();}
+  if(dwDate.effective_date===dwBaseDate()){return window.__dwOrigItemSave();}
   if(!dwSnapshot||!selectedGroup){dwShow("ಮೊದಲು Class Group Load ಮಾಡಿ.","err");return;}
   const name=$("itemName").value.trim(),q=$("itemQty").value,u=$("itemUnit").value;
   if(!name||q===""||Number(q)<0){dwShow("Item ಮತ್ತು Amount ಸರಿಯಾಗಿ ನಮೂದಿಸಿ.","err");return;}
@@ -1620,7 +1631,7 @@ async function dwSaveItem(){
   dwShow(was?"Item Update ಆಯಿತು.":"Item Save ಆಯಿತು.","ok");
 }
 async function dwSaveWheat(){
-  if(dwDate.effective_date===DW_BASE){return window.__dwOrigWheatSave();}
+  if(dwDate.effective_date===dwBaseDate()){return window.__dwOrigWheatSave();}
   if(!dwSnapshot||!selectedGroup){dwShow("ಮೊದಲು Class Group Load ಮಾಡಿ.","err");return;}
   const q=$("wheatQty").value,r=$("wheatRate").value;
   if(q===""||r===""||Number(q)<0||Number(r)<0){dwShow("ಗೋಧಿ ಪ್ರಮಾಣ ಮತ್ತು Rate ನಮೂದಿಸಿ.","err");return;}
@@ -1629,7 +1640,7 @@ async function dwSaveWheat(){
   await dwPutSnapshot(dwDate.id,dwSnapshot);await dwRenderSnapshotGroup(selectedGroup);dwShow("ಗೋಧಿ Rate Save ಆಯಿತು.","ok");
 }
 async function dwSaveIngredient(){
-  if(dwDate.effective_date===DW_BASE){return window.__dwOrigIngredientSave();}
+  if(dwDate.effective_date===dwBaseDate()){return window.__dwOrigIngredientSave();}
   if(!dwSnapshot||!selectedGroup){dwShow("ಮೊದಲು Class Group Load ಮಾಡಿ.","err");return;}
   const n=$("ingredientName").value.trim(),a=$("ingredientAmount").value;
   if(!n||a===""||Number(a)<0){dwShow("ಅಡಿಗೆ ಪದಾರ್ಥ ಮತ್ತು ಮೊತ್ತ ನಮೂದಿಸಿ.","err");return;}
@@ -1644,7 +1655,7 @@ async function dwSaveIngredient(){
   const was=!!editingIngredientId;resetIngredient();await dwRenderSnapshotGroup(selectedGroup);dwShow(was?"ಅಡಿಗೆ ಪದಾರ್ಥ Update ಆಯಿತು.":"ಅಡಿಗೆ ಪದಾರ್ಥ Save ಆಯಿತು.","ok");
 }
 async function dwSaveNutrition(){
-  if(dwDate.effective_date===DW_BASE){return window.__dwOrigNutritionSave();}
+  if(dwDate.effective_date===dwBaseDate()){return window.__dwOrigNutritionSave();}
   if(!dwSnapshot||!selectedGroup){dwShow("ಮೊದಲು Class Group Load ಮಾಡಿ.","err");return;}
   const n=$("nutritionName").value.trim(),q=$("nutritionQty").value,u=$("nutritionUnit").value;
   if(!n||q===""||Number(q)<0){dwShow("ಪೌಷ್ಠಿಕ ಆಹಾರ ಮತ್ತು Amount ನಮೂದಿಸಿ.","err");return;}
@@ -1660,11 +1671,11 @@ async function dwSaveNutrition(){
 }
 
 window.dwEditItem=x=>{editingItemId=x.id;$("itemName").value=x.item_name||"";$("itemQty").value=x.quantity_per_student??"";$("itemUnit").value=x.unit==="Gram"?"Gram":"KG";$("itemSaveBtn").textContent="💾 Update";$("itemCancelBtn").style.display="inline-block";};
-window.dwDeleteItem=async id=>{if(!confirm("ಈ Item ಅಳಿಸಬೇಕೇ?"))return;if(dwDate.effective_date===DW_BASE){return window.__dwOrigDeleteItem(id);}dwSnapshot.calculation_items=(dwSnapshot.calculation_items||[]).filter(x=>x.id!==id);await dwPutSnapshot(dwDate.id,dwSnapshot);await dwRenderSnapshotGroup(selectedGroup);dwShow("Item Delete ಆಯಿತು.","ok");};
+window.dwDeleteItem=async id=>{if(!confirm("ಈ Item ಅಳಿಸಬೇಕೇ?"))return;if(dwDate.effective_date===dwBaseDate()){return window.__dwOrigDeleteItem(id);}dwSnapshot.calculation_items=(dwSnapshot.calculation_items||[]).filter(x=>x.id!==id);await dwPutSnapshot(dwDate.id,dwSnapshot);await dwRenderSnapshotGroup(selectedGroup);dwShow("Item Delete ಆಯಿತು.","ok");};
 window.dwEditIngredient=x=>{editingIngredientId=x.id;$("ingredientName").value=x.ingredient_name||"";$("ingredientAmount").value=x.amount_per_student??"";$("ingredientSaveBtn").textContent="💾 Update";$("ingredientCancelBtn").style.display="inline-block";};
-window.dwDeleteIngredient=async id=>{if(!confirm("ಈ ಅಡಿಗೆ ಪದಾರ್ಥ ಅಳಿಸಬೇಕೇ?"))return;if(dwDate.effective_date===DW_BASE){return window.__dwOrigDeleteIngredient(id);}dwSnapshot.kitchen_ingredients=(dwSnapshot.kitchen_ingredients||[]).filter(x=>x.id!==id);await dwPutSnapshot(dwDate.id,dwSnapshot);await dwRenderSnapshotGroup(selectedGroup);dwShow("ಅಡಿಗೆ ಪದಾರ್ಥ Delete ಆಯಿತು.","ok");};
+window.dwDeleteIngredient=async id=>{if(!confirm("ಈ ಅಡಿಗೆ ಪದಾರ್ಥ ಅಳಿಸಬೇಕೇ?"))return;if(dwDate.effective_date===dwBaseDate()){return window.__dwOrigDeleteIngredient(id);}dwSnapshot.kitchen_ingredients=(dwSnapshot.kitchen_ingredients||[]).filter(x=>x.id!==id);await dwPutSnapshot(dwDate.id,dwSnapshot);await dwRenderSnapshotGroup(selectedGroup);dwShow("ಅಡಿಗೆ ಪದಾರ್ಥ Delete ಆಯಿತು.","ok");};
 window.dwEditNutrition=x=>{editingNutritionId=x.id;$("nutritionName").value=x.food_name||"";$("nutritionQty").value=x.quantity_per_student??"";$("nutritionUnit").value=x.unit==="Gram"?"Gram":x.unit==="KG"?"KG":"Nos";$("nutritionSaveBtn").textContent="💾 Update";$("nutritionCancelBtn").style.display="inline-block";};
-window.dwDeleteNutrition=async id=>{if(!confirm("ಈ ಪೌಷ್ಠಿಕ ಆಹಾರ ಅಳಿಸಬೇಕೇ?"))return;if(dwDate.effective_date===DW_BASE){return window.__dwOrigDeleteNutrition(id);}dwSnapshot.nutritional_foods=(dwSnapshot.nutritional_foods||[]).filter(x=>x.id!==id);await dwPutSnapshot(dwDate.id,dwSnapshot);await dwRenderSnapshotGroup(selectedGroup);dwShow("ಪೌಷ್ಠಿಕ ಆಹಾರ Delete ಆಯಿತು.","ok");};
+window.dwDeleteNutrition=async id=>{if(!confirm("ಈ ಪೌಷ್ಠಿಕ ಆಹಾರ ಅಳಿಸಬೇಕೇ?"))return;if(dwDate.effective_date===dwBaseDate()){return window.__dwOrigDeleteNutrition(id);}dwSnapshot.nutritional_foods=(dwSnapshot.nutritional_foods||[]).filter(x=>x.id!==id);await dwPutSnapshot(dwDate.id,dwSnapshot);await dwRenderSnapshotGroup(selectedGroup);dwShow("ಪೌಷ್ಠಿಕ ಆಹಾರ Delete ಆಯಿತು.","ok");};
 
 window.dwOpenDate=dwOpenDate;
 window.dwDeleteDate=async function(id){
@@ -1681,7 +1692,7 @@ async function dwAddDate(){
  const m=String(v).trim().match(/^(\d{1,2})[.\-\/](\d{1,2})[.\-\/](\d{4})$/);
  if(!m){dwShow("ಸರಿಯಾದ Date ನಮೂದಿಸಿ. ಉದಾ: 01.09.2026","err");return;}
  const iso=`${m[3]}-${String(m[2]).padStart(2,"0")}-${String(m[1]).padStart(2,"0")}`;
- if(iso<DW_BASE){dwShow("01.06.2026ಕ್ಕಿಂತ ಹಿಂದಿನ Date ಸೇರಿಸಲಾಗುವುದಿಲ್ಲ.","err");return;}
+ if(iso<dwBaseDate()){dwShow(`${dwDateText(dwBaseDate())}ಕ್ಕಿಂತ ಹಿಂದಿನ Date ಸೇರಿಸಲಾಗುವುದಿಲ್ಲ.`,"err");return;}
  if(dwDates.some(x=>x.effective_date===iso)){dwShow("ಈ Date ಈಗಾಗಲೇ ಇದೆ.","err");return;}
  const {data,error}=await db.from("calculation_setting_dates").insert({
   school_id:currentSchoolId,academic_year_id:activeYear.id,class_group:"ALL",effective_date:iso,is_base_date:false
@@ -1696,7 +1707,7 @@ async function dwAddDate(){
  const prev=dwPrevDate(iso);
 
  if(prev){
-   if(prev.effective_date===DW_BASE){
+   if(prev.effective_date===dwBaseDate()){
      // Base date is the original calculation_settings data.
      dwDate=prev;
      let ps=await dwGetSnapshot(prev.id);
@@ -1727,7 +1738,7 @@ async function dwAddDate(){
        if(older){
          let os=await dwGetSnapshot(older.id);
          if(!dwHasSnapshotData(os)){
-           if(older.effective_date===DW_BASE){
+           if(older.effective_date===dwBaseDate()){
              os=dwNorm(null,older.id);
              for(const g of DW_GROUPS){
                try{
@@ -1777,7 +1788,7 @@ async function dwApplySelection(){
   resetItem();
   resetIngredient();
 
-  if(dwDate.effective_date===DW_BASE){
+  if(dwDate.effective_date===dwBaseDate()){
     await loadItems();
     await loadIngredients();
     await loadNutrition();
