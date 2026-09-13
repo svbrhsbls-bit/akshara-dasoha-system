@@ -1471,23 +1471,34 @@ async function dwMigrateGroupIfNeeded(g){
 
 async function dwFindPreviousAcademicYear(){
   const name=String(activeYear?.year_name||"").trim();
-  const m=name.match(/^(\d{4})[-\/](\d{2})$/);
+  const m=name.match(/^(\d{4})-(\d{2})$/);
   if(!m)return null;
 
-  // 2027-28 -> 2026-27, 2028-29 -> 2027-28, etc.
   const prevStart=Number(m[1])-1;
-  const prevEnd=String(Number(m[1])%100).padStart(2,"0");
+  const prevEnd=String(Number(m[2])-1).padStart(2,"0");
   const prevName=`${prevStart}-${prevEnd}`;
 
-  const {data,error}=await db.from("academic_years").select("id,year_name")
-    .eq("year_name",prevName).limit(1).maybeSingle();
+  const {data,error}=await db.from("academic_years")
+    .select("id,year_name")
+    .eq("year_name",prevName)
+    .maybeSingle();
   if(error)throw error;
   return data||null;
 }
 
+/* Read a previous year's legacy settings only when the source Date is that
+   year's original base Date.  For a non-base Date we never fall back to the
+   current year's legacy tables; we search older Date snapshots instead. */
 async function dwReadLegacyGroupForYear(g,yearId,dateId){
-  const out=dwNorm(null,dateId);
-  out.academic_year_id=yearId;
+  const out={
+    calculation_date_id:dateId,
+    school_id:currentSchoolId,
+    academic_year_id:yearId,
+    calculation_items:[],
+    wheat_setting:{},
+    kitchen_ingredients:[],
+    nutritional_foods:[]
+  };
 
   const {data:items,error:ie}=await db.from("calculation_settings").select("*")
     .eq("school_id",currentSchoolId).eq("academic_year_id",yearId).eq("class_group",g)
@@ -1510,7 +1521,8 @@ async function dwReadLegacyGroupForYear(g,yearId,dateId){
     .eq("class_group",g).order("created_at",{ascending:true});
   if(ingRes.error && /column .*school_id|does not exist/i.test(ingRes.error.message)){
     ingRes=await db.from("kitchen_ingredients").select("*")
-      .eq("academic_year_id",yearId).eq("class_group",g).order("created_at",{ascending:true});
+      .eq("academic_year_id",yearId).eq("class_group",g)
+      .order("created_at",{ascending:true});
   }
   if(ingRes.error)throw ingRes.error;
   out.kitchen_ingredients=(ingRes.data||[]).map(x=>({
@@ -1531,15 +1543,19 @@ async function dwReadLegacyGroupForYear(g,yearId,dateId){
   return out;
 }
 
-async function dwBuildPreviousYearSnapshot(prevYear,prevDate){
-  // A non-base Date should have its own snapshot. If it does not, walk
-  // backwards to the nearest earlier Date that has usable settings.
-  const {data:psData,error:psError}=await db.from("calculation_setting_snapshots").select("*")
-    .eq("calculation_date_id",prevDate.id).maybeSingle();
-  if(psError)throw psError;
-  if(psData && dwHasSnapshotData(psData))return dwNorm(psData,prevDate.id);
+async function dwSnapshotForPreviousDate(prevYear,prevDate){
+  const {data:snap,error}=await db.from("calculation_setting_snapshots")
+    .select("*").eq("calculation_date_id",prevDate.id).maybeSingle();
+  if(error)throw error;
 
-  if(prevDate.is_base_date || prevDate.effective_date===DW_BASE){
+  if(snap && dwHasSnapshotData(snap)){
+    const normalized=dwNorm(snap,prevDate.id);
+    normalized.academic_year_id=prevYear.id;
+    return normalized;
+  }
+
+  /* Only the previous year's actual base Date may use legacy tables. */
+  if(prevDate.effective_date===DW_BASE){
     const out=dwNorm(null,prevDate.id);
     out.academic_year_id=prevYear.id;
     for(const g of DW_GROUPS){
@@ -1549,12 +1565,15 @@ async function dwBuildPreviousYearSnapshot(prevYear,prevDate){
       out.kitchen_ingredients.push(...legacy.kitchen_ingredients);
       out.nutritional_foods.push(...legacy.nutritional_foods);
     }
-    return out;
+    return dwHasSnapshotData(out)?out:null;
   }
 
   return null;
 }
 
+/* Find the latest Date in the previous year that actually has usable
+   settings. If its snapshot is missing, move backwards to the previous Date.
+   This is what makes year-to-year inheritance follow the last valid Date. */
 async function dwGetPreviousYearSource(prevYear){
   const {data:prevDates,error}=await db.from("calculation_setting_dates").select("*")
     .eq("school_id",currentSchoolId).eq("academic_year_id",prevYear.id)
@@ -1562,14 +1581,17 @@ async function dwGetPreviousYearSource(prevYear){
   if(error)throw error;
 
   for(const prevDate of (prevDates||[])){
-    const snap=await dwBuildPreviousYearSnapshot(prevYear,prevDate);
-    if(snap && dwHasSnapshotData(snap))return {date:prevDate,snapshot:snap};
+    const snap=await dwSnapshotForPreviousDate(prevYear,prevDate);
+    if(snap && dwHasSnapshotData(snap)){
+      return {date:prevDate,snapshot:snap};
+    }
   }
   return null;
 }
 
 async function dwLoadDates(){
   dwInheritedIds=new Set();
+
   const {data,error}=await db.from("calculation_setting_dates").select("*")
     .eq("school_id",currentSchoolId).eq("academic_year_id",activeYear.id)
     .order("effective_date",{ascending:true});
@@ -1581,10 +1603,10 @@ async function dwLoadDates(){
     if(!old || (!old.is_base_date&&r.is_base_date))map.set(r.effective_date,r);
   }
 
-  const isFirstYear=String(activeYear?.year_name||"").trim()==="2026-27";
+  const yearName=String(activeYear?.year_name||"").trim();
 
-  if(isFirstYear){
-    // EXACT original 2026-27 behaviour. Do not change it.
+  /* 2026-27 is the original working year. Keep its date logic untouched. */
+  if(yearName==="2026-27"){
     dwDates=[...map.values()].sort((a,b)=>a.effective_date.localeCompare(b.effective_date));
     if(!dwDates.some(x=>x.effective_date===DW_BASE)){
       const {data:base,error:be}=await db.from("calculation_setting_dates").insert({
@@ -1599,39 +1621,50 @@ async function dwLoadDates(){
     return;
   }
 
-  // From 2027-28 onward, 01.06.2026 is NOT a base date for the new year.
-  // Older versions may already have created that protected row; never delete
-  // or update it. Simply exclude it from the future-year UI and create the
-  // correct inherited Date when the year has no real Date yet.
-  const futureRows=[...map.values()].filter(r=>r.effective_date!==DW_BASE);
-  dwDates=futureRows.sort((a,b)=>a.effective_date.localeCompare(b.effective_date));
+  /* Future years: never delete, update, or otherwise touch the protected
+     01.06.2026 row that an older version may have left behind. It is simply
+     not a valid UI Date for the future academic year. */
+  dwDates=[...map.values()]
+    .filter(r=>r.effective_date!==DW_BASE)
+    .sort((a,b)=>a.effective_date.localeCompare(b.effective_date));
 
-  if(!dwDates.length){
-    const prevYear=await dwFindPreviousAcademicYear();
-    if(prevYear){
-      const source=await dwGetPreviousYearSource(prevYear);
-      if(source){
-        const {data:created,error:ce}=await db.from("calculation_setting_dates").insert({
-          school_id:currentSchoolId,
-          academic_year_id:activeYear.id,
-          class_group:"ALL",
-          effective_date:source.date.effective_date,
-          is_base_date:false
-        }).select().single();
-        if(ce)throw ce;
-
-        const copy=dwNorm(source.snapshot,created.id);
-        copy.academic_year_id=activeYear.id;
-        await dwPutSnapshot(created.id,copy);
-        dwDates=[created];
-        dwInheritedIds.add(created.id);
-      }
-    }
+  /* If this future year already has a real Date, preserve it exactly. */
+  if(dwDates.length){
+    dwRenderDates();
+    return;
   }
 
-  dwDates.sort((a,b)=>a.effective_date.localeCompare(b.effective_date));
+  const prevYear=await dwFindPreviousAcademicYear();
+  if(!prevYear){
+    dwRenderDates();
+    return;
+  }
+
+  const source=await dwGetPreviousYearSource(prevYear);
+  if(!source){
+    dwRenderDates();
+    return;
+  }
+
+  /* Do NOT use is_base_date=true here. The inherited Date is a normal Date. */
+  const {data:created,error:ce}=await db.from("calculation_setting_dates").insert({
+    school_id:currentSchoolId,
+    academic_year_id:activeYear.id,
+    class_group:"ALL",
+    effective_date:source.date.effective_date,
+    is_base_date:false
+  }).select().single();
+  if(ce)throw ce;
+
+  const copy=dwNorm(source.snapshot,created.id);
+  copy.academic_year_id=activeYear.id;
+  await dwPutSnapshot(created.id,copy);
+
+  dwDates=[created];
+  dwInheritedIds.add(created.id);
   dwRenderDates();
 }
+
 function dwRenderDates(){
   const e=document.getElementById("dateWiseList");
   e.innerHTML=dwDates.map(r=>`
