@@ -1385,6 +1385,18 @@ async function dwPutSnapshot(id,s){
   return dwNorm(data,id);
 }
 
+function dwFutureEditMarkerKey(dateId){
+  return `dw_future_date_edited_${currentSchoolId||''}_${activeYear?.id||''}_${dateId||''}`;
+}
+function dwMarkFutureDateEdited(){
+  if(dwDate && dwDate.effective_date!==DW_BASE){
+    try{localStorage.setItem(dwFutureEditMarkerKey(dwDate.id),'1');}catch(e){}
+  }
+}
+function dwWasFutureDateEdited(dateId){
+  try{return localStorage.getItem(dwFutureEditMarkerKey(dateId))==='1';}catch(e){return false;}
+}
+
 /* Read the old working tables exactly as the original page did.
    This is the important recovery path for the user's already-entered Items. */
 async function dwReadLegacyGroup(g){
@@ -1589,6 +1601,54 @@ async function dwGetPreviousYearSource(prevYear){
   return null;
 }
 
+/* Repair/sync a future academic year's inherited date from the exact
+   previous-year source date. This is intentionally used only for the first
+   inherited date of a future year, never for 2026-27. */
+async function dwSyncFutureInheritedDate(row,prevYear,source){
+  if(!row || !source || !prevYear)return row;
+  if(String(activeYear?.year_name||'').trim()==='2026-27')return row;
+  if(row.effective_date!==source.date.effective_date)return row;
+
+  let current=await dwGetSnapshot(row.id);
+  const src=dwNorm(source.snapshot,source.date.id);
+
+  /* The date was inherited by this page/version before the source snapshot
+     was available, or its copied snapshot still contains the old base-rate
+     values. For a sole future-year date, refresh the complete snapshot from
+     the previous year's actual last valid date. */
+  const onlyDate=dwDates.length===1;
+  if(!onlyDate)return row;
+  if(dwWasFutureDateEdited(row.id))return row;
+
+  if(!current || !dwHasSnapshotData(current)){
+    const copy=dwNorm(src,row.id);
+    copy.academic_year_id=activeYear.id;
+    await dwPutSnapshot(row.id,copy);
+    return row;
+  }
+
+  /* If a previous version copied the wrong base snapshot, compare the
+     complete groups. Only repair when the stored inherited snapshot is not
+     the same as the previous-year source. */
+  const same=JSON.stringify({
+    items:current.calculation_items||[],
+    wheat:current.wheat_setting||{},
+    ingredients:current.kitchen_ingredients||[],
+    nutrition:current.nutritional_foods||[]
+  })===JSON.stringify({
+    items:src.calculation_items||[],
+    wheat:src.wheat_setting||{},
+    ingredients:src.kitchen_ingredients||[],
+    nutrition:src.nutritional_foods||[]
+  });
+  if(!same){
+    const copy=dwNorm(src,row.id);
+    copy.academic_year_id=activeYear.id;
+    await dwPutSnapshot(row.id,copy);
+  }
+  return row;
+}
+
 async function dwLoadDates(){
   dwInheritedIds=new Set();
 
@@ -1621,20 +1681,28 @@ async function dwLoadDates(){
     return;
   }
 
-  /* Future years: never delete, update, or otherwise touch the protected
-     01.06.2026 row that an older version may have left behind. It is simply
-     not a valid UI Date for the future academic year. */
+  /* Future years: never delete or update the protected 01.06.2026 base row.
+     It is not a valid UI date for later academic years. */
   dwDates=[...map.values()]
     .filter(r=>r.effective_date!==DW_BASE)
     .sort((a,b)=>a.effective_date.localeCompare(b.effective_date));
 
-  /* If this future year already has a real Date, preserve it exactly. */
+  const prevYear=await dwFindPreviousAcademicYear();
+
+  /* If a future year already contains its inherited date, keep that date.
+     When it is the sole inherited date, refresh its snapshot from the exact
+     previous-year last valid date so old/base-rate copies cannot leak in. */
   if(dwDates.length){
+    if(prevYear && dwDates.length===1){
+      const source=await dwGetPreviousYearSource(prevYear);
+      if(source && source.date.effective_date===dwDates[0].effective_date){
+        await dwSyncFutureInheritedDate(dwDates[0],prevYear,source);
+      }
+    }
     dwRenderDates();
     return;
   }
 
-  const prevYear=await dwFindPreviousAcademicYear();
   if(!prevYear){
     dwRenderDates();
     return;
@@ -1646,7 +1714,7 @@ async function dwLoadDates(){
     return;
   }
 
-  /* Do NOT use is_base_date=true here. The inherited Date is a normal Date. */
+  /* Inherited Date is a normal Date, not a protected Base Date. */
   const {data:created,error:ce}=await db.from("calculation_setting_dates").insert({
     school_id:currentSchoolId,
     academic_year_id:activeYear.id,
@@ -1664,7 +1732,6 @@ async function dwLoadDates(){
   dwInheritedIds.add(created.id);
   dwRenderDates();
 }
-
 function dwRenderDates(){
   const e=document.getElementById("dateWiseList");
   e.innerHTML=dwDates.map(r=>`
@@ -1776,6 +1843,7 @@ async function dwRenderSnapshotGroup(g){
    functions so existing records continue to save in the original tables. */
 async function dwSaveItem(){
   if(dwDate.effective_date===DW_BASE){return window.__dwOrigItemSave();}
+  dwMarkFutureDateEdited();
   if(!dwSnapshot||!selectedGroup){dwShow("ಮೊದಲು Class Group Load ಮಾಡಿ.","err");return;}
   const name=$("itemName").value.trim(),q=$("itemQty").value,u=$("itemUnit").value;
   if(!name||q===""||Number(q)<0){dwShow("Item ಮತ್ತು Amount ಸರಿಯಾಗಿ ನಮೂದಿಸಿ.","err");return;}
@@ -1793,6 +1861,7 @@ async function dwSaveItem(){
 }
 async function dwSaveWheat(){
   if(dwDate.effective_date===DW_BASE){return window.__dwOrigWheatSave();}
+  dwMarkFutureDateEdited();
   if(!dwSnapshot||!selectedGroup){dwShow("ಮೊದಲು Class Group Load ಮಾಡಿ.","err");return;}
   const q=$("wheatQty").value,r=$("wheatRate").value;
   if(q===""||r===""||Number(q)<0||Number(r)<0){dwShow("ಗೋಧಿ ಪ್ರಮಾಣ ಮತ್ತು Rate ನಮೂದಿಸಿ.","err");return;}
@@ -1802,6 +1871,7 @@ async function dwSaveWheat(){
 }
 async function dwSaveIngredient(){
   if(dwDate.effective_date===DW_BASE){return window.__dwOrigIngredientSave();}
+  dwMarkFutureDateEdited();
   if(!dwSnapshot||!selectedGroup){dwShow("ಮೊದಲು Class Group Load ಮಾಡಿ.","err");return;}
   const n=$("ingredientName").value.trim(),a=$("ingredientAmount").value;
   if(!n||a===""||Number(a)<0){dwShow("ಅಡಿಗೆ ಪದಾರ್ಥ ಮತ್ತು ಮೊತ್ತ ನಮೂದಿಸಿ.","err");return;}
@@ -1817,6 +1887,7 @@ async function dwSaveIngredient(){
 }
 async function dwSaveNutrition(){
   if(dwDate.effective_date===DW_BASE){return window.__dwOrigNutritionSave();}
+  dwMarkFutureDateEdited();
   if(!dwSnapshot||!selectedGroup){dwShow("ಮೊದಲು Class Group Load ಮಾಡಿ.","err");return;}
   const n=$("nutritionName").value.trim(),q=$("nutritionQty").value,u=$("nutritionUnit").value;
   if(!n||q===""||Number(q)<0){dwShow("ಪೌಷ್ಠಿಕ ಆಹಾರ ಮತ್ತು Amount ನಮೂದಿಸಿ.","err");return;}
