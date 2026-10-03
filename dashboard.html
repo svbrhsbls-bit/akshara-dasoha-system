@@ -61,6 +61,9 @@ body{overflow:hidden}
 .frame-actions button{border:0;border-radius:6px;padding:6px 10px;font-weight:700;cursor:pointer;background:#e6ece8}
 iframe{display:block;width:100%;height:calc(100% - 47px);border:0;background:#fff}
 
+/* MOBILE HEADER */
+.mobile-menu-toggle,.mobile-logo,.mobile-logout,.menu-overlay{display:none}
+
 /* RESPONSIVE */
 
 .items-balance-box{background:#fff;border:1px solid #dfe5e9;border-radius:11px;box-shadow:0 2px 7px #00000009;overflow:hidden}
@@ -93,17 +96,33 @@ iframe{display:block;width:100%;height:calc(100% - 47px);border:0;background:#ff
  .top-title h2{font-size:17px}
 }
 @media(max-width:700px){
- body{overflow:auto}.app{height:auto;min-height:100vh;display:block}
- .sidebar{width:100%;height:auto;min-width:0}
- .nav{display:grid;grid-template-columns:1fr 1fr}
- .nav-title{grid-column:1/-1}
- .sidebar-bottom{display:none}
- .main{height:auto;min-height:calc(100vh - 400px)}
- .topbar{height:auto;min-height:76px;padding:12px 15px}
- .content{padding:14px}
- .summary,.modules{grid-template-columns:1fr}
- .frame-wrap{height:750px}
- iframe{height:calc(100% - 47px)}
+  body{overflow:hidden}
+  .app{height:100vh;min-height:100vh;display:flex}
+  .main{width:100%;height:100vh;min-height:0}
+  .sidebar{position:fixed;left:0;top:76px;bottom:0;width:min(84vw,360px);min-width:0;height:auto;z-index:1001;transform:translateX(-105%);transition:transform .25s ease;box-shadow:8px 0 24px #0004;overflow-y:auto}
+  .sidebar.mobile-open{transform:translateX(0)}
+  .brand{display:none}
+  .nav{display:block;padding:22px 12px}
+  .nav-title{font-size:13px;padding:8px 12px 10px;margin-top:0}
+  .nav-btn{padding:15px 14px;margin:3px 0;border-radius:10px;font-size:17px;min-height:54px;gap:14px}
+  .nav-icon{width:28px;font-size:21px}
+  .sidebar-bottom{display:none}
+  .sidebar>div[style]{padding:12px !important}
+  .mobile-menu-toggle{display:flex;align-items:center;justify-content:center;width:46px;height:46px;flex:0 0 46px;border:0;border-radius:8px;background:transparent;color:#fff;font-size:30px;line-height:1;cursor:pointer}
+  .mobile-logo{display:flex;align-items:center;justify-content:center;width:42px;height:42px;flex:0 0 42px;border-radius:9px;background:#087b43;font-size:23px}
+  .mobile-logout{display:block !important;border:0;border-radius:9px;padding:10px 14px;background:#fff;color:#17202a;font-weight:800;font-size:14px;cursor:pointer;white-space:nowrap}
+  .topbar{position:relative;z-index:1002;height:76px;min-height:76px;padding:8px 10px;gap:7px;background:#0d1729;border-bottom:1px solid #243047;color:#fff}
+  .top-title{display:flex;align-items:center;gap:9px;min-width:0;flex:1}
+  .top-title h2{color:#fff;font-size:16px;line-height:1.2;white-space:normal}
+  .top-title p{color:#aeb9cb;font-size:11px;margin-top:3px}
+  .top-right-info{gap:0;flex:0 0 auto}
+  .year-badge,.date-badge{display:none}
+  .content{padding:14px;overflow:auto}
+  .summary,.modules{grid-template-columns:1fr}
+  .frame-wrap{height:750px}
+  iframe{height:calc(100% - 47px)}
+  .menu-overlay{display:block;position:fixed;inset:76px 0 0 0;z-index:1000;background:#0007;opacity:0;pointer-events:none;transition:opacity .25s ease}
+  .menu-overlay.show{opacity:1;pointer-events:auto}
 }
 </style>
 </head>
@@ -181,11 +200,16 @@ iframe{display:block;width:100%;height:calc(100% - 47px);border:0;background:#ff
   <main class="main">
 
     <header class="topbar">
+      <button class="mobile-menu-toggle" type="button" aria-label="Open menu" aria-expanded="false" onclick="toggleMobileMenu()">☰</button>
+      <div class="mobile-logo" aria-hidden="true">🍚</div>
       <div class="top-title">
-        <h2 id="topDepartment">ಅಕ್ಷರ ದಾಸೋಹ ಕಾರ್ಯಕ್ರಮ</h2>
-        <p id="topSchool">ಶಾಲೆಯ ಹೆಸರು</p>
+        <div>
+          <h2 id="topDepartment">ಅಕ್ಷರ ದಾಸೋಹ ಕಾರ್ಯಕ್ರಮ</h2>
+          <p id="topSchool">ಶಾಲೆಯ ಹೆಸರು</p>
+        </div>
       </div>
       <div class="top-right-info">
+        <button class="mobile-logout" type="button" onclick="logout()">Logout</button>
         <div class="year-badge">Academic Year: <span id="academicYear">Loading...</span></div>
         <div class="date-badge" id="todayDate">Loading...</div>
       </div>
@@ -284,6 +308,7 @@ iframe{display:block;width:100%;height:calc(100% - 47px);border:0;background:#ff
     </section>
   </main>
 </div>
+<div id="menuOverlay" class="menu-overlay" onclick="closeMobileMenu()"></div>
 
 <script>
 const SUPABASE_URL="https://ezmudfrpcvjsgnjibvoq.supabase.co";
@@ -302,7 +327,24 @@ function setActive(button){
   if(button) button.classList.add("active");
 }
 
+function toggleMobileMenu(){
+  const sidebar=document.querySelector(".sidebar");
+  const overlay=$("menuOverlay");
+  const button=document.querySelector(".mobile-menu-toggle");
+  const open=sidebar.classList.toggle("mobile-open");
+  overlay.classList.toggle("show",open);
+  if(button)button.setAttribute("aria-expanded",open?"true":"false");
+}
+function closeMobileMenu(){
+  const sidebar=document.querySelector(".sidebar");
+  const overlay=$("menuOverlay");
+  const button=document.querySelector(".mobile-menu-toggle");
+  sidebar.classList.remove("mobile-open");
+  overlay.classList.remove("show");
+  if(button)button.setAttribute("aria-expanded","false");
+}
 function openByFile(file,title){
+  closeMobileMenu();
   const btn=[...document.querySelectorAll(".nav-btn")].find(x=>x.dataset.file===file);
   if(btn) setActive(btn);
   selectedFile=file;
@@ -320,6 +362,7 @@ function openModule(button){
 }
 
 function goHome(){
+  closeMobileMenu();
   selectedFile="";
   $("pageFrame").src="about:blank";
   $("frameWrap").style.display="none";
