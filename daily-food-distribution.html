@@ -54,7 +54,7 @@ tfoot td{font-weight:700;background:#e8eee9}
 @media(max-width:900px){.controls{grid-template-columns:1fr 1fr}.controls button{width:100%}}
 @media print{
   /* Print report on ONE A4 portrait page and keep numbers readable. */
-  html,body{width:210mm;height:297mm;background:#fff;overflow-y:auto}
+  html,body{width:100%;min-height:100%;height:auto;background:#fff}
   body{margin:0}
   header,.no-print{display:none!important}
   .wrap{max-width:none;margin:0;padding:0}
