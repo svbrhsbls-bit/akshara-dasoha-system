@@ -4,7 +4,26 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Cash Book</title>
-<style>
+ .report-print-title th{
+  text-align:center;
+  font-weight:800;
+  font-size:18px;
+  padding:6px;
+  border:1px solid #cfd8d2;
+  background:#fff;
+}
+
+@media print{
+  .print-report thead{
+    display:table-header-group;
+  }
+
+  .report-print-title th{
+    font-size:16px;
+    padding:5px;
+    background:#fff;
+  }
+}
 *{box-sizing:border-box}
 body{margin:0;background:#f3f7f4;color:#17221b;font-family:"Noto Sans Kannada","Nirmala UI",Arial,sans-serif}
 .school-header{text-align:center;background:#fff;padding:16px 12px 12px;border-bottom:1px solid #d8e2dc}
@@ -1061,9 +1080,18 @@ function reportPage(type,from,to){
       <div class="school">${esc(school)}</div>
       <div class="year">ವರ್ಷ: ${esc(year)}</div>
     </div>
-    <div class="report-title">${title} — Cash Book — ${esc(selectedYear)}</div>`;
+    
   if(!rows.length){h+=`<div class="empty">Entry ಮಾಡಿದ ದಿನಾಂಕಗಳಿಲ್ಲ</div></div>`;return h}
-  h+=`<table><thead>${tableHead()}</thead><tbody>`;
+  h+=`<table>
+  <thead>
+    <tr class="report-print-title">
+      <th colspan="${state.items.length+4}">
+        ${title} — Cash Book — ${esc(selectedYear)}
+      </th>
+    </tr>
+    ${tableHead()}
+  </thead>
+  <tbody>`;
   rows.forEach((r,index)=>{
     const movement=type==='jama'?r.jama:r.kharchu;
     const movementTotal=type==='jama'?r.jamaTotal:r.kharchuTotal;
