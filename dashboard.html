@@ -187,8 +187,8 @@ iframe{display:block;width:100%;height:calc(100% - 47px);border:0;background:#ff
   .year-badge,.date-badge{display:none}
   .content{padding:14px;overflow:auto}
   .summary,.modules{grid-template-columns:1fr}
-  .frame-wrap{height:auto;min-height:500px}
-iframe{height:500px}
+  .frame-wrap{height:1247px}
+  iframe{height:1200px}
 .menu-overlay{
     display:block;
     position:fixed;
@@ -478,7 +478,10 @@ function resizeModuleFrame(){
 
     // Same-origin module pages can be measured directly.
     // Grow the Dashboard frame to the module's real content height.
-    const frameHeight=Math.max(500, contentHeight + 4);
+    // On mobile keep a stable height so scrolling inside the module cannot
+    // change the Dashboard frame height. This keeps Save / Excel / Print visible.
+    const mobile=window.matchMedia("(max-width:700px)").matches;
+    const frameHeight=mobile ? 1200 : Math.max(500, contentHeight + 4);
     frame.style.height=frameHeight+"px";
     wrap.style.height=(frameHeight + 47)+"px";
 
