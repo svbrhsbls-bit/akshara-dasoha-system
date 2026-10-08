@@ -431,7 +431,12 @@ function openByFile(file,title){
   $("homePage").style.display="none";
   $("frameWrap").style.display="block";
   $("frameTitle").textContent=title;
-  $("pageFrame").onload=resizeModuleFrame;
+  $("pageFrame").onload=()=>{
+    resizeModuleFrame();
+    setTimeout(resizeModuleFrame,300);
+    setTimeout(resizeModuleFrame,800);
+    setTimeout(resizeModuleFrame,1500);
+  };
   $("pageFrame").src=file;
 }
 
@@ -477,16 +482,9 @@ function resizeModuleFrame(){
     frame.style.height=frameHeight+"px";
     wrap.style.height=(frameHeight + 47)+"px";
 
-    if(frame._resizeObserver) frame._resizeObserver.disconnect();
-    if(window.ResizeObserver){
-      const target=body || html;
-      if(target){
-        frame._resizeObserver=new ResizeObserver(()=>{
-          requestAnimationFrame(resizeModuleFrame);
-        });
-        frame._resizeObserver.observe(target);
-      }
-    }
+    // Do not use ResizeObserver here. Changing the parent iframe height
+    // while observing the embedded page can create a feedback loop and
+    // make the frame keep growing during scrolling.
   }catch(e){
     console.log("Module frame resize failed:",e);
   }
