@@ -187,8 +187,8 @@ iframe{display:block;width:100%;height:calc(100% - 47px);border:0;background:#ff
   .year-badge,.date-badge{display:none}
   .content{padding:14px;overflow:auto}
   .summary,.modules{grid-template-columns:1fr}
-  .frame-wrap{height:750px}
-iframe{height:calc(100% - 47px)}
+  .frame-wrap{height:auto;min-height:500px}
+iframe{height:500px}
 .menu-overlay{
     display:block;
     position:fixed;
@@ -431,6 +431,7 @@ function openByFile(file,title){
   $("homePage").style.display="none";
   $("frameWrap").style.display="block";
   $("frameTitle").textContent=title;
+  $("pageFrame").onload=resizeModuleFrame;
   $("pageFrame").src=file;
 }
 
@@ -450,6 +451,45 @@ function goHome(){
   const home=document.querySelector('.nav-btn[data-file=""]');
   setActive(home);
   $("content").scrollTop=0;
+}
+
+function resizeModuleFrame(){
+  const frame=$("pageFrame");
+  const wrap=$("frameWrap");
+  if(!frame || !wrap || !selectedFile) return;
+
+  try{
+    const doc=frame.contentDocument || frame.contentWindow.document;
+    if(!doc) return;
+
+    const body=doc.body;
+    const html=doc.documentElement;
+    const contentHeight=Math.max(
+      body ? body.scrollHeight : 0,
+      body ? body.offsetHeight : 0,
+      html ? html.scrollHeight : 0,
+      html ? html.offsetHeight : 0
+    );
+
+    // Same-origin module pages can be measured directly.
+    // Grow the Dashboard frame to the module's real content height.
+    const frameHeight=Math.max(500, contentHeight + 4);
+    frame.style.height=frameHeight+"px";
+    wrap.style.height=(frameHeight + 47)+"px";
+
+    if(frame._resizeObserver) frame._resizeObserver.disconnect();
+    if(window.ResizeObserver){
+      const target=body || html;
+      if(target){
+        frame._resizeObserver=new ResizeObserver(()=>{
+          requestAnimationFrame(resizeModuleFrame);
+        });
+        frame._resizeObserver.observe(target);
+      }
+    }
+  }catch(e){
+    console.log("Module frame resize failed:",e);
+  }
 }
 
 function reloadFrame(){
