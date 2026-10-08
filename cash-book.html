@@ -1060,10 +1060,16 @@ function reportPage(type,from,to){
       <div class="dept">${esc(dept)}</div>
       <div class="school">${esc(school)}</div>
       <div class="year">ವರ್ಷ: ${esc(year)}</div>
-    </div>
-    <div class="report-title">${title} — Cash Book — ${esc(selectedYear)}</div>`;
+    </div>`;
   if(!rows.length){h+=`<div class="empty">Entry ಮಾಡಿದ ದಿನಾಂಕಗಳಿಲ್ಲ</div></div>`;return h}
-  h+=`<table><thead>${tableHead()}</thead><tbody>`;
+  h+=`<table><thead>
+    <tr>
+      <th colspan="${state.items.length+4}" style="text-align:center;font-weight:800;font-size:18px;padding:6px;border:1px solid #cfd8d2;background:#fff">
+        ${title} — Cash Book — ${esc(selectedYear)}
+      </th>
+    </tr>
+    ${tableHead()}
+  </thead><tbody>`;
   rows.forEach((r,index)=>{
     const movement=type==='jama'?r.jama:r.kharchu;
     const movementTotal=type==='jama'?r.jamaTotal:r.kharchuTotal;
@@ -1113,6 +1119,7 @@ function reportPage(type,from,to){
     <div>${isJama?'ಜಮಾ ನಂತರದ ಶಿಲ್ಕು':'ಅಂತಿಮ ಶಿಲ್ಕು'} — ಒಟ್ಟು<br><b>${money(finalTotal)}</b></div></div></div>`;
   return h;
 }
+
 function renderPreview(){
   const from=document.getElementById('fromDate').value,to=document.getElementById('toDate').value,type=document.getElementById('reportType').value;
   let h='';
