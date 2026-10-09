@@ -54,12 +54,12 @@ body{overflow:hidden}
 .open-link{display:block;color:#126b38;font-weight:800;font-size:13px;margin-top:10px}
 
 /* MODULE FRAME */
-.frame-wrap{height:100%;background:#fff;border:1px solid #dce2e7;border-radius:10px;overflow:hidden;box-shadow:0 2px 8px #00000008}
-.frame-head{height:47px;background:#f7faf8;border-bottom:1px solid #dce2e7;display:flex;align-items:center;justify-content:space-between;padding:0 12px 0 16px}
+.frame-wrap{display:flex;flex-direction:column;min-height:0;height:100%;background:#fff;border:1px solid #dce2e7;border-radius:10px;overflow:hidden;box-shadow:0 2px 8px #00000008}
+.frame-head{height:47px;min-height:47px;flex:0 0 47px;background:#f7faf8;border-bottom:1px solid #dce2e7;display:flex;align-items:center;justify-content:space-between;padding:0 12px 0 16px}
 .frame-head b{font-size:14px}
 .frame-actions{display:flex;gap:6px}
 .frame-actions button{border:0;border-radius:6px;padding:6px 10px;font-weight:700;cursor:pointer;background:#e6ece8}
-iframe{display:block;width:100%;height:calc(100% - 47px);border:0;background:#fff}
+iframe{display:block;flex:1 1 auto;width:100%;height:auto;min-height:0;border:0;background:#fff}
 
 /* MOBILE HEADER */
 .mobile-menu-toggle,.mobile-logo,.mobile-logout,.menu-overlay{display:none}
@@ -185,11 +185,12 @@ iframe{display:block;width:100%;height:calc(100% - 47px);border:0;background:#ff
   }
   .top-right-info{gap:0;flex:0 0 auto}
   .year-badge,.date-badge{display:none}
-  .content{padding:14px;overflow:auto}
+  .content{display:flex;flex-direction:column;flex:1;min-height:0;padding:10px;overflow:hidden}
+  .home{flex:1;min-height:0;overflow:auto}
   .summary,.modules{grid-template-columns:1fr}
-  /* Keep the module viewport stable on phones; let the embedded page scroll inside it. */
-  .frame-wrap{height:clamp(560px, calc(100vh - 105px), 760px);min-height:560px;overflow:hidden}
-  #pageFrame{display:block;width:100%;height:calc(100% - 47px);min-height:0;border:0;background:#fff;overflow:auto;-webkit-overflow-scrolling:touch}
+  /* Fill the available screen; scroll the embedded module inside its frame. */
+  .frame-wrap{display:flex;flex:1 1 auto;flex-direction:column;width:100%;height:auto;min-height:0;overflow:hidden}
+  #pageFrame{display:block;flex:1 1 auto;width:100%;height:auto;min-height:0;border:0;background:#fff;overflow:auto;-webkit-overflow-scrolling:touch}
 .menu-overlay{
     display:block;
     position:fixed;
@@ -430,7 +431,7 @@ function openByFile(file,title){
   if(btn) setActive(btn);
   selectedFile=file;
   $("homePage").style.display="none";
-  $("frameWrap").style.display="block";
+  $("frameWrap").style.display="flex";
   $("frameTitle").textContent=title;
   $("pageFrame").src=file;
 }
