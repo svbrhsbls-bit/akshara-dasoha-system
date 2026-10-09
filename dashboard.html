@@ -3,829 +3,1251 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>ಅಕ್ಷರ ದಾಸೋಹ - Dashboard</title>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<title>Cash Book</title>
 <style>
 *{box-sizing:border-box}
-html,body{margin:0;width:100%;height:100%;font-family:Arial,"Noto Sans Kannada","Nirmala UI",sans-serif;background:#f4f6f8;color:#17202a}
-body{overflow:hidden}
-.app{display:flex;width:100%;height:100vh}
-
-/* LEFT SIDEBAR */
-.sidebar{width:285px;min-width:285px;height:100vh;background:#0d1729;color:#fff;display:flex;flex-direction:column;overflow-y:auto}
-.brand{padding:20px 18px 18px;border-bottom:1px solid #243047}
-.brand-row{display:flex;align-items:center;gap:12px}
-.logo{width:43px;height:43px;border-radius:9px;background:#087b43;display:flex;align-items:center;justify-content:center;font-size:24px}
-.brand h1{font-size:17px;margin:0;line-height:1.35}
-.brand p{font-size:11px;color:#aeb9cb;margin:2px 0 0}
-.nav{padding:16px 11px}
-.nav-title{font-size:12px;color:#8290a6;padding:8px 10px 6px;margin-top:2px}
-.nav-btn{width:100%;border:0;background:transparent;color:#e8edf5;text-align:left;border-radius:8px;padding:11px 12px;margin:2px 0;cursor:pointer;font:700 14px Arial,"Noto Sans Kannada","Nirmala UI",sans-serif;display:flex;align-items:center;gap:10px}
-.nav-btn:hover{background:#17253b}
-.nav-btn.active{background:#087b43;color:#fff}
-.nav-icon{width:22px;text-align:center;font-size:16px}
-.sidebar-bottom{margin-top:auto;padding:12px;border-top:1px solid #243047;color:#91a0b5;font-size:11px;line-height:1.5}
-
-/* MAIN */
-.main{flex:1;min-width:0;height:100vh;display:flex;flex-direction:column;overflow:hidden}
-.topbar{height:88px;min-height:88px;background:#fff;border-bottom:1px solid #dce2e7;display:flex;align-items:center;justify-content:space-between;padding:0 25px;gap:15px}
-.top-title{min-width:0}
-.top-title h2{margin:0;color:#126b38;font-size:21px;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.top-title p{margin:4px 0 0;color:#8993a0;font-size:13px}
-.year-badge{background:#eef7f1;color:#126b38;border:1px solid #cfe4d6;border-radius:22px;padding:9px 15px;font-weight:700;font-size:13px;white-space:nowrap}
-.top-right-info{display:flex;align-items:center;gap:9px;flex-wrap:wrap;justify-content:flex-end}
-.date-badge{background:#fff7e8;color:#7a5310;border:1px solid #ead7ad;border-radius:22px;padding:9px 15px;font-weight:700;font-size:13px;white-space:nowrap}
-.content{flex:1;overflow:auto;padding:20px 24px 28px}
-
-/* HOME */
-.home{max-width:1450px;margin:auto}
-.summary{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:18px}
-.stat{background:#fff;border:1px solid #e0e5e9;border-radius:11px;padding:15px;box-shadow:0 2px 7px #00000009}
-.stat-label{font-size:13px;color:#687585;font-weight:700}
-.stat-value{font-size:25px;font-weight:800;margin-top:6px}
-.stat-note{font-size:11px;color:#38805d;margin-top:4px}
-.modules-title{font-size:19px;margin:8px 0 12px}
-.modules{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
-.module{background:#fff;border:1px solid #e0e5e9;border-radius:11px;padding:16px;cursor:pointer;box-shadow:0 2px 7px #00000009}
-.module:hover{box-shadow:0 5px 16px #0002;transform:translateY(-1px)}
-.module .icon{font-size:25px}
-.module h3{margin:8px 0 5px;font-size:16px}
-.module p{margin:0;color:#697586;font-size:12px;line-height:1.5}
-.open-link{display:block;color:#126b38;font-weight:800;font-size:13px;margin-top:10px}
-
-/* MODULE FRAME */
-.frame-wrap{display:flex;flex-direction:column;min-height:0;height:100%;background:#fff;border:1px solid #dce2e7;border-radius:10px;overflow:hidden;box-shadow:0 2px 8px #00000008}
-.frame-head{height:47px;min-height:47px;flex:0 0 47px;background:#f7faf8;border-bottom:1px solid #dce2e7;display:flex;align-items:center;justify-content:space-between;padding:0 12px 0 16px}
-.frame-head b{font-size:14px}
-.frame-actions{display:flex;gap:6px}
-.frame-actions button{border:0;border-radius:6px;padding:6px 10px;font-weight:700;cursor:pointer;background:#e6ece8}
-iframe{display:block;flex:1 1 auto;width:100%;height:auto;min-height:0;border:0;background:#fff}
-
-/* MOBILE HEADER */
-.mobile-menu-toggle,.mobile-logo,.mobile-logout,.menu-overlay{display:none}
-
-/* RESPONSIVE */
-
-.items-balance-box{background:#fff;border:1px solid #dfe5e9;border-radius:11px;box-shadow:0 2px 7px #00000009;overflow:hidden}
-.items-balance-head,.daily-food-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px 16px;background:#f7faf8;border-bottom:1px solid #dfe5e9}
-.items-balance-head b,.daily-food-head b{font-size:16px}.items-balance-note{font-size:12px;color:#64748b;margin-top:3px}
-.refresh-items{border:0;border-radius:7px;padding:7px 11px;background:#e5ece7;color:#126b38;font-weight:700;cursor:pointer}
-.item-cards{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;padding:14px}
-.item-card{background:#fff;border:1px solid #dfe5e9;border-radius:10px;padding:15px;min-height:112px;box-shadow:0 2px 6px #00000008}
-.item-card:hover{box-shadow:0 5px 14px #0002}
-.item-card-name{font-size:16px;font-weight:800;line-height:1.35}
-.item-card-unit{font-size:11px;color:#7b8794;margin-top:3px}
-.item-card-label{font-size:12px;color:#687585;margin-top:14px}
-.item-card-balance{font-size:21px;font-weight:800;color:#126b38;margin-top:2px}
-.item-card-empty{grid-column:1/-1;padding:25px;text-align:center;color:#64748b}
-.items-status{padding:8px 15px;font-size:12px;color:#64748b}
-.daily-title{margin-top:22px}
-.daily-food-box{background:#fff;border:1px solid #dfe5e9;border-radius:11px;box-shadow:0 2px 7px #00000009;overflow:hidden}
-.daily-food-table-wrap{max-height:520px;overflow:auto}
-.daily-food-table{width:100%;border-collapse:collapse}
-.daily-food-table th,.daily-food-table td{border:1px solid #d8e0db;padding:10px 12px;text-align:center}
-.daily-food-table th{position:sticky;top:0;background:#eef4ef;z-index:1;font-size:13px}
-.daily-food-table td:first-child{font-weight:700}
-.daily-food-table td:nth-child(3){font-weight:800;color:#126b38;font-size:16px}
-.daily-food-table tr.today-row{background:#f0f8f3}
-.daily-food-table tr.today-row td{font-weight:800}
-@media(max-width:1050px){
- .sidebar{width:235px;min-width:235px}
- .summary{grid-template-columns:repeat(2,1fr)}
- .modules{grid-template-columns:repeat(2,1fr)}
- .top-title h2{font-size:17px}
-}
-@media(max-width:700px), (hover: none) and (pointer: coarse){
-  body{overflow:hidden}
-  .app{height:100vh;min-height:100vh;display:flex}
-  .main{width:auto;flex:1;min-width:0;height:100vh;min-height:0}
-  .sidebar{
-    position:fixed;
-    left:0;
-    top:76px;
-    bottom:0;
-    width:min(84vw,360px);
-    min-width:0;
-    height:auto;
-    z-index:1001;
-    transform:translateX(-105%);
-    transition:transform .25s ease;
-    box-shadow:8px 0 24px #0004;
-    overflow-y:auto;
-  }
-  .sidebar.mobile-open{transform:translateX(0)}
-  .brand{display:none}
-  .nav{display:block;padding:22px 12px}
-  .nav-title{font-size:13px;padding:8px 12px 10px;margin-top:0}
-  .nav-btn{
-    padding:15px 14px;
-    margin:3px 0;
-    border-radius:10px;
-    font-size:17px;
-    min-height:54px;
-    gap:14px;
-  }
-  .nav-icon{width:28px;font-size:21px}
-  .sidebar-bottom{display:none}
-  .sidebar>div[style]{padding:12px !important}
-  .mobile-menu-toggle{
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    width:46px;
-    height:46px;
-    flex:0 0 46px;
-    border:0;
-    border-radius:8px;
-    background:transparent;
-    color:#fff;
-    font-size:30px;
-    line-height:1;
-    cursor:pointer;
-  }
-  .mobile-logo{
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    width:42px;
-    height:42px;
-    flex:0 0 42px;
-    border-radius:9px;
-    background:#087b43;
-    font-size:23px;
-  }
-  .topbar{
-    position:relative;
-    z-index:1002;
-    height:76px;
-    min-height:76px;
-    padding:8px 10px;
-    gap:7px;
-    background:#0d1729;
-    border-bottom:1px solid #243047;
-    color:#fff;
-  }
-  .top-title{
-    display:flex;
-    align-items:center;
-    gap:9px;
-    min-width:0;
-    flex:1;
-  }
-  .top-title h2{
-    color:#fff;
-    font-size:16px;
-    line-height:1.2;
-    white-space:normal;
-  }
-  .top-title p{
-    color:#aeb9cb;
-    font-size:11px;
-    margin-top:3px;
-  }
-  .top-right-info{gap:0;flex:0 0 auto}
-  .year-badge,.date-badge{display:none}
-  .content{display:flex;flex-direction:column;flex:1;min-height:0;padding:10px;overflow:hidden}
-  .home{flex:1;min-height:0;overflow:auto}
-  .summary,.modules{grid-template-columns:1fr}
-  /* Fill the available screen; scroll the embedded module inside its frame. */
-  .frame-wrap{display:flex;flex:1 1 auto;flex-direction:column;width:100%;height:auto;min-height:0;overflow:hidden}
-  #pageFrame{display:block;flex:1 1 auto;width:100%;height:auto;min-height:0;border:0;background:#fff;overflow:auto;-webkit-overflow-scrolling:touch}
-.menu-overlay{
-    display:block;
-    position:fixed;
-    inset:76px 0 0 0;
-    z-index:1000;
-    background:#0007;
-    opacity:0;
-    pointer-events:none;
-    transition:opacity .25s ease;
-  }
-  .menu-overlay.show{
-    opacity:1;
-    pointer-events:auto;
-  }
-}
-</style>
+body{margin:0;background:#f3f7f4;color:#17221b;font-family:"Noto Sans Kannada","Nirmala UI",Arial,sans-serif}
+.school-header{text-align:center;background:#fff;padding:16px 12px 12px;border-bottom:1px solid #d8e2dc}
+.school-header .dept{font-size:24px;font-weight:800;line-height:1.35}
+.school-header .school{font-size:23px;font-weight:800;line-height:1.35}
+.school-header .year{font-size:20px;font-weight:800;line-height:1.35}
+.wrap{max-width:1500px;margin:18px auto;padding:0 14px}
+.tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+.tab{padding:11px 18px;border:1px solid #ccd8d0;border-radius:8px;background:#fff;font-weight:800;cursor:pointer}
+.tab.active{background:#146c3a;color:#fff;border-color:#146c3a}
+.card{background:#fff;border:1px solid #d7e2da;border-radius:12px;padding:16px;margin-bottom:14px;box-shadow:0 2px 8px #0000000b}
+h2{margin:0 0 14px}
+.grid{display:grid;grid-template-columns:repeat(5,minmax(150px,1fr));gap:10px}
+label{display:block;font-weight:700;font-size:13px;margin-bottom:5px}
+input,select{width:100%;height:42px;padding:8px 10px;border:1px solid #cbd5ce;border-radius:7px;font:inherit;background:#fff}
+input:disabled{background:#f1f5f2;color:#4b5a51}
+button{border:0;border-radius:7px;padding:10px 14px;font:inherit;font-weight:800;cursor:pointer}
+.primary{background:#146c3a;color:#fff}.secondary{background:#e8efeb}.danger{background:#fee2e2;color:#991b1b}
+.actions{display:flex;gap:8px;align-items:end;flex-wrap:wrap}
+.small{font-size:12px;color:#65736a}
+.notice{background:#fff7ed;border:1px solid #fed7aa;border-radius:8px;padding:9px;margin-top:10px}
+.table-wrap{overflow:auto;border:1px solid #d7e2da;border-radius:8px}
+table{border-collapse:collapse;width:100%;min-width:1250px}
+th,td{border:1px solid #cfd8d2;padding:6px;text-align:center;white-space:nowrap;font-size:12px}
+thead tr.group th{background:#edf5ef;font-weight:800}
+thead tr.sub th{background:#f8faf9;font-weight:800}
+td input{height:34px;min-width:90px;text-align:right}
+.summary{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+.stat{border:1px solid #d7e2da;background:#f8fbf9;border-radius:8px;padding:9px 13px}.stat b{display:block;font-size:17px}
+.item-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.item-row{display:flex;gap:8px;align-items:center;border:1px solid #dbe5df;padding:7px;border-radius:8px}
+.item-row input{height:36px}.item-row .remove{padding:6px 9px}
+.empty{text-align:center;padding:25px;color:#68766d}
+.print-only{display:none}
+.print-report{background:#fff}
+.spacer-row td{padding:0!important}
+ .report-title{text-align:center;font-weight:800;font-size:18px;margin-bottom:8px}
+.report-header{text-align:center;margin-bottom:6px;border-bottom:1px solid #ddd;padding-bottom:6px}
+.report-header .dept{font-size:16px;font-weight:800;line-height:1.3}
+.report-header .school{font-size:15px;font-weight:800;line-height:1.3}
+.report-header .year{font-size:14px;font-weight:800;line-height:1.3}
+.balance-box{display:grid;grid-template-columns:repeat(3,1fr);border:1px solid #222;margin:8px 0}
+.balance-box div{padding:6px;border-right:1px solid #222;text-align:center}.balance-box div:last-child{border-right:0}
+@media(max-width:900px){.grid{grid-template-columns:1fr 1fr}.item-grid{grid-template-columns:1fr}}
+@media print{
+  @page{size:A4 landscape;margin:7mm}
+  body{background:#fff}
+  .no-print,.tabs{display:none!important}
+  .wrap{max-width:none;margin:0;padding:0}
+  .card{border:0;box-shadow:none;padding:0}
+  .school-header{display:none!important}
+  .report-header{padding:0 0 7px;margin-bottom:6px}
+  .report-header .dept{font-size:19px}
+  .report-header .school{font-size:18px}
+  .report-header .year{font-size:17px}
+  .print-only{display:block}
+  table{min-width:0;width:100%;table-layout:auto;border-collapse:collapse}
+  /* Print/PDF: table lines should match the on-screen Cash Book. */
+  .print-report table{border-collapse:collapse!important;border-spacing:0!important}
+  .print-report thead th,
+  .print-report tbody td{border:1px solid #cfd8d2!important}
+  .print-report tbody .spacer-row td{border:1px solid #cfd8d2!important}
+  th,td{font-size:11px;padding:5px 4px;line-height:1.15}
+  .report-title{font-size:20px;margin-bottom:8px}
+  .balance-box{font-size:12px}
+  .print-report{page-break-after:always;break-after:page}
+  .print-report:last-child{page-break-after:auto;break-after:auto}
+}</style>
 </head>
 <body>
 
-<div class="app">
+<header class="school-header">
+  <div class="dept" id="departmentName">ಇಲಾಖೆಯ ಹೆಸರು</div>
+  <div class="school" id="schoolName">ಶಾಲೆಯ ಹೆಸರು</div>
+  <div class="year">ವರ್ಷ: <span id="academicYear">-</span></div>
+</header>
 
-  <aside class="sidebar">
-    <div class="brand">
-      <div class="brand-row">
-        <div class="logo">🍚</div>
+<div class="wrap">
+  <div class="card no-print" style="margin-bottom:12px">
+    <div class="grid" style="grid-template-columns:260px minmax(260px,420px) 1fr;align-items:end">
+      <div>
+        <label>ಶೈಕ್ಷಣಿಕ ವರ್ಷ / Academic Year</label>
+        <select id="cashBookYearSelect">
+          <option value="">Loading...</option>
+        </select>
+      </div>
+      <div class="notice" style="margin:0">
+        <b>Cash Book Year</b><br>
+        ಆಯ್ಕೆ ಮಾಡಿದ ವರ್ಷದ JAMA / KHARCHU ಮಾತ್ರ ಇಲ್ಲಿ ಕಾಣುತ್ತದೆ. ಹಿಂದಿನ ವರ್ಷದ Closing → ಈ ವರ್ಷದ Opening automatic.
+      </div>
+    </div>
+  </div>
+
+  <div class="tabs no-print">
+    <button class="tab active" data-page="opening">Opening Balance</button>
+    <button class="tab" data-page="jama">ಜಮಾ Entry</button>
+    <button class="tab" data-page="kharchu">ಖರ್ಚು Entry</button>
+    <button class="tab" data-page="items">Item Master</button>
+    <button class="tab" data-page="reports">Reports / Print</button>
+  </div>
+
+  <section id="opening" class="page">
+    <div class="card">
+      <h2>ಪ್ರಾರಂಭಿಕ ಶಿಲ್ಕು (Opening Balance)</h2>
+      <p class="small">ಪ್ರತಿಯೊಂದು Itemಗೆ ಪ್ರತ್ಯೇಕ Opening Balance ನಮೂದಿಸಿ. Date ಇರುವುದಿಲ್ಲ. Save ಮಾಡಿದ ನಂತರ Lock ಆಗುತ್ತದೆ; ಬದಲಾಯಿಸಲು Edit ಒತ್ತಿ.</p>
+      <div id="openingItems" class="item-grid"></div>
+      <div class="balance-box" style="margin-top:12px">
+        <div>ಪ್ರಾರಂಭಿಕ ಶಿಲ್ಕು — ಒಟ್ಟು<br><b id="openingTotal">₹0.00</b></div>
+        <div>ಸ್ಥಿತಿ<br><b id="openingLockStatus">ಹೊಸದಾಗಿದೆ</b></div>
+      </div>
+      <div class="actions no-print" style="margin-top:12px">
+        <button id="openingSaveBtn" class="primary" onclick="saveOpeningBalance()">💾 Save</button>
+        <button id="openingEditBtn" class="secondary" onclick="editOpeningBalance()" style="display:none">✏️ Edit</button>
+      </div>
+      <div id="openingStatus" class="notice" style="display:none"></div>
+    </div>
+  </section>
+
+  <section id="jama" class="page">
+    <div class="card no-print">
+      <h2>ಜಮಾ Entry</h2>
+      <div class="grid" style="grid-template-columns:220px 300px 1fr;">
+        <div><label>ದಿನಾಂಕ</label><input id="jamaDate" type="date"></div>
+        <div><label>ವಿವರ</label><input id="jamaDesc" type="text" placeholder="ಈ ದಿನದ ಜಮಾ ವಿವರ"></div>
         <div>
-          <h1 id="sideDepartment">ಅಕ್ಷರ ದಾಸೋಹ</h1>
-          <p>MDM Management</p>
+          <label>ಈ ದಿನದ JAMA Items — ಬೇಕಾದಷ್ಟು Amount ಹಾಕಿ</label>
+          <div id="jamaEntryItems" class="item-grid"></div>
         </div>
       </div>
+      <div class="actions" style="margin-top:12px">
+        <button class="primary" onclick="saveBulkEntry('jama')">💾 ಈ ದಿನದ JAMA Save</button>
+        <button class="secondary" onclick="clearBulkEntry('jama')">Clear</button>
+      </div>
+      <div class="notice">ಒಂದೇ Date ಆಯ್ಕೆ ಮಾಡಿ 1, 2, 3, 4... ಎಷ್ಟು Items ಬೇಕಾದರೂ Amount ಹಾಕಿ ಒಂದೇ ಬಾರಿ Save ಮಾಡಬಹುದು.</div>
     </div>
-
-    <nav class="nav">
-      <div class="nav-title">ಮುಖ್ಯ ನಿಯಂತ್ರಣ</div>
-
-      <button class="nav-btn active" data-file="" data-title="Dashboard (Home)" onclick="openModule(this)">
-        <span class="nav-icon">📊</span><span>ಡ್ಯಾಶ್‌ಬೋರ್ಡ್ (Home)</span>
-      </button>
-
-      <div class="nav-title">ದೈನಂದಿನ ಕಾರ್ಯಗಳು</div>
-
-      <button class="nav-btn" data-file="daily-food-distribution.html" data-title="ದಿನವಹಿ ಆಹಾರ ವಿತರಣೆ" onclick="openModule(this)">
-        <span class="nav-icon">🍚</span><span>ದಿನವಹಿ ಆಹಾರ ವಿತರಣೆ</span>
-      </button>
-
-      <button class="nav-btn" data-file="daily-items-food-calculation.html" data-title="Daily Items & Food Calculation" onclick="openModule(this)">
-        <span class="nav-icon">⚖️</span><span>Daily Food Calculation</span>
-      </button>
-
-      <button class="nav-btn" data-file="cash-book.html" data-title="Cash Book" onclick="openModule(this)">
-        <span class="nav-icon">💰</span><span>Cash Book</span>
-      </button>
-
-      <div class="nav-title">ಸೆಟ್ಟಿಂಗ್ಸ್ & ದಾಖಲೆ</div>
-
-      <button class="nav-btn" data-file="students-number.html" data-title="Students Number" onclick="openModule(this)">
-        <span class="nav-icon">🎓</span><span>Students Number</span>
-      </button>
-
-      <button class="nav-btn" data-file="calculation-settings.html" data-title="Calculation Settings" onclick="openModule(this)">
-        <span class="nav-icon">⚙️</span><span>Calculation Settings</span>
-      </button>
-
-      <button class="nav-btn" data-file="item-availability.html" data-title="Item Availability / ಪದಾರ್ಥ ಲಭ್ಯತೆ" onclick="openModule(this)">
-        <span class="nav-icon">📦</span><span>Item Availability</span>
-      </button>
-
-      <button class="nav-btn" data-file="monthly-items-student-summary.html" data-title="Monthly Summary" onclick="openModule(this)">
-        <span class="nav-icon">📑</span><span>Monthly Summary</span>
-      </button>
-
-      <button class="nav-btn" data-file="school-settings.html" data-title="ಶಾಲಾ ಸೆಟ್ಟಿಂಗ್ಸ್" onclick="openModule(this)">
-        <span class="nav-icon">🏫</span><span>ಶಾಲಾ ಸೆಟ್ಟಿಂಗ್ಸ್</span>
-      </button>
-    </nav>
-
-    <div style="padding:12px 12px 0">
-      <button class="nav-btn" type="button" onclick="logout()" style="background:#8b1e1e;color:#fff;justify-content:center;">
-        <span class="nav-icon">🚪</span><span>Logout</span>
-      </button>
+    <div class="card">
+      <div class="summary" id="jamaSummary"></div>
+      <div class="table-wrap"><table><thead id="jamaHead"></thead><tbody id="jamaBody"></tbody></table></div>
     </div>
+  </section>
 
-    <div class="sidebar-bottom">
-      ರಚನೆ:- ಈರಪ್ಪ ಸಿ<br>
-      Mobile No: 7259515753
-    </div>
-  </aside>
-
-  <main class="main">
-
-    <header class="topbar">
-      <button class="mobile-menu-toggle" type="button" aria-label="Open menu" aria-expanded="false" onclick="toggleMobileMenu()">☰</button>
-      <div class="mobile-logo" aria-hidden="true">🍚</div>
-      <div class="top-title">
+  <section id="kharchu" class="page" style="display:none">
+    <div class="card no-print">
+      <h2>ಖರ್ಚು Entry</h2>
+      <div class="grid" style="grid-template-columns:220px 300px 1fr;">
+        <div><label>ದಿನಾಂಕ</label><input id="khDate" type="date"></div>
+        <div><label>ವಿವರ</label><input id="khDesc" type="text" placeholder="ಈ ದಿನದ ಖರ್ಚಿನ ವಿವರ"></div>
         <div>
-          <h2 id="topDepartment">ಅಕ್ಷರ ದಾಸೋಹ ಕಾರ್ಯಕ್ರಮ</h2>
-          <p id="topSchool">ಶಾಲೆಯ ಹೆಸರು</p>
+          <label>ಈ ದಿನದ KHARCHU Items — ಬೇಕಾದಷ್ಟು Amount ಹಾಕಿ</label>
+          <div id="khEntryItems" class="item-grid"></div>
         </div>
       </div>
-      <div class="top-right-info">
-        
-        <div class="year-badge">Academic Year: <span id="academicYear">Loading...</span></div>
-        <div class="date-badge" id="todayDate">Loading...</div>
+      <div class="actions" style="margin-top:12px">
+        <button class="primary" onclick="saveBulkEntry('kharchu')">💾 ಈ ದಿನದ ಖರ್ಚು Save</button>
+        <button class="secondary" onclick="clearBulkEntry('kharchu')">Clear</button>
       </div>
-    </header>
+      <div class="notice">ಒಂದೇ Date ಆಯ್ಕೆ ಮಾಡಿ 1, 2, 3, 4... ಎಷ್ಟು Items ಬೇಕಾದರೂ Amount ಹಾಕಿ ಒಂದೇ ಬಾರಿ Save ಮಾಡಬಹುದು.</div>
+    </div>
+    <div class="card">
+      <div class="summary" id="khSummary"></div>
+      <div class="table-wrap"><table><thead id="khHead"></thead><tbody id="khBody"></tbody></table></div>
+    </div>
+  </section>
 
-    <section class="content" id="content">
-
-      <!-- HOME -->
-      <div class="home" id="homePage">
-
-        <div class="summary">
-          <div class="stat">
-            <div class="stat-label">ವಿದ್ಯಾರ್ಥಿಗಳು (Students)</div>
-            <div class="stat-value" id="studentTotal">0</div>
-            <div class="stat-note">ವಿದ್ಯಾರ್ಥಿಗಳ ಒಟ್ಟು ಸಂಖ್ಯೆ</div>
-          </div>
-
-          <div class="stat">
-            <div class="stat-label">ವಿತರಿಸಿದ ಬಿಸಿಊಟ</div>
-            <div class="stat-value" id="foodTotal">0</div>
-            <div class="stat-note" id="foodTodayNote">ಇಂದಿನ ಹಾಜರಾತಿ ಮಕ್ಕಳು</div>
-          </div>
-
-          <div class="stat">
-            <div class="stat-label">ಪದಾರ್ಥಗಳ ಸಂಖ್ಯೆ</div>
-            <div class="stat-value" id="itemTotal">0</div>
-            <div class="stat-note">Calculation Settings</div>
-          </div>
-
-          <div class="stat">
-            <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
-              <div class="stat-label">Cash Book ಶಿಲ್ಕು</div>
-              <button onclick="refreshCashBalance()" style="border:0;border-radius:7px;padding:5px 9px;background:#e5ece7;color:#126b38;font-weight:700;cursor:pointer;">↻ Refresh</button>
-            </div>
-            <div class="stat-value" id="cashBalance">₹0.00</div>
-            <div class="stat-note">ಅಂತಿಮ ನಗದು ಶಿಲ್ಕು</div>
-          </div>
-        </div>
-
-        <!-- ಆಹಾರ ಪದಾರ್ಥಗಳು ಮಾತ್ರ -->
-        <h2 class="modules-title">📦 ಆಹಾರ ಪದಾರ್ಥಗಳ ಉಳಿಕೆ</h2>
-        <div class="items-balance-box">
-          <div class="items-balance-head">
-            <div>
-              <b>Items (ಆಹಾರ ಪದಾರ್ಥಗಳು)</b>
-              <div class="items-balance-note" id="itemsBalanceMonth">ಪ್ರಸ್ತುತ ತಿಂಗಳ ಉಳಿಕೆ</div>
-            </div>
-            <button class="refresh-items" onclick="loadItemClosings()">↻ Refresh</button>
-          </div>
-          <div class="item-cards" id="itemClosingCards">
-            <div class="item-card-empty">ಆಹಾರ ಪದಾರ್ಥಗಳ ಉಳಿಕೆ Loading...</div>
-          </div>
-          <div id="itemClosingStatus" class="items-status"></div>
-        </div>
-
-        <!-- ಪ್ರತಿ ದಿನದ ಬಿಸಿಊಟ ಮಕ್ಕಳ ಸಂಖ್ಯೆ -->
-        <h2 class="modules-title daily-title">🍚 ಪ್ರತಿ ದಿನದ ಬಿಸಿಊಟ ಮಕ್ಕಳ ಸಂಖ್ಯೆ</h2>
-        <div class="daily-food-box">
-          <div class="daily-food-head">
-            <div>
-              <b>ದಿನಾಂಕ — ವಾರ — ಬಿಸಿಊಟ ಪಡೆದ ಮಕ್ಕಳ ಸಂಖ್ಯೆ</b>
-              <div class="items-balance-note" id="dailyFoodMonth">Loading...</div>
-            </div>
-            <button class="refresh-items" onclick="loadDailyFoodCounts()">↻ Refresh</button>
-          </div>
-          <div class="daily-food-table-wrap">
-            <table class="daily-food-table">
-              <thead>
-                <tr>
-                  <th>ದಿನಾಂಕ</th>
-                  <th>ವಾರ</th>
-                  <th>ಬಿಸಿಊಟ ಮಕ್ಕಳ ಸಂಖ್ಯೆ</th>
-                </tr>
-              </thead>
-              <tbody id="dailyFoodBody">
-                <tr><td colspan="3" class="items-empty">Daily Food data Loading...</td></tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-
+  <section id="items" class="page" style="display:none">
+    <div class="card no-print">
+      <h2>Item Master</h2>
+      <p class="small">Excel‌ನ title, school name, date, formula ಮತ್ತು totals Item ಆಗಿ ಬರುವುದಿಲ್ಲ. ಕೆಳಗಿನ ನಿಜವಾದ Item columns ಮಾತ್ರ ಬಳಸಲಾಗುತ್ತವೆ. ಹೊಸ Item ಸೇರಿಸಿದರೆ JAMA/KHARCHU ಎರಡೂ ಕಡೆ ಬರುತ್ತದೆ.</p>
+      <div id="itemList" class="item-grid"></div>
+      <div style="margin-top:12px;display:flex;gap:8px">
+        <input id="newItem" placeholder="ಹೊಸ Item ಹೆಸರು">
+        <button class="primary" onclick="addItem()">+ ಹೊಸ Item</button>
       </div>
+    </div>
+  </section>
 
-      <!-- ALL HTML PAGES OPEN HERE, WITHOUT LEAVING DASHBOARD -->
-      <div class="frame-wrap" id="frameWrap" style="display:none">
-        <div class="frame-head">
-          <b id="frameTitle">ವಿಭಾಗ</b>
-          <div class="frame-actions">
-            <button onclick="goHome()">⌂ Dashboard</button>
-            <button onclick="reloadFrame()">↻ Reload</button>
-          </div>
-        </div>
-        <iframe id="pageFrame" title="Dashboard Module"></iframe>
+  <section id="reports" class="page" style="display:none">
+    <div class="card no-print">
+      <h2>Reports / Print</h2>
+      <div class="grid">
+        <div><label>From Date</label><input id="fromDate" type="date"></div>
+        <div><label>To Date</label><input id="toDate" type="date"></div>
+        <div><label>Print</label><select id="reportType"><option value="both">JAMA + KHARCHU</option><option value="jama">JAMA</option><option value="kharchu">KHARCHU</option></select></div>
+        <div class="actions"><button class="primary" onclick="printReport()">🖨️ Print</button><button class="primary" onclick="exportExcel()">📊 Excel Export</button></div>
       </div>
-
-    </section>
-  </main>
+      <p class="small">ನೀವು Entry ಮಾಡಿದ ದಿನಾಂಕಗಳು ಮಾತ್ರ ಬರುತ್ತವೆ. ಪ್ರತಿದಿನದ date automatic ಆಗಿ ಬರುವುದಿಲ್ಲ.</p>
+      <p class="small">ಮೊದಲ ಬಾರಿಗೆ ಮಾತ್ರ Opening Balance ಹಾಕಬೇಕು. ನಂತರ ಹಿಂದಿನ Closing Balance ಮುಂದಿನ Entry ದಿನದ Opening Balance ಆಗಿ automatic ಆಗುತ್ತದೆ.</p>
+    </div>
+    <div id="reportPreview"></div>
+  </section>
 </div>
-<div id="menuOverlay" class="menu-overlay" onclick="closeMobileMenu()"></div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script>
 const SUPABASE_URL="https://ezmudfrpcvjsgnjibvoq.supabase.co";
-const SUPABASE_KEY="sb_publishable__FYyH6NQaqgARaq2dvuovQ_rKmus0js";
-const db=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+const SUPABASE_ANON_KEY="sb_publishable__FYyH6NQaqgARaq2dvuovQ_rKmus0js";
+const db=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
 
-let selectedFile="";
+const DEFAULT_ITEMS=[
+  "ಪೋಷಣಾ ಶಕ್ತಿ - ಸರ್ಕಾರಿ","ಪೋಷಣಾ ಶಕ್ತಿ - APF","ಉಪ್ಪು",
+  "ತರಕಾರಿ - 8","ತರಕಾರಿ - 9-10","ಸಾಂಬಾರು - 8","ಸಾಂಬಾರು - 9-10",
+  "ಅನಿಲ - 8","ಅನಿಲ - 9-10","ಗೋದಿ","ಗ್ಯಾಸ್",
+  "ಕ್ಷೀರಭಾಗ್ಯ - ಸಕ್ಕರೆ","ಕ್ಷೀರಭಾಗ್ಯ - ಇತರೆ","ಇತರೆ - ಅನಿಲ","ಇತರೆ","ಬಡ್ಡಿ"
+];
+
+let state={
+  items:DEFAULT_ITEMS.slice(),
+  jama:[],
+  kharchu:[],
+  openingBalance:null
+};
+
 let currentSchoolId=null;
 let currentSchoolUserId=null;
 
-function $(id){return document.getElementById(id)}
-function money(v){return "₹"+Number(v||0).toLocaleString("en-IN",{minimumFractionDigits:2,maximumFractionDigits:2})}
+let academicYears=[];
+let selectedYear="";
+let selectedYearId=null;
+let firstAcademicYear="";
+let loading=false;
+let editMode={type:null,date:null};
 
-function setActive(button){
-  document.querySelectorAll(".nav-btn").forEach(x=>x.classList.remove("active"));
-  if(button) button.classList.add("active");
+function money(n){
+  return '₹'+Number(n||0).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2})
 }
-
-function toggleMobileMenu(){
-  const sidebar=document.querySelector(".sidebar");
-  const overlay=$("menuOverlay");
-  const button=document.querySelector(".mobile-menu-toggle");
-  const open=sidebar.classList.toggle("mobile-open");
-  overlay.classList.toggle("show",open);
-  if(button)button.setAttribute("aria-expanded",open?"true":"false");
+function esc(s){
+  return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]))
 }
-function closeMobileMenu(){
-  const sidebar=document.querySelector(".sidebar");
-  const overlay=$("menuOverlay");
-  const button=document.querySelector(".mobile-menu-toggle");
-  sidebar.classList.remove("mobile-open");
-  overlay.classList.remove("show");
-  if(button)button.setAttribute("aria-expanded","false");
+function safeDate(s){return /^\d{4}-\d{2}-\d{2}$/.test(s||'')}
+function displayDate(s){
+  if(!safeDate(s)) return s||'';
+  const [y,m,d]=s.split('-');
+  return `${d}-${m}-${y}`;
 }
-function openByFile(file,title){
-  closeMobileMenu();
-  const btn=[...document.querySelectorAll(".nav-btn")].find(x=>x.dataset.file===file);
-  if(btn) setActive(btn);
-  selectedFile=file;
-  $("homePage").style.display="none";
-  $("frameWrap").style.display="flex";
-  $("frameTitle").textContent=title;
-  $("pageFrame").src=file;
+function yearNumber(y){
+  const m=String(y||'').match(/^(\d{4})-(\d{2,4})$/);
+  return m?Number(m[1]):999999;
 }
-
-function openModule(button){
-  const file=button.dataset.file;
-  setActive(button);
-  if(!file){goHome();return}
-  openByFile(file,button.dataset.title);
+function previousAcademicYearName(year){
+  const idx=academicYears.findIndex(x=>x.year_name===year);
+  return idx>0?academicYears[idx-1].year_name:null;
+}
+function dates(){
+  return [...new Set([...state.jama,...state.kharchu].map(x=>x.date).filter(Boolean))].sort()
+}
+function allDates(from,to){
+  return dates().filter(d=>(!from||d>=from)&&(!to||d<=to))
+}
+function totalsForDate(date){
+  const j=state.jama.filter(x=>x.date===date).reduce((s,x)=>s+Number(x.amount||0),0);
+  const k=state.kharchu.filter(x=>x.date===date).reduce((s,x)=>s+Number(x.amount||0),0);
+  return {j,k};
 }
 
-function goHome(){
-  closeMobileMenu();
-  selectedFile="";
-  $("pageFrame").src="about:blank";
-  $("frameWrap").style.display="none";
-  $("homePage").style.display="block";
-  const home=document.querySelector('.nav-btn[data-file=""]');
-  setActive(home);
-  $("content").scrollTop=0;
-}
-
-function reloadFrame(){
-  if(selectedFile){
-    $("pageFrame").src=selectedFile;
-  }
-}
-
-function updateTodayDate(){
-  const now=new Date();
-  const dd=String(now.getDate()).padStart(2,"0");
-  const mm=String(now.getMonth()+1).padStart(2,"0");
-  const yyyy=now.getFullYear();
-  const weekdays=["ಭಾನುವಾರ","ಸೋಮವಾರ","ಮಂಗಳವಾರ","ಬುಧವಾರ","ಗುರುವಾರ","ಶುಕ್ರವಾರ","ಶನಿವಾರ"];
-  $("todayDate").textContent=`${dd}-${mm}-${yyyy} ${weekdays[now.getDay()]}`;
-}
-
+/* =========================================================
+   SUPABASE: YEAR LIST + SCHOOL SETTINGS
+========================================================= */
 async function loadCurrentSchool(){
-  try{
-    const {data:{user},error:authError}=await db.auth.getUser();
-    if(authError)throw authError;
-    if(!user){
-      window.location.href="login.html";
-      return null;
-    }
+  const {data:{user},error:userError}=await db.auth.getUser();
+  if(userError)throw userError;
+  if(!user)throw new Error("Login session ಇಲ್ಲ. ದಯವಿಟ್ಟು Login ಮಾಡಿ.");
 
-    const {data:su,error:suError}=await db.from("school_users")
-      .select("id,school_id,role,is_active")
-      .eq("user_id",user.id)
-      .maybeSingle();
+  const {data:su,error:suError}=await db.from("school_users")
+    .select("id,user_id,school_id,role,is_active")
+    .eq("user_id",user.id)
+    .eq("is_active",true)
+    .maybeSingle();
 
-    if(suError)throw suError;
-
-    if(!su || !su.is_active){
-      await db.auth.signOut();
-      alert("ಈ login accountಗೆ system access ನೀಡಲಾಗಿಲ್ಲ.");
-      window.location.href="login.html";
-      return null;
-    }
-
-    currentSchoolUserId=su.id;
-    currentSchoolId=su.school_id;
-
-    if(su.role==="admin"){
-      // Dashboard is intended for school users. Keep Admin Panel separate.
-      window.location.href="admin.html";
-      return null;
-    }
-
-    return su;
-  }catch(e){
-    console.error("School session failed:",e);
-    alert("ಶಾಲೆಯ login ಮಾಹಿತಿ ಪಡೆಯಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ.");
-    await db.auth.signOut().catch(()=>{});
-    window.location.href="login.html";
-    return null;
+  if(suError)throw suError;
+  if(!su)throw new Error("ಈ Loginಗೆ School access ಇಲ್ಲ.");
+  if(su.role==="admin"){
+    window.location.href="admin.html";
+    throw new Error("Admin dashboardಗೆ redirect ಆಗುತ್ತಿದೆ.");
   }
+
+  currentSchoolId=su.school_id;
+  currentSchoolUserId=su.user_id;
+  if(!currentSchoolId)throw new Error("School ID ಸಿಗಲಿಲ್ಲ.");
 }
 
-async function loadSchool(){
-  try{
-    let query=db.from("school_settings").select("*").order("created_at",{ascending:false}).limit(1);
-    if(currentSchoolId)query=query.eq("school_id",currentSchoolId);
-    const {data}=await query.maybeSingle();
-    if(data){
-      $("topDepartment").textContent=data.department_name||"ಅಕ್ಷರ ದಾಸೋಹ ಕಾರ್ಯಕ್ರಮ";
-      $("topSchool").textContent=data.school_name||"ಶಾಲೆಯ ಹೆಸರು";
-      $("sideDepartment").textContent=data.department_name||"ಅಕ್ಷರ ದಾಸೋಹ";
-    }
-  }catch(e){console.log(e)}
-}
+async function loadSchoolAndYears(){
+  const [yearsRes,schoolRes]=await Promise.all([
+    db.from("academic_years").select("id,year_name,is_active,created_at").order("created_at",{ascending:true}),
+    db.from("school_settings").select("department_name,school_name,academic_year").eq("school_id",currentSchoolId).order("created_at",{ascending:true}).limit(1).maybeSingle()
+  ]);
 
-async function loadYear(){
-  try{
-    const {data}=await db.from("academic_years").select("id,year_name,is_active,created_at").order("created_at",{ascending:true});
-    const active=(data||[]).find(x=>x.is_active)||(data||[]).at(-1);
-    $("academicYear").textContent=active?.year_name||"Active Year ಇಲ್ಲ";
-    return active;
-  }catch(e){
-    $("academicYear").textContent="Loading failed";
-    return null;
+  if(yearsRes.error) throw yearsRes.error;
+  academicYears=(yearsRes.data||[]).filter(x=>x.year_name).sort((a,b)=>{
+    const na=yearNumber(a.year_name),nb=yearNumber(b.year_name);
+    return na-nb || String(a.year_name).localeCompare(String(b.year_name));
+  });
+
+  document.getElementById('departmentName').textContent=schoolRes.data?.department_name||'ಇಲಾಖೆಯ ಹೆಸರು';
+  document.getElementById('schoolName').textContent=schoolRes.data?.school_name||'ಶಾಲೆಯ ಹೆಸರು';
+
+  const active=(academicYears.find(x=>x.is_active)?.year_name)||schoolRes.data?.academic_year||academicYears[0]?.year_name||"";
+  firstAcademicYear=academicYears[0]?.year_name||active||"";
+
+  const remembered=localStorage.getItem('cashbook_selected_year_'+currentSchoolId);
+  selectedYear=(academicYears.some(x=>x.year_name===remembered)?remembered:active);
+  if(!selectedYear && academicYears[0])selectedYear=academicYears[0].year_name;
+
+  const row=academicYears.find(x=>x.year_name===selectedYear);
+  selectedYearId=row?.id||null;
+
+  renderYearSelect();
+  updateHeaderYear();
+}
+function renderYearSelect(){
+  const el=document.getElementById('cashBookYearSelect');
+  if(!el)return;
+  if(!academicYears.length){
+    el.innerHTML='<option value="">Academic Year ಇಲ್ಲ</option>';
+    return;
   }
+  el.innerHTML=academicYears.map(y=>`<option value="${esc(y.year_name)}">${esc(y.year_name)}${y.is_active?' — Active':''}</option>`).join('');
+  el.value=selectedYear;
+}
+function updateHeaderYear(){
+  document.getElementById('academicYear').textContent=selectedYear||'—';
 }
 
-async function loadStudents(year){
-  if(!year)return;
-  try{
-    const month=new Date().getMonth()+1;
-    let query=db.from("student_numbers")
-      .select("class_number,total_students,boys,girls,month_number,division_name")
-      .eq("academic_year_id",year.id);
-    if(currentSchoolId)query=query.eq("school_id",currentSchoolId);
-    const {data}=await query
-      .eq("month_number",month)
-      .eq("division_name","ALL");
-    let total=0;
-    const seen=new Set();
-    (data||[]).forEach(r=>{
-      const c=String(r.class_number);
-      if(seen.has(c))return;
-      seen.add(c);
-      total+=Number(r.total_students||Number(r.boys||0)+Number(r.girls||0));
-    });
-    $("studentTotal").textContent=total;
-  }catch(e){console.log(e)}
-}
-
-async function loadFood(year){
-  if(!year)return;
-  const today=new Date();
-  const todayKey=`${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,"0")}-${String(today.getDate()).padStart(2,"0")}`;
-  try{
-    let query=db.from("daily_food_distribution")
-      .select("distribution_date,item_name,students_count,total_quantity")
-      .eq("academic_year_id",year.id);
-    if(currentSchoolId)query=query.eq("school_id",currentSchoolId);
-    const {data,error}=await query
-      .eq("distribution_date",todayKey)
-      .eq("item_name","ಹಾಜರಾತಿ||ALL")
-      .maybeSingle();
-
-    if(error)throw error;
-    const count=Number(data?.students_count ?? data?.total_quantity ?? 0);
-    $("foodTotal").textContent=count;
-    $("foodTodayNote").textContent=`${todayKey.split("-").reverse().join("-")} — ಇಂದಿನ ಹಾಜರಾತಿ`;
-  }catch(e){
-    console.log(e);
-    $("foodTotal").textContent="0";
-    $("foodTodayNote").textContent="ಇಂದಿನ ಹಾಜರಾತಿ";
-  }
-}
-
-async function loadItems(year){
-  try{
-    let query=db.from("calculation_settings").select("*");
-    if(currentSchoolId)query=query.eq("school_id",currentSchoolId);
-    const {data,error}=await query;
-    if(!error)$("itemTotal").textContent=(data||[]).length;
-  }catch(e){console.log(e)}
-}
-
-async function loadCash(year){
-  if(!year)return;
-  try{
-    let jamaQuery=db.from("cash_book_entries").select("amount").eq("academic_year",year.year_name).eq("entry_type","jama");
-    let kharchuQuery=db.from("cash_book_entries").select("amount").eq("academic_year",year.year_name).eq("entry_type","kharchu");
-    let openingQuery=db.from("cash_book_opening_balances").select("amount").eq("academic_year",year.year_name);
-    if(currentSchoolId){
-      jamaQuery=jamaQuery.eq("school_id",currentSchoolId);
-      kharchuQuery=kharchuQuery.eq("school_id",currentSchoolId);
-      openingQuery=openingQuery.eq("school_id",currentSchoolId);
-    }
-    const [j,k,o]=await Promise.all([jamaQuery,kharchuQuery,openingQuery]);
-    if(j.error||k.error||o.error)throw new Error("Cash tables");
-    const opening=(o.data||[]).reduce((s,r)=>s+Number(r.amount||0),0);
-    const jama=(j.data||[]).reduce((s,r)=>s+Number(r.amount||0),0);
-    const kharchu=(k.data||[]).reduce((s,r)=>s+Number(r.amount||0),0);
-    $("cashBalance").textContent=money(opening+jama-kharchu);
-  }catch(e){console.log(e)}
-}
-
-
-async function refreshCashBalance(){
-  try{
-    const year=await getActiveYear();
-    if(year) await loadCash(year);
-  }catch(e){
-    console.log(e);
-  }
-}
-
-function academicStartYear(name){
-  const m=String(name||"").match(/\d{4}/);
-  return m?Number(m[0]):new Date().getFullYear();
-}
-
-function currentReportYear(month,yearName){
-  const start=academicStartYear(yearName);
-  return Number(month)>=6?start:start+1;
-}
-
-function escapeHtml(v){
-  return String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
-}
-
-function academicStartYear(name){
-  const m=String(name||"").match(/\d{4}/);
-  return m?Number(m[0]):new Date().getFullYear();
-}
-
-function currentReportYear(month,yearName){
-  const start=academicStartYear(yearName);
-  return Number(month)>=6?start:start+1;
-}
-
-async function getActiveYear(){
-  const {data,error}=await db.from("academic_years")
-    .select("id,year_name,is_active,created_at")
+/* =========================================================
+   SUPABASE: ITEMS
+========================================================= */
+async function loadItems(){
+  const {data,error}=await db.from("cash_book_items")
+    .select("id,item_name,sort_order,created_at")
+    .eq("school_id",currentSchoolId)
+    .order("sort_order",{ascending:true})
     .order("created_at",{ascending:true});
   if(error)throw error;
-  return (data||[]).find(x=>x.is_active)||(data||[]).at(-1)||null;
+
+  if((data||[]).length){
+    state.items=data.map(x=>x.item_name).filter(x=>x && x!=="ಒಟ್ಟು");
+  }else{
+    const payload=DEFAULT_ITEMS.map((item,i)=>({school_id:currentSchoolId,item_name:item,sort_order:i}));
+    const ins=await db.from("cash_book_items").insert(payload);
+    if(ins.error)throw ins.error;
+    state.items=DEFAULT_ITEMS.slice();
+  }
 }
 
-async function loadItemClosings(){
-  const box=$("itemClosingCards"),note=$("itemsBalanceMonth"),status=$("itemClosingStatus");
-  box.innerHTML='<div class="item-card-empty">ಆಹಾರ ಪದಾರ್ಥಗಳ ಉಳಿಕೆ Loading...</div>';
-  status.textContent="";
+/* =========================================================
+   SUPABASE: YEAR DATA
+========================================================= */
+async function loadYearData(){
+  state.jama=[];
+  state.kharchu=[];
+  state.openingBalance=null;
+
+  const [jRes,kRes,oRes]=await Promise.all([
+    db.from("cash_book_entries").select("id,academic_year,entry_type,entry_date,item_name,amount,details,created_at")
+      .eq("school_id",currentSchoolId).eq("academic_year",selectedYear).eq("entry_type","jama").order("entry_date",{ascending:true}).order("created_at",{ascending:true}),
+    db.from("cash_book_entries").select("id,academic_year,entry_type,entry_date,item_name,amount,details,created_at")
+      .eq("school_id",currentSchoolId).eq("academic_year",selectedYear).eq("entry_type","kharchu").order("entry_date",{ascending:true}).order("created_at",{ascending:true}),
+    db.from("cash_book_opening_balances").select("id,academic_year,item_name,amount,created_at")
+      .eq("school_id",currentSchoolId).eq("academic_year",selectedYear).order("created_at",{ascending:true})
+  ]);
+  if(jRes.error)throw jRes.error;
+  if(kRes.error)throw kRes.error;
+  if(oRes.error)throw oRes.error;
+
+  state.jama=(jRes.data||[]).map(x=>({
+    id:x.id,date:x.entry_date,item:x.item_name,amount:Number(x.amount||0),desc:x.details||'',createdAt:x.created_at
+  }));
+  state.kharchu=(kRes.data||[]).map(x=>({
+    id:x.id,date:x.entry_date,item:x.item_name,amount:Number(x.amount||0),desc:x.details||'',createdAt:x.created_at
+  }));
+
+  if((oRes.data||[]).length){
+    state.openingBalance={};
+    (oRes.data||[]).forEach(x=>state.openingBalance[x.item_name]=Number(x.amount||0));
+  }
+
+  // Only the very first academic year needs a manually entered opening balance.
+  // Later years receive the previous year's final closing automatically.
+  if(selectedYear!==firstAcademicYear){
+    const prev=previousAcademicYearName(selectedYear);
+    if(prev){
+      const prevClosing=await calculateYearClosing(prev);
+      if(prevClosing){
+        state.openingBalance=prevClosing;
+      }
+    }
+  }
+
+  await migrateLegacyLocalDataIfNeeded();
+}
+async function calculateYearClosing(year){
+  const [jRes,kRes,oRes]=await Promise.all([
+    db.from("cash_book_entries").select("entry_date,item_name,amount").eq("school_id",currentSchoolId).eq("academic_year",year).eq("entry_type","jama").order("entry_date",{ascending:true}),
+    db.from("cash_book_entries").select("entry_date,item_name,amount").eq("school_id",currentSchoolId).eq("academic_year",year).eq("entry_type","kharchu").order("entry_date",{ascending:true}),
+    db.from("cash_book_opening_balances").select("item_name,amount").eq("school_id",currentSchoolId).eq("academic_year",year)
+  ]);
+  if(jRes.error)throw jRes.error;
+  if(kRes.error)throw kRes.error;
+  if(oRes.error)throw oRes.error;
+
+  const base={};
+  state.items.forEach(it=>base[it]=0);
+  (oRes.data||[]).forEach(x=>{if(Object.prototype.hasOwnProperty.call(base,x.item_name))base[x.item_name]=Number(x.amount||0)});
+
+  const all=[...(jRes.data||[]).map(x=>({...x,type:'jama'})),...(kRes.data||[]).map(x=>({...x,type:'kharchu'}))]
+    .sort((a,b)=>String(a.entry_date).localeCompare(String(b.entry_date)));
+  all.forEach(x=>{
+    if(!Object.prototype.hasOwnProperty.call(base,x.item_name))return;
+    const n=Number(x.amount||0);
+    base[x.item_name]+=x.type==='jama'?n:-n;
+  });
+  return base;
+}
+
+/* One-time migration from the old localStorage version, preserving current 2026-27 data.
+   It runs only when the selected year's Supabase data is empty. */
+async function migrateLegacyLocalDataIfNeeded(){
+  if(!selectedYear || localStorage.getItem('cashbook_supabase_migrated_'+currentSchoolId+'_'+selectedYear))return;
+
+  const localRaw=localStorage.getItem('cashbook_v2');
+  if(!localRaw)return;
+  let old;
+  try{old=JSON.parse(localRaw)}catch(e){return}
+  if(!old || !Array.isArray(old.items))return;
+
+  const remoteHasData=state.jama.length||state.kharchu.length||state.openingBalance;
+  if(remoteHasData){
+    localStorage.setItem('cashbook_supabase_migrated_'+currentSchoolId+'_'+selectedYear,'1');
+    return;
+  }
+
+  const oldOpening=old.openingBalance&&typeof old.openingBalance==="object"?old.openingBalance:null;
+  if(oldOpening && selectedYear===firstAcademicYear){
+    const payload=Object.entries(oldOpening)
+      .filter(([item])=>state.items.includes(item) && item!=="ಒಟ್ಟು")
+      .map(([item,amount])=>({school_id:currentSchoolId,academic_year:selectedYear,item_name:item,amount:Number(amount||0)}));
+    if(payload.length){
+      const r=await db.from("cash_book_opening_balances").upsert(payload,{onConflict:"school_id,academic_year,item_name"});
+      if(r.error)throw r.error;
+      state.openingBalance={};
+      payload.forEach(x=>state.openingBalance[x.item_name]=x.amount);
+    }
+  }
+
+  for(const type of ['jama','kharchu']){
+    const arr=Array.isArray(old[type])?old[type]:[];
+    for(const x of arr){
+      if(!safeDate(x.date)||!state.items.includes(x.item)||Number(x.amount||0)<=0)continue;
+      const row={
+        school_id:currentSchoolId,academic_year:selectedYear,entry_type:type,entry_date:x.date,
+        item_name:x.item,amount:Number(x.amount||0),details:x.desc||''
+      };
+      const r=await db.from("cash_book_entries").upsert(row,{onConflict:"school_id,academic_year,entry_type,entry_date,item_name"});
+      if(r.error)throw r.error;
+    }
+  }
+  localStorage.setItem('cashbook_supabase_migrated_'+currentSchoolId+'_'+selectedYear,'1');
+
+  // Reload after migration so IDs and server timestamps are present.
+  const [jRes,kRes]=await Promise.all([
+    db.from("cash_book_entries").select("id,academic_year,entry_type,entry_date,item_name,amount,details,created_at")
+      .eq("school_id",currentSchoolId).eq("academic_year",selectedYear).eq("entry_type","jama").order("entry_date",{ascending:true}),
+    db.from("cash_book_entries").select("id,academic_year,entry_type,entry_date,item_name,amount,details,created_at")
+      .eq("school_id",currentSchoolId).eq("academic_year",selectedYear).eq("entry_type","kharchu").order("entry_date",{ascending:true})
+  ]);
+  if(jRes.error)throw jRes.error;if(kRes.error)throw kRes.error;
+  state.jama=(jRes.data||[]).map(x=>({id:x.id,date:x.entry_date,item:x.item_name,amount:Number(x.amount||0),desc:x.details||'',createdAt:x.created_at}));
+  state.kharchu=(kRes.data||[]).map(x=>({id:x.id,date:x.entry_date,item:x.item_name,amount:Number(x.amount||0),desc:x.details||'',createdAt:x.created_at}));
+}
+
+/* =========================================================
+   YEAR CHANGE
+========================================================= */
+async function changeYear(){
+  if(loading)return;
+  const el=document.getElementById('cashBookYearSelect');
+  const y=el.value;
+  const row=academicYears.find(x=>x.year_name===y);
+  if(!row)return;
+  selectedYear=y;selectedYearId=row.id||null;
+  localStorage.setItem('cashbook_selected_year_'+currentSchoolId,selectedYear);
+  updateHeaderYear();
+
   try{
-    const year=await getActiveYear();
-    if(!year){
-      box.innerHTML='<div class="item-card-empty">Active Academic Year ಇಲ್ಲ.</div>';
-      return;
-    }
-
-    const month=new Date().getMonth()+1;
-    const reportYear=currentReportYear(month,year.year_name);
-    const monthNames=["ಜನವರಿ","ಫೆಬ್ರವರಿ","ಮಾರ್ಚ್","ಏಪ್ರಿಲ್","ಮೇ","ಜೂನ್","ಜುಲೈ","ಆಗಸ್ಟ್","ಸೆಪ್ಟೆಂಬರ್","ಅಕ್ಟೋಬರ್","ನವೆಂಬರ್","ಡಿಸೆಂಬರ್"];
-    note.textContent=`${monthNames[month-1]}-${reportYear} | Active Academic Year: ${year.year_name}`;
-
-    // Calculation Settingsನಲ್ಲಿ ಇರುವ Items ಹೆಸರುಗಳೇ Dashboardನ ಆಹಾರ ಪದಾರ್ಥಗಳ ಮೂಲ.
-    // Ingredients / Nutrition ಅನ್ನು ಇಲ್ಲಿ ಬಳಸುವುದಿಲ್ಲ.
-    let settingsQuery=db.from("calculation_settings")
-      .select("item_name,is_enabled,class_group")
-      .eq("academic_year_id",year.id);
-    if(currentSchoolId)settingsQuery=settingsQuery.eq("school_id",currentSchoolId);
-    const {data:settings,error:settingsError}=await settingsQuery;
-    if(settingsError)throw settingsError;
-
-    const itemNames=new Set(
-      (settings||[])
-        .filter(r=>r.is_enabled!==false && String(r.item_name||"").trim())
-        .map(r=>String(r.item_name||"").trim())
-    );
-
-    let closingsQuery=db.from("food_stock_monthly_closing")
-      .select("item_name,closing_balance,unit,month_number,item_type")
-      .eq("academic_year_id",year.id)
-      .eq("month_number",month);
-    if(currentSchoolId)closingsQuery=closingsQuery.eq("school_id",currentSchoolId);
-    const {data:closings,error}=await closingsQuery;
-    if(error)throw error;
-
-    // Nutrition closing rows are stored with item_type='item' but have the
-    // private __NUTRITION_CLOSING__| prefix. Match only real Items from
-    // Calculation Settings, so Nutrition can never appear here.
-    const latest=new Map();
-    (closings||[]).forEach(r=>{
-      const raw=String(r.item_name||"").trim();
-      if(!raw || raw.startsWith("__NUTRITION_CLOSING__|"))return;
-      if(!itemNames.has(raw))return;
-      latest.set(raw,r);
-    });
-
-    const rows=[...latest.values()].sort((a,b)=>String(a.item_name).localeCompare(String(b.item_name),"kn"));
-    if(!rows.length){
-      box.innerHTML='<div class="item-card-empty">ಈ ತಿಂಗಳಿಗೆ ಆಹಾರ ಪದಾರ್ಥಗಳ ಉಳಿಕೆ ದಾಖಲೆ ಇಲ್ಲ.</div>';
-      status.textContent="Daily Items & Food Calculationನಲ್ಲಿ Save ಮಾಡಿದ ನಂತರ ಉಳಿಕೆ ಇಲ್ಲಿ ಕಾಣಿಸುತ್ತದೆ.";
-      return;
-    }
-
-    box.innerHTML=rows.map(r=>{
-      const value=Number(r.closing_balance||0);
-      const unit=r.unit||"KG";
-      const display=value.toLocaleString("en-IN",{minimumFractionDigits:3,maximumFractionDigits:3});
-      return `<div class="item-card">
-        <div class="item-card-name">${escapeHtml(r.item_name)}</div>
-        <div class="item-card-unit">${escapeHtml(unit)}</div>
-        <div class="item-card-label">ಉಳಿಕೆ</div>
-        <div class="item-card-balance">${display} ${escapeHtml(unit)}</div>
-      </div>`;
-    }).join("");
-    status.textContent=`ಒಟ್ಟು ${rows.length} ಆಹಾರ ಪದಾರ್ಥಗಳು`;
+    loading=true;
+    await loadYearData();
+    fillItems();
+    renderAll();
+    updateOpeningUI();
   }catch(e){
     console.error(e);
-    box.innerHTML='<div class="item-card-empty">ಆಹಾರ ಪದಾರ್ಥಗಳ ಉಳಿಕೆ ಪಡೆಯಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ.</div>';
-    status.textContent="Items data load failed.";
-  }
+    alert('Academic Year data load failed: '+e.message);
+  }finally{loading=false}
 }
+document.getElementById('cashBookYearSelect').addEventListener('change',changeYear);
 
-const kannadaWeekdays=["ಭಾನುವಾರ","ಸೋಮವಾರ","ಮಂಗಳವಾರ","ಬುಧವಾರ","ಗುರುವಾರ","ಶುಕ್ರವಾರ","ಶನಿವಾರ"];
+/* =========================================================
+   BALANCE CALCULATION — unchanged logic
+========================================================= */
+function openingValue(item){return Number(state.openingBalance?.[item]||0)}
+function ensureOpening(){
+  if(state.openingBalance && typeof state.openingBalance==="object"){
+    return state.items.every(it=>Object.prototype.hasOwnProperty.call(state.openingBalance,it));
+  }
+  alert('ಮೊದಲು Opening Balance ವಿಭಾಗದಲ್ಲಿ ಪ್ರತಿಯೊಂದು Itemಗೆ Opening Balance ನಮೂದಿಸಿ ಮತ್ತು Save ಮಾಡಿ.');
+  document.querySelector('.tab[data-page="opening"]').click();
+  return false;
+}
+function balanceRows(from,to){
+  const ds=allDates(from,to);
+  if(!ds.length)return [];
 
-async function loadDailyFoodCounts(){
-  const body=$("dailyFoodBody"),note=$("dailyFoodMonth");
-  body.innerHTML='<tr><td colspan="3" class="items-empty">Daily Food data Loading...</td></tr>';
-  try{
-    const year=await getActiveYear();
-    if(!year){
-      body.innerHTML='<tr><td colspan="3" class="items-empty">Active Academic Year ಇಲ್ಲ.</td></tr>';
-      return;
-    }
+  // Daily flow: Opening → JAMA → JAMA Total → KHARCHU Opening → KHARCHU → Final Closing.
+  const firstAll=dates();
+  const opening={};
+  state.items.forEach(it=>opening[it]=openingValue(it));
 
-    const now=new Date();
-    const month=now.getMonth()+1;
-    const reportYear=currentReportYear(month,year.year_name);
-    const days=new Date(reportYear,month,0).getDate();
-    const start=`${reportYear}-${String(month).padStart(2,"0")}-01`;
-    const end=`${reportYear}-${String(month).padStart(2,"0")}-${String(days).padStart(2,"0")}`;
+  const rows=[];
+  for(const d of firstAll){
+    const jama={},kharchu={},jamaClosing={},kharchuOpening={},kharchuClosing={};
 
-    note.textContent=`${monthNamesForDashboard[month-1]}-${reportYear} | ಪ್ರತಿದಿನದ ಬಿಸಿಊಟ ಮಕ್ಕಳ ಸಂಖ್ಯೆ`;
+    state.items.forEach(it=>{
+      const j=state.jama.filter(x=>x.date===d&&x.item===it)
+        .reduce((s,x)=>s+Number(x.amount||0),0);
+      const k=state.kharchu.filter(x=>x.date===d&&x.item===it)
+        .reduce((s,x)=>s+Number(x.amount||0),0);
 
-    let query=db.from("daily_food_distribution")
-      .select("distribution_date,students_count,total_quantity")
-      .eq("academic_year_id",year.id)
-      .gte("distribution_date",start)
-      .lte("distribution_date",end)
-      .order("distribution_date",{ascending:true});
-    if(currentSchoolId)query=query.eq("school_id",currentSchoolId);
-    const {data,error}=await query;
-    if(error)throw error;
-
-    const totals={};
-    (data||[]).forEach(r=>{
-      const d=String(r.distribution_date||"").slice(0,10);
-      if(!d)return;
-      // Multiple item rows on one date are combined; count is kept at the date level.
-      const n=Number(r.students_count||0);
-      totals[d]=Math.max(Number(totals[d]||0),n);
+      jama[it]=j;
+      kharchu[it]=k;
+      jamaClosing[it]=opening[it]+j;
+      kharchuOpening[it]=jamaClosing[it];
+      kharchuClosing[it]=kharchuOpening[it]-k;
     });
 
-    const today=new Date();
-    const todayKey=`${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,"0")}-${String(today.getDate()).padStart(2,"0")}`;
+    if(ds.includes(d)){
+      rows.push({
+        date:d,
+        opening:{...opening},
+        jama:{...jama},
+        jamaClosing:{...jamaClosing},
+        kharchuOpening:{...kharchuOpening},
+        kharchu:{...kharchu},
+        kharchuClosing:{...kharchuClosing},
+        closing:{...kharchuClosing},
+        jamaTotal:Object.values(jama).reduce((s,n)=>s+Number(n||0),0),
+        kharchuTotal:Object.values(kharchu).reduce((s,n)=>s+Number(n||0),0)
+      });
+    }
 
-    body.innerHTML=Array.from({length:days},(_,i)=>{
-      const d=i+1;
-      const key=`${reportYear}-${String(month).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
-      const dt=new Date(reportYear,month-1,d);
-      const dateText=`${String(d).padStart(2,"0")}-${String(month).padStart(2,"0")}-${reportYear}`;
-      const count=Number(totals[key]||0);
-      return `<tr class="${key===todayKey?"today-row":""}">
-        <td>${dateText}</td>
-        <td>${kannadaWeekdays[dt.getDay()]}</td>
-        <td>${count}</td>
-      </tr>`;
-    }).join("");
+    state.items.forEach(it=>opening[it]=kharchuClosing[it]);
+  }
+  return rows;
+}
+
+/* =========================================================
+   ITEMS UI
+========================================================= */
+function fillItems(){
+  renderBulkEntry('jama');
+  renderBulkEntry('kharchu');
+
+  document.getElementById('itemList').innerHTML=state.items.map((x,i)=>`
+    <div class="item-row" id="master_item_${i}">
+      <input id="master_input_${i}" value="${esc(x)}" disabled
+             style="flex:1;background:#f1f5f3;font-weight:600">
+      <button class="secondary" id="master_btn_${i}" onclick="editItem(${i})">✏️ Edit</button>
+      <button class="danger remove" onclick="removeItem(${i})" title="Item ತೆಗೆದುಹಾಕಿ">🗑️ Delete</button>
+    </div>`).join('');
+}
+
+async function addItem(){
+  const input=document.getElementById('newItem');
+  const v=(input?.value||'').trim();
+  if(!v)return alert('Item ಹೆಸರು ನಮೂದಿಸಿ');
+  if(v==='ಒಟ್ಟು')return alert('ಒಟ್ಟು Item ಆಗಿ ಬಳಸಲಾಗುವುದಿಲ್ಲ');
+  if(state.items.some(x=>String(x).trim().toLowerCase()===v.toLowerCase())){
+    return alert('ಈ Item ಈಗಾಗಲೇ ಇದೆ');
+  }
+  try{
+    const maxOrder=state.items.length
+      ? state.items.reduce((m,_,i)=>Math.max(m,i),-1)
+      : -1;
+    const r=await db.from('cash_book_items').insert({
+      school_id:currentSchoolId,
+      item_name:v,
+      sort_order:maxOrder+1
+    });
+    if(r.error)throw r.error;
+    state.items.push(v);
+    if(input)input.value='';
+    fillItems();
+    renderAll();
+    renderOpeningBalance();
+  }catch(e){
+    alert('ಹೊಸ Item save failed: '+e.message);
+  }
+}
+
+function editItem(i){
+  const input=document.getElementById(`master_input_${i}`);
+  const btn=document.getElementById(`master_btn_${i}`);
+  if(!input||!btn)return;
+  input.disabled=false;
+  input.style.background='#fff';
+  input.focus();
+  input.select();
+  btn.textContent='💾 Save';
+  btn.onclick=()=>saveItem(i);
+}
+
+async function saveItem(i){
+  const input=document.getElementById(`master_input_${i}`);
+  const btn=document.getElementById(`master_btn_${i}`);
+  if(!input)return;
+
+  const v=input.value.trim();
+  if(!v)return alert('Item ಹೆಸರು ಖಾಲಿ ಇರಬಾರದು');
+  if(v==="ಒಟ್ಟು")return alert('ಒಟ್ಟು Item ಆಗಿ ಬಳಸಲಾಗುವುದಿಲ್ಲ');
+  if(state.items.some((x,n)=>n!==i&&x.toLowerCase()===v.toLowerCase())){
+    return alert('ಈ Item ಈಗಾಗಲೇ ಇದೆ');
+  }
+
+  const old=state.items[i];
+  if(v===old){
+    input.disabled=true;
+    input.style.background='#f1f5f3';
+    if(btn){btn.textContent='✏️ Edit';btn.onclick=()=>editItem(i);}
+    return;
+  }
+
+  try{
+    const r=await db.from("cash_book_items").update({item_name:v}).eq("school_id",currentSchoolId).eq("item_name",old);
+    if(r.error)throw r.error;
+
+    // Existing year data is also renamed so historical data remains connected.
+    const [j,k,o]=await Promise.all([
+      db.from("cash_book_entries").update({item_name:v})
+        .eq("school_id",currentSchoolId).eq("academic_year",selectedYear).eq("entry_type","jama").eq("item_name",old),
+      db.from("cash_book_entries").update({item_name:v})
+        .eq("school_id",currentSchoolId).eq("academic_year",selectedYear).eq("entry_type","kharchu").eq("item_name",old),
+      db.from("cash_book_opening_balances").update({item_name:v})
+        .eq("school_id",currentSchoolId).eq("academic_year",selectedYear).eq("item_name",old)
+    ]);
+    if(j.error||k.error||o.error){
+      console.warn('Item historical rename warning',j.error,k.error,o.error);
+    }
+
+    state.items[i]=v;
+    if(state.openingBalance){
+      state.openingBalance[v]=state.openingBalance[old]||0;
+      delete state.openingBalance[old];
+    }
+    state.jama.forEach(x=>{if(x.item===old)x.item=v});
+    state.kharchu.forEach(x=>{if(x.item===old)x.item=v});
+
+    fillItems();
+    renderAll();
+  }catch(e){
+    alert('Item update failed: '+e.message);
+  }
+}
+
+// Backward-compatible wrapper.
+async function renameItem(i,v){
+  const input=document.getElementById(`master_input_${i}`);
+  if(input){
+    input.value=v;
+    await saveItem(i);
+  }
+}
+
+async function removeItem(i){
+  const item=state.items[i];
+  if(!item)return;
+  if(!confirm('ಈ Item ಅನ್ನು Item Masterನಿಂದ ತೆಗೆದುಹಾಕಬೇಕೇ?'))return;
+
+  const r=await db.from("cash_book_items").delete()
+    .eq("school_id",currentSchoolId)
+    .eq("item_name",item);
+  if(r.error)return alert('Item delete failed: '+r.error.message);
+
+  // Delete the same Item's Opening Balance also.
+  const ob=await db.from("cash_book_opening_balances").delete()
+    .eq("school_id",currentSchoolId)
+    .eq("academic_year",selectedYear)
+    .eq("item_name",item);
+  if(ob.error)return alert('Opening Balance delete failed: '+ob.error.message);
+
+  state.items.splice(i,1);
+  delete state.openingBalance?.[item];
+  state.jama=state.jama.filter(x=>x.item!==item);
+  state.kharchu=state.kharchu.filter(x=>x.item!==item);
+  fillItems();
+  renderAll();
+  renderOpeningBalance();
+}
+
+function renderBulkEntry(type){
+  const box=document.getElementById(type==='jama'?'jamaEntryItems':'khEntryItems');
+  if(!box)return;
+  const prefix=type==='jama'?'jamaBulk':'khBulk';
+  box.innerHTML=state.items.map((it,i)=>`
+    <div class="item-row">
+      <label style="flex:1;margin:0">${esc(it)}</label>
+      <input id="${prefix}_${i}" type="number" step="0.01" placeholder="₹ 0.00" data-item="${esc(it)}">
+    </div>`).join('');
+}
+
+/* =========================================================
+   JAMA / KHARCHU SAVE — one date, many items
+========================================================= */
+async function saveBulkEntry(type){
+  if(!ensureOpening())return;
+  const date=document.getElementById(type==='jama'?'jamaDate':'khDate').value;
+  const desc=(document.getElementById(type==='jama'?'jamaDesc':'khDesc')?.value||'').trim();
+  if(!safeDate(date))return alert('ದಿನಾಂಕ ಆಯ್ಕೆ ಮಾಡಿ');
+
+  const prefix=type==='jama'?'jamaBulk':'khBulk';
+  const inputs=[...document.querySelectorAll(`[id^="${prefix}_"]`)];
+  const rows=inputs.map(el=>({item:el.dataset.item,amount:Number(el.value||0)})).filter(x=>x.amount>0);
+  if(!rows.length)return alert('ಕನಿಷ್ಠ ಒಂದು Itemಗೆ Amount ನಮೂದಿಸಿ');
+
+  const isEditing=editMode.type===type && editMode.date===date;
+
+  try{
+    // Edit mode: replace the selected day's entries completely.
+    // This also allows the user to remove an old Item by clearing its Amount.
+    if(isEditing){
+      const del=await db.from("cash_book_entries")
+        .delete()
+        .eq("school_id",currentSchoolId)
+        .eq("academic_year",selectedYear)
+        .eq("entry_type",type)
+        .eq("entry_date",date);
+      if(del.error)throw del.error;
+    }
+
+    for(const r of rows){
+      const payload={
+        school_id:currentSchoolId,academic_year:selectedYear,entry_type:type,entry_date:date,
+        item_name:r.item,amount:r.amount,details:desc
+      };
+
+      const result=await db.from("cash_book_entries")
+        .upsert(payload,{onConflict:"school_id,academic_year,entry_type,entry_date,item_name"})
+        .select("id,entry_date,item_name,amount,details,created_at").single();
+
+      if(result.error)throw result.error;
+    }
+
+    editMode={type:null,date:null};
+    await loadYearData();
+    clearBulkEntry(type);
+    updateEditButtonState(type);
+    renderAll();
   }catch(e){
     console.error(e);
-    body.innerHTML='<tr><td colspan="3" class="items-empty">Daily Food Distribution data ಪಡೆಯಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ.</td></tr>';
+    alert('Save failed: '+e.message);
   }
 }
 
-const monthNamesForDashboard=["ಜನವರಿ","ಫೆಬ್ರವರಿ","ಮಾರ್ಚ್","ಏಪ್ರಿಲ್","ಮೇ","ಜೂನ್","ಜುಲೈ","ಆಗಸ್ಟ್","ಸೆಪ್ಟೆಂಬರ್","ಅಕ್ಟೋಬರ್","ನವೆಂಬರ್","ಡಿಸೆಂಬರ್"];
+function editDate(type,date){
+  const source=type==='jama'?state.jama:state.kharchu;
+  const entries=source.filter(x=>x.date===date);
+  if(!entries.length)return alert('ಈ ದಿನದ Entry ಕಂಡುಬಂದಿಲ್ಲ');
 
-async function logout(){
-  try{
-    const {error}=await db.auth.signOut();
-    if(error)throw error;
-    window.location.href="login.html";
-  }catch(e){
-    alert("Logout ಮಾಡಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ.\n"+(e.message||"Unknown error"));
+  const dateId=type==='jama'?'jamaDate':'khDate';
+  const descId=type==='jama'?'jamaDesc':'khDesc';
+  const prefix=type==='jama'?'jamaBulk':'khBulk';
+
+  document.getElementById(dateId).value=date;
+  document.getElementById(descId).value=entries.map(x=>x.desc).find(x=>x)||'';
+
+  document.querySelectorAll(`[id^="${prefix}_"]`).forEach(el=>el.value='');
+  entries.forEach(entry=>{
+    const idx=state.items.indexOf(entry.item);
+    if(idx>=0){
+      const el=document.getElementById(`${prefix}_${idx}`);
+      if(el)el.value=Number(entry.amount||0);
+    }
+  });
+
+  editMode={type,date};
+  updateEditButtonState(type);
+
+  const tab=document.querySelector(`.tab[data-page="${type==='jama'?'jama':'kharchu'}"]`);
+  if(tab)tab.click();
+
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+async function deleteDate(type,date){
+  if(!confirm(`${displayDate(date)} ದಿನದ ಎಲ್ಲಾ ${type==='jama'?'ಜಮಾ':'ಖರ್ಚು'} entries ಅಳಿಸಬೇಕೇ?`))return;
+  const r=await db.from("cash_book_entries")
+    .delete()
+    .eq("academic_year",selectedYear)
+    .eq("entry_type",type)
+    .eq("entry_date",date);
+  if(r.error)return alert('Delete failed: '+r.error.message);
+
+  if(editMode.type===type && editMode.date===date){
+    editMode={type:null,date:null};
+  }
+
+  await loadYearData();
+  clearBulkEntry(type);
+  updateEditButtonState(type);
+  renderAll();
+}
+
+function cancelEdit(type){
+  editMode={type:null,date:null};
+  clearBulkEntry(type);
+  updateEditButtonState(type);
+}
+
+function updateEditButtonState(type){
+  const dateId=type==='jama'?'jamaDate':'khDate';
+  const descId=type==='jama'?'jamaDesc':'khDesc';
+  const saveBtn=document.querySelector(`#${type==='jama'?'jama':'kharchu'} .primary`);
+  if(saveBtn){
+    saveBtn.textContent=(editMode.type===type)?'💾 Update Save':`💾 ಈ ದಿನದ ${type==='jama'?'JAMA':'ಖರ್ಚು'} Save`;
+  }
+
+  let cancelBtn=document.getElementById(`${type}_cancel_edit`);
+  if(editMode.type===type){
+    if(!cancelBtn){
+      cancelBtn=document.createElement('button');
+      cancelBtn.id=`${type}_cancel_edit`;
+      cancelBtn.className='secondary';
+      cancelBtn.textContent='✖️ Edit Cancel';
+      cancelBtn.onclick=()=>cancelEdit(type);
+      saveBtn?.parentElement?.appendChild(cancelBtn);
+    }
+  }else if(cancelBtn){
+    cancelBtn.remove();
   }
 }
 
+function clearBulkEntry(type){
+  const prefix=type==='jama'?'jamaBulk':'khBulk';
+  document.querySelectorAll(`[id^="${prefix}_"]`).forEach(el=>el.value='');
+  const desc=document.getElementById(type==='jama'?'jamaDesc':'khDesc');
+  if(desc)desc.value='';
+}
+async function deleteDate(type,date){
+  if(!confirm(`${date} ದಿನದ ಎಲ್ಲಾ ${type==='jama'?'ಜಮಾ':'ಖರ್ಚು'} entries ಅಳಿಸಬೇಕೇ?`))return;
+  const r=await db.from("cash_book_entries").delete().eq("school_id",currentSchoolId).eq("academic_year",selectedYear).eq("entry_type",type).eq("entry_date",date);
+  if(r.error)return alert('Delete failed: '+r.error.message);
+  await loadYearData();renderAll();
+}
+
+/* =========================================================
+   TABLE
+========================================================= */
+function buildItemGroups(){
+  const groups=[];
+  const byKey=new Map();
+  const suffixPattern=/^(.*?)[ ]*-[ ]*(1-5|6-7|8|9-10|ಸರ್ಕಾರಿ|APF|ಸಕ್ಕರೆ|ಇತರೆ|ಅನಿಲ)$/i;
+
+  state.items.forEach(item=>{
+    const name=String(item||'').trim();
+    if(!name || name==='ಒಟ್ಟು')return;
+    const m=name.match(suffixPattern);
+    if(m){
+      const base=m[1].trim();
+      const sub=m[2].trim();
+      const key=base.toLocaleLowerCase('kn-IN');
+      let g=byKey.get(key);
+      if(!g){
+        g={name:base,subs:[],items:[]};
+        byKey.set(key,g);
+        groups.push(g);
+      }
+      if(!g.subs.includes(sub))g.subs.push(sub);
+      g.items.push(name);
+    }else{
+      groups.push({name,subs:null,items:[name]});
+    }
+  });
+
+  return groups;
+}
+
+function tableHead(){
+  const groups=buildItemGroups();
+  let r1='<tr class="group"><th rowspan="2">ದಿನಾಂಕ</th><th rowspan="2">ವಿವರ</th>';
+  let r2='<tr class="sub">';
+  groups.forEach(g=>{
+    if(g.subs){
+      r1+=`<th colspan="${g.subs.length}">${esc(g.name)}</th>`;
+      g.subs.forEach(s=>r2+=`<th>${esc(s)}</th>`);
+    }else{
+      r1+=`<th rowspan="2">${esc(g.name)}</th>`;
+    }
+  });
+  r1+='<th rowspan="2">ಒಟ್ಟು</th><th rowspan="2" class="no-print">Action</th></tr>';
+  return r1+r2+'</tr>';
+}
+
+function renderTable(type){
+  const head=document.getElementById(type==='jama'?'jamaHead':'khHead');
+  const body=document.getElementById(type==='jama'?'jamaBody':'khBody');
+  head.innerHTML=tableHead();
+  const rows=balanceRows('','');
+  if(!rows.length){
+    body.innerHTML=`<tr><td colspan="${state.items.length+4}" class="empty">ಯಾವುದೇ Entry ಇಲ್ಲ</td></tr>`;
+    return;
+  }
+  let html='';
+  rows.forEach((r,index)=>{
+    const isJama=type==='jama';
+    const movement=isJama?r.jama:r.kharchu;
+    const movementTotal=isJama?r.jamaTotal:r.kharchuTotal;
+
+    // If a date has KHARCHU but no JAMA, that date's final balance
+    // is the JAMA opening/final balance shown for the same date.
+    const jamaOnlyDisplay=isJama && r.jamaTotal===0 && r.kharchuTotal>0;
+    const opening=isJama
+      ? (jamaOnlyDisplay ? r.kharchuClosing : r.opening)
+      : r.kharchuOpening;
+    const closing=isJama
+      ? (jamaOnlyDisplay ? r.kharchuClosing : r.jamaClosing)
+      : r.kharchuClosing;
+    const details=(isJama?state.jama:state.kharchu).filter(x=>x.date===r.date).map(x=>x.desc).find(x=>x)||'';
+
+    html+=`<tr><td>${esc(displayDate(r.date))}</td><td><b>ಪ್ರಾರಂಭಿಕ ಶಿಲ್ಕು</b></td>
+      ${state.items.map(it=>`<td>${money(opening[it])}</td>`).join('')}
+      <td><b>${money(state.items.reduce((s,it)=>s+Number(opening[it]||0),0))}</b></td><td></td></tr>`;
+
+    html+=`<tr><td></td><td>${movementTotal!==0?esc(details||(isJama?'ಜಮಾ':'ಖರ್ಚು')):`ಯಾವುದೇ ${isJama?'ಜಮಾ':'ಖರ್ಚು'} ಇರುವುದಿಲ್ಲ`}</td>
+      ${state.items.map(it=>movement[it]!==0?`<td>${money(movement[it])}</td>`:'<td>—</td>').join('')}
+      <td><b>${money(movementTotal)}</b></td><td></td></tr>`;
+
+    html+=`<tr><td></td><td><b>${isJama?'ಒಟ್ಟು':'ಅಂತಿಮ ಶಿಲ್ಕು'}</b></td>
+      ${state.items.map(it=>`<td><b>${money(closing[it])}</b></td>`).join('')}
+      <td><b>${money(state.items.reduce((s,it)=>s+Number(closing[it]||0),0))}</b></td>
+      <td class="no-print">
+        <button class="secondary" onclick="editDate('${type}','${r.date}')">✏️ Edit</button>
+        <button class="danger" onclick="deleteDate('${type}','${r.date}')">Delete</button>
+      </td></tr>`;
+    if(index<rows.length-1){
+      html+=`<tr class="spacer-row"><td colspan="${state.items.length+4}" style="height:18px;border-left:0;border-right:0;background:#fff"></td></tr>`;
+      html+=`<tr class="spacer-row"><td colspan="${state.items.length+4}" style="height:18px;border-left:0;border-right:0;background:#fff"></td></tr>`;
+    }
+  });
+  body.innerHTML=html;
+}
+
+function renderAll(){
+  renderTable('jama');
+  renderTable('kharchu');
+
+  const jamaTotal=state.jama.reduce((s,x)=>s+Number(x.amount||0),0);
+  const kharchuTotal=state.kharchu.reduce((s,x)=>s+Number(x.amount||0),0);
+  const openingTotal=state.items.reduce((s,it)=>s+openingValue(it),0);
+
+  const jt=document.getElementById('jamaSummary');
+  const kt=document.getElementById('khSummary');
+
+  if(jt)jt.innerHTML=`
+    <div class="stat">ಪ್ರಾರಂಭಿಕ ಶಿಲ್ಕು <b>${money(openingTotal)}</b></div>
+    <div class="stat">ಒಟ್ಟು ಜಮಾ <b>${money(jamaTotal)}</b></div>
+  `;
+  if(kt)kt.innerHTML=`
+    <div class="stat">ಪ್ರಾರಂಭಿಕ ಶಿಲ್ಕು <b>${money(openingTotal)}</b></div>
+    <div class="stat">ಒಟ್ಟು ಖರ್ಚು <b>${money(kharchuTotal)}</b></div>
+  `;
+
+  const activePage=document.querySelector('.tab.active')?.dataset.page;
+  if(activePage==='reports')renderPreview();
+}
+
+/* =========================================================
+   OPENING BALANCE
+========================================================= */
+function isFirstYear(){return selectedYear===firstAcademicYear}
+function renderOpeningBalance(){
+  const box=document.getElementById('openingItems'),saveBtn=document.getElementById('openingSaveBtn'),
+        editBtn=document.getElementById('openingEditBtn'),status=document.getElementById('openingStatus'),
+        totalEl=document.getElementById('openingTotal'),lockEl=document.getElementById('openingLockStatus');
+  if(!box)return;
+
+  const hasManual=!!state.openingBalance && typeof state.openingBalance==="object";
+  const manualAllowed=isFirstYear();
+  const locked=hasManual;
+  const values=state.openingBalance||{};
+
+  box.innerHTML=state.items.map((it,i)=>`
+    <div class="item-row">
+      <label style="flex:1;margin:0">${esc(it)}</label>
+      <input id="opening_${i}" type="number" step="0.01" placeholder="₹ 0.00"
+        value="${values[it]!==undefined?Number(values[it]):''}"
+        ${(manualAllowed&&!locked)?'':'disabled'}>
+    </div>`).join('');
+
+  const total=state.items.reduce((s,it)=>s+Number(values[it]||0),0);
+  totalEl.textContent=money(total);
+
+  if(!manualAllowed){
+    lockEl.textContent='🔗 Previous Year Closing';
+    saveBtn.style.display='none';editBtn.style.display='none';
+    status.style.display='block';
+    status.textContent=`✅ ${previousAcademicYearName(selectedYear)||'ಹಿಂದಿನ ವರ್ಷದ'} Closing Balance → ${selectedYear} Opening Balance automatic ಆಗಿದೆ.`;
+  }else{
+    lockEl.textContent=locked?'🔒 Locked':'ಹೊಸದಾಗಿದೆ';
+    saveBtn.style.display=locked?'none':'inline-block';
+    editBtn.style.display=locked?'inline-block':'none';
+    status.style.display=locked?'block':'none';
+    if(locked)status.textContent='✅ ಪ್ರತಿಯೊಂದು Itemನ Opening Balance Save ಆಗಿದೆ ಮತ್ತು Lock ಆಗಿದೆ. ಬದಲಾಯಿಸಲು Edit ಒತ್ತಿ.';
+  }
+}
+function updateOpeningUI(){renderOpeningBalance()}
+async function saveOpeningBalance(){
+  if(!isFirstYear())return alert('ಈ ವರ್ಷದ Opening Balance ಹಿಂದಿನ ವರ್ಷದ Closing Balanceನಿಂದ automatic ಆಗಿದೆ.');
+  const next={};
+  state.items.forEach((it,i)=>{
+    const el=document.getElementById(`opening_${i}`);
+    const n=Number(el?.value||0);
+    if(!Number.isFinite(n)){alert('ಸರಿಯಾದ Opening Balance ನಮೂದಿಸಿ: '+it);throw new Error('invalid opening')}
+    next[it]=n;
+  });
+  if(state.openingBalance && typeof state.openingBalance==="object"){
+    if(!confirm('Opening Balance ಬದಲಾಯಿಸಿದರೆ ಈ ವರ್ಷದ Closing Balanceಗಳು ಮರುಲೆಕ್ಕವಾಗುತ್ತವೆ. Save ಮಾಡಬೇಕೇ?'))return;
+  }
+  const payload=state.items.map(it=>({school_id:currentSchoolId,academic_year:selectedYear,item_name:it,amount:next[it]}));
+  const r=await db.from("cash_book_opening_balances").upsert(payload,{onConflict:"school_id,academic_year,item_name"});
+  if(r.error)return alert('Opening Balance save failed: '+r.error.message);
+  state.openingBalance=next;
+  renderOpeningBalance();renderAll();
+}
+function editOpeningBalance(){
+  if(!isFirstYear())return;
+  const box=document.getElementById('openingItems');
+  box.querySelectorAll('input').forEach(x=>x.disabled=false);
+  document.getElementById('openingSaveBtn').style.display='inline-block';
+  document.getElementById('openingEditBtn').style.display='none';
+  const status=document.getElementById('openingStatus');
+  status.style.display='block';status.textContent='✏️ Edit mode: Item-wise Opening Balance ಬದಲಾಯಿಸಿ Save ಒತ್ತಿ.';
+  const first=box.querySelector('input');if(first)first.focus();
+}
+
+/* =========================================================
+   REPORTS
+========================================================= */
+function reportPage(type,from,to){
+  const rows=balanceRows(from,to),title=type==='jama'?'ಜಮಾ':'ಖರ್ಚು';
+  const dept=document.getElementById('departmentName')?.textContent||'ಇಲಾಖೆಯ ಹೆಸರು';
+  const school=document.getElementById('schoolName')?.textContent||'ಶಾಲೆಯ ಹೆಸರು';
+  const year=document.getElementById('academicYear')?.textContent||selectedYear||'-';
+  let h=`<div class="card print-report">
+    <div class="report-header">
+      <div class="dept">${esc(dept)}</div>
+      <div class="school">${esc(school)}</div>
+      <div class="year">ವರ್ಷ: ${esc(year)}</div>
+    </div>`;
+  if(!rows.length){h+=`<div class="empty">Entry ಮಾಡಿದ ದಿನಾಂಕಗಳಿಲ್ಲ</div></div>`;return h}
+  h+=`<table><thead>
+    <tr class="report-print-title">
+      <th colspan="${state.items.length+4}" style="text-align:center;font-weight:800;font-size:16px;padding:5px;background:#fff">${title} — Cash Book — ${esc(selectedYear)}</th>
+    </tr>
+    ${tableHead()}
+  </thead><tbody>`;
+  rows.forEach((r,index)=>{
+    const movement=type==='jama'?r.jama:r.kharchu;
+    const movementTotal=type==='jama'?r.jamaTotal:r.kharchuTotal;
+    const source=type==='jama'?state.jama:state.kharchu;
+    const entries=source.filter(x=>x.date===r.date);
+    const details=entries.map(x=>x.desc).find(x=>x)||'';
+    const isJama=type==='jama';
+    const jamaOnlyDisplay=isJama && r.jamaTotal===0 && r.kharchuTotal>0;
+    const opening=isJama
+      ? (jamaOnlyDisplay ? r.kharchuClosing : r.opening)
+      : r.kharchuOpening;
+    const closing=isJama
+      ? (jamaOnlyDisplay ? r.kharchuClosing : r.jamaClosing)
+      : r.kharchuClosing;
+    const openingTotal=state.items.reduce((s,it)=>s+Number(opening[it]||0),0);
+    const closingTotal=state.items.reduce((s,it)=>s+Number(closing[it]||0),0);
+    h+=`<tr><td>${esc(displayDate(r.date))}</td><td><b>ಪ್ರಾರಂಭಿಕ ಶಿಲ್ಕು</b></td>
+      ${state.items.map(it=>`<td>${money(opening[it])}</td>`).join('')}
+      <td><b>${money(openingTotal)}</b></td><td></td></tr>`;
+    h+=`<tr><td></td><td>${entries.length?esc(details||(isJama?'ಜಮಾ':'ಖರ್ಚು')):`ಯಾವುದೇ ${isJama?'ಜಮಾ':'ಖರ್ಚು'} ಇರುವುದಿಲ್ಲ`}</td>
+      ${state.items.map(it=>movement[it]!==0?`<td>${money(movement[it])}</td>`:'<td>—</td>').join('')}
+      <td><b>${money(movementTotal)}</b></td><td></td></tr>`;
+    h+=`<tr><td></td><td><b>${isJama?'ಒಟ್ಟು':'ಅಂತಿಮ ಶಿಲ್ಕು'}</b></td>
+      ${state.items.map(it=>`<td><b>${money(closing[it])}</b></td>`).join('')}
+      <td><b>${money(closingTotal)}</b></td><td></td></tr>`;
+    if(index<rows.length-1){
+      h+=`<tr class="spacer-row"><td colspan="${state.items.length+4}" style="height:18px;border-left:0;border-right:0;background:#fff"></td></tr>`;
+      h+=`<tr class="spacer-row"><td colspan="${state.items.length+4}" style="height:18px;border-left:0;border-right:0;background:#fff"></td></tr>`;
+    }
+  });
+  h+=`</tbody></table>`;
+  const isJama=type==='jama';
+  const firstR=rows[0], lastR=rows[rows.length-1];
+  const firstJamaOnly=isJama && firstR.jamaTotal===0 && firstR.kharchuTotal>0;
+  const lastJamaOnly=isJama && lastR.jamaTotal===0 && lastR.kharchuTotal>0;
+  const firstOpening=isJama
+    ? (firstJamaOnly ? firstR.kharchuClosing : firstR.opening)
+    : firstR.kharchuOpening;
+  const finalClosing=isJama
+    ? (lastJamaOnly ? lastR.kharchuClosing : lastR.jamaClosing)
+    : lastR.kharchuClosing;
+  const firstOpeningTotal=state.items.reduce((s,it)=>s+Number(firstOpening[it]||0),0);
+  const movementTotal=rows.reduce((s,r)=>s+(isJama?r.jamaTotal:r.kharchuTotal),0);
+  const finalTotal=state.items.reduce((s,it)=>s+Number(finalClosing[it]||0),0);
+  h+=`<div class="balance-box"><div>ಪ್ರಾರಂಭಿಕ ಶಿಲ್ಕು — ಒಟ್ಟು<br><b>${money(firstOpeningTotal)}</b></div>
+    <div>${isJama?'ಒಟ್ಟು ಜಮಾ':'ಒಟ್ಟು ಖರ್ಚು'}<br><b>${money(movementTotal)}</b></div>
+    <div>${isJama?'ಜಮಾ ನಂತರದ ಶಿಲ್ಕು':'ಅಂತಿಮ ಶಿಲ್ಕು'} — ಒಟ್ಟು<br><b>${money(finalTotal)}</b></div></div></div>`;
+  return h;
+}
+function renderPreview(){
+  const from=document.getElementById('fromDate').value,to=document.getElementById('toDate').value,type=document.getElementById('reportType').value;
+  let h='';
+  if(type==='both'||type==='jama')h+=reportPage('jama',from,to);
+  if(type==='both'||type==='kharchu')h+=reportPage('kharchu',from,to);
+  document.getElementById('reportPreview').innerHTML=h||'<div class="card empty">Entry ಮಾಡಿದ ದಿನಾಂಕಗಳಿಲ್ಲ</div>';
+}
+function exportExcel(){
+  if(typeof XLSX==='undefined'){
+    alert('Excel Export library load ಆಗಿಲ್ಲ. Internet connection ಪರಿಶೀಲಿಸಿ.');
+    return;
+  }
+  const from=document.getElementById('fromDate').value;
+  const to=document.getElementById('toDate').value;
+  const type=document.getElementById('reportType').value;
+
+  const makeSheet=(kind)=>{
+    const rows=balanceRows(from,to);
+    const title=kind==='jama'?'ಜಮಾ — Cash Book':'ಖರ್ಚು — Cash Book';
+    const dept=document.getElementById('departmentName')?.textContent||'ಇಲಾಖೆಯ ಹೆಸರು';
+    const school=document.getElementById('schoolName')?.textContent||'ಶಾಲೆಯ ಹೆಸರು';
+    const year=document.getElementById('academicYear')?.textContent||selectedYear||'-';
+
+    const groups=buildItemGroups();
+    const aoa=[[dept],[school],[`ವರ್ಷ: ${year}`],[title],[],['ದಿನಾಂಕ','ವಿವರ'],['','']];
+    let c=2;
+    groups.forEach(g=>{
+      aoa[5][c]=g.name;
+      if(g.subs){
+        g.subs.forEach((sub,i)=>aoa[6][c+i]=sub);
+        c+=g.subs.length;
+      }else{ aoa[6][c]=''; c++; }
+    });
+    aoa[5][c]='ಒಟ್ಟು'; aoa[6][c]='';
+    const lastCol=c;
+    const source=kind==='jama'?state.jama:state.kharchu;
+
+    rows.forEach((r,i)=>{
+      const isJama=kind==='jama';
+      const movement=isJama?r.jama:r.kharchu;
+      const jamaOnlyDisplay=isJama && r.jamaTotal===0 && r.kharchuTotal>0;
+      const opening=isJama
+        ? (jamaOnlyDisplay ? r.kharchuClosing : r.opening)
+        : r.kharchuOpening;
+      const closing=isJama
+        ? (jamaOnlyDisplay ? r.kharchuClosing : r.jamaClosing)
+        : r.kharchuClosing;
+      const entries=source.filter(x=>x.date===r.date);
+      const desc=entries.map(x=>x.desc).find(x=>x)||'';
+      aoa.push([displayDate(r.date),'ಪ್ರಾರಂಭಿಕ ಶಿಲ್ಕು',...state.items.map(it=>opening[it]),state.items.reduce((s,it)=>s+Number(opening[it]||0),0)]);
+      aoa.push(['',entries.length?desc:`ಯಾವುದೇ ${isJama?'ಜಮಾ':'ಖರ್ಚು'} ಇರುವುದಿಲ್ಲ`,...state.items.map(it=>movement[it]!==0?movement[it]:''),isJama?r.jamaTotal:r.kharchuTotal]);
+      aoa.push(['',isJama?'ಒಟ್ಟು':'ಅಂತಿಮ ಶಿಲ್ಕು',...state.items.map(it=>closing[it]),state.items.reduce((s,it)=>s+Number(closing[it]||0),0)]);
+      if(i<rows.length-1){aoa.push([]);aoa.push([]);}
+    });
+
+    const ws=XLSX.utils.aoa_to_sheet(aoa);
+    ws['!merges']=[];
+    for(let r=0;r<4;r++)ws['!merges'].push({s:{r,c:0},e:{r,c:lastCol}});
+    ws['!merges'].push({s:{r:5,c:0},e:{r:6,c:0}});
+    ws['!merges'].push({s:{r:5,c:1},e:{r:6,c:1}});
+    c=2;
+    groups.forEach(g=>{
+      if(g.subs){ws['!merges'].push({s:{r:5,c},e:{r:5,c:c+g.subs.length-1}});c+=g.subs.length;}
+      else{ws['!merges'].push({s:{r:5,c},e:{r:6,c}});c++;}
+    });
+    ws['!merges'].push({s:{r:5,c:lastCol},e:{r:6,c:lastCol}});
+
+    const border={top:{style:'thin'},bottom:{style:'thin'},left:{style:'thin'},right:{style:'thin'}};
+    const borderCell=(r,col)=>{
+      const a=XLSX.utils.encode_cell({r,c:col});
+      if(!ws[a])ws[a]={v:''};
+      ws[a].s=ws[a].s||{};
+      ws[a].s.border=border;
+      ws[a].s.alignment={vertical:'center',horizontal:'center',wrapText:true};
+    };
+    for(let col=0;col<=lastCol;col++){borderCell(5,col);borderCell(6,col);}
+    for(let r=7;r<aoa.length;r++){
+      if(aoa[r].some(v=>v!==''&&v!==null&&v!==undefined))
+        for(let col=0;col<=lastCol;col++)borderCell(r,col);
+    }
+    for(let r=0;r<4;r++){
+      const a=XLSX.utils.encode_cell({r,c:0});
+      if(ws[a])ws[a].s={font:{bold:true,sz:r===3?14:12},alignment:{horizontal:'center',vertical:'center'}};
+    }
+    ws['!cols']=[{wch:14},{wch:28},...state.items.map(()=>({wch:14})),{wch:16}];
+    return ws;
+  };
+
+  const wb=XLSX.utils.book_new();
+  if(type==='both'||type==='jama')XLSX.utils.book_append_sheet(wb,makeSheet('jama'),'JAMA');
+  if(type==='both'||type==='kharchu')XLSX.utils.book_append_sheet(wb,makeSheet('kharchu'),'KHARCHU');
+  const safeYear=(selectedYear||'year').replace(/[^\w-]+/g,'_');
+  const suffix=type==='both'?'CashBook':(type==='jama'?'JAMA':'KHARCHU');
+  XLSX.writeFile(wb,`Cash-Book-${safeYear}-${suffix}.xlsx`);
+}
+function printReport(){
+  renderPreview();
+  // Allow the report DOM to finish rendering before opening Print/PDF.
+  setTimeout(()=>window.print(),150);
+}
+
+document.querySelectorAll('.tab').forEach(btn=>btn.addEventListener('click',()=>{
+  document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));btn.classList.add('active');
+  document.querySelectorAll('.page').forEach(x=>x.style.display='none');
+  document.getElementById(btn.dataset.page).style.display='block';
+  renderPreview();
+}));
+['fromDate','toDate','reportType'].forEach(id=>document.getElementById(id).addEventListener('change',renderPreview));
+
+/* =========================================================
+   STARTUP
+========================================================= */
 async function init(){
-  updateTodayDate();
-  setInterval(updateTodayDate,60000);
-
-  const schoolUser=await loadCurrentSchool();
-  if(!schoolUser)return;
-
-  await loadSchool();
-  const year=await loadYear();
-  await Promise.all([loadStudents(year),loadFood(year),loadItems(year),loadCash(year),loadItemClosings(),loadDailyFoodCounts()]);
-
-  // Attendance card updates automatically after a Save in Daily Food Distribution.
-  if(year){
-    setInterval(()=>loadFood(year),5000);
-    try{
-      db.channel("dashboard-daily-food")
-        .on("postgres_changes",
-          {event:"*",schema:"public",table:"daily_food_distribution",filter:`academic_year_id=eq.${year.id}`},
-          ()=>loadFood(year)
-        ).subscribe();
-    }catch(e){console.log(e)}
-  }
+  try{
+    loading=true;
+    await loadCurrentSchool();
+    await loadSchoolAndYears();
+    if(!selectedYear){
+      alert('School Settingsನಲ್ಲಿ Academic Year ಸೇರಿಸಿ.');
+      renderAll();return;
+    }
+    await loadItems();
+    await loadYearData();
+    fillItems();
+    renderAll();
+    renderOpeningBalance();
+    updateHeaderYear();
+  }catch(e){
+    console.error(e);
+    alert('Cash Book load failed: '+e.message+'\n\nSupabase tables/policies setup ಆಗಿದೆಯೇ ಪರಿಶೀಲಿಸಿ.');
+  }finally{loading=false}
 }
 init();
 </script>
